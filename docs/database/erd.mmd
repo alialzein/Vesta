@@ -1,0 +1,24 @@
+erDiagram
+  profiles ||--o{ user_integrations : owns
+  profiles ||--o{ mailboxes : owns
+  user_integrations ||--o{ mailboxes : has
+  user_integrations ||--|| graph_tokens : stores_private
+  mailboxes ||--o{ sync_cursors : syncs
+  mailboxes ||--o{ email_threads : contains
+  email_threads ||--o{ email_messages : groups
+  email_threads ||--o{ work_items : creates
+  email_messages ||--o{ work_items : creates
+  work_items ||--o{ ai_analyses : analyzed_by
+  work_items ||--o{ reminders : schedules
+  work_items ||--o{ draft_replies : drafts
+  work_items ||--o{ commitments : may_create
+  profiles ||--o{ people : knows
+  profiles ||--o{ projects : tracks
+  profiles ||--o{ manager_rules : defines
+  profiles ||--o{ manager_memories : remembers
+  profiles ||--o{ feedback_events : gives
+  profiles ||--o{ audit_logs : audited
+  profiles ||--o{ daily_briefs : receives
+  profiles ||--o{ focus_sessions : starts
+  focus_sessions ||--o{ focus_session_items : contains
+  work_items ||--o{ focus_session_items : queued_in

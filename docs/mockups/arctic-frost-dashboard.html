@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vesta — Arctic Frost</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     THEMING — two full, independent palettes.
+     [data-theme="dark"]  -> Dark mode
+     [data-theme="light"] -> White mode (now with a LIGHT sidebar)
+     ============================================================ */
+  :root{
+    --radius:18px;
+    --radius-lg:24px;
+    --font-display:"Fraunces", Georgia, serif;
+    --font-body:"Outfit", ui-sans-serif, system-ui, sans-serif;
+    --font-mono:"JetBrains Mono", ui-monospace, monospace;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+
+  /* ---------- DARK MODE ---------- */
+  html[data-theme="dark"]{
+    --bg:#0a0f17;
+    --bg-grad-1:rgba(56,128,221,.20);
+    --bg-grad-2:rgba(93,202,229,.10);
+    --panel:rgba(20,28,40,.74);
+    --panel-solid:#141c28;
+    --panel-2:rgba(120,170,230,.05);
+    --ink:#eaf2fc;
+    --ink-soft:#bccadd;
+    --muted:#788aa0;
+    --line:rgba(120,170,230,.12);
+    --line-strong:rgba(120,170,230,.22);
+    --accent:#5ba8f5;
+    --accent-2:#67e8d8;
+    --accent-soft:rgba(91,168,245,.20);
+    --red:#ff7a6e;     --red-soft:rgba(255,122,110,.18);
+    --amber:#ffc24b;   --amber-soft:rgba(255,194,75,.18);
+    --green:#43e0a8;   --green-soft:rgba(67,224,168,.18);
+    --side-bg:linear-gradient(180deg,#121b28,#0a0f17);
+    --side-border:rgba(120,170,230,.10);
+    --side-ink:#eaf2fc;
+    --side-muted:#8090a4;
+    --side-link:#b0bfd2;
+    --side-hover:rgba(91,168,245,.10);
+    --side-active-bg:linear-gradient(100deg, var(--accent-soft), transparent);
+    --side-badge-bg:rgba(120,170,230,.12);
+    --side-badge-ink:#cfddee;
+    --side-card:rgba(120,170,230,.06);
+    --side-card-border:rgba(120,170,230,.10);
+    --side-lbl:#717f90;
+    --shadow:0 24px 60px rgba(0,0,0,.6);
+    --shadow-soft:0 10px 30px rgba(0,0,0,.45);
+    --glow:0 0 0 1px var(--line),0 18px 48px rgba(0,0,0,.55);
+    --chat-bubble-ai:rgba(91,168,245,.16);
+    --chat-bubble-user:rgba(120,170,230,.07);
+    --grain-opacity:.05;
+    --ring-track:rgba(120,170,230,.10);
+    --field-bg:rgba(120,170,230,.05);
+  }
+
+  /* ---------- WHITE MODE ---------- */
+  html[data-theme="light"]{
+    --bg:#eef3fa;
+    --bg-grad-1:rgba(74,111,165,.13);
+    --bg-grad-2:rgba(212,228,247,.30);
+    --panel:rgba(255,255,255,.86);
+    --panel-solid:#ffffff;
+    --panel-2:rgba(35,55,85,.025);
+    --ink:#27384f;
+    --ink-soft:#4a5d75;
+    --muted:#8b98a8;
+    --line:rgba(35,55,85,.10);
+    --line-strong:rgba(35,55,85,.18);
+    --accent:#4a6fa5;
+    --accent-2:#6f9bd6;
+    --accent-soft:rgba(74,111,165,.12);
+    --red:#cc5b53;     --red-soft:rgba(204,91,83,.10);
+    --amber:#bc8a2e;   --amber-soft:rgba(188,138,46,.13);
+    --green:#2f9277;   --green-soft:rgba(47,146,119,.12);
+    --side-bg:linear-gradient(180deg,#ffffff,#eaf1fa);
+    --side-border:rgba(35,55,85,.08);
+    --side-ink:#27384f;
+    --side-muted:#8995a6;
+    --side-link:#4a5d75;
+    --side-hover:rgba(74,111,165,.07);
+    --side-active-bg:linear-gradient(100deg, var(--accent-soft), transparent);
+    --side-badge-bg:rgba(35,55,85,.07);
+    --side-badge-ink:#4a5d75;
+    --side-card:#eef3fb;
+    --side-card-border:rgba(35,55,85,.08);
+    --side-lbl:#a6b1c0;
+    --shadow:0 24px 60px rgba(35,55,85,.12);
+    --shadow-soft:0 10px 30px rgba(35,55,85,.07);
+    --glow:0 0 0 1px var(--line),0 18px 48px rgba(35,55,85,.09);
+    --chat-bubble-ai:rgba(74,111,165,.10);
+    --chat-bubble-user:rgba(35,55,85,.05);
+    --grain-opacity:.02;
+    --ring-track:rgba(35,55,85,.08);
+    --field-bg:#ffffff;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:
+      radial-gradient(900px 520px at 10% -8%, var(--bg-grad-1), transparent 58%),
+      radial-gradient(760px 480px at 102% 2%, var(--bg-grad-2), transparent 55%),
+      radial-gradient(700px 600px at 50% 115%, var(--accent-soft), transparent 60%),
+      var(--bg);
+    transition:background .5s var(--ease), color .35s var(--ease);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden; /* full-screen app, inner regions scroll */
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:9999;
+    opacity:var(--grain-opacity);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode:overlay;
+  }
+
+  /* full-screen grid; columns adapt when chat is collapsed */
+  .app{
+    display:grid;
+    grid-template-columns:250px minmax(0,1fr) 392px;
+    gap:16px; padding:16px; height:100vh; width:100vw;
+    transition:grid-template-columns .4s var(--ease);
+  }
+  .app.chat-collapsed{grid-template-columns:250px minmax(0,1fr) 0px;}
+
+  /* ============================ SIDEBAR ============================ */
+  aside{
+    background:var(--side-bg);
+    border:1px solid var(--side-border);
+    border-radius:var(--radius-lg);
+    padding:22px 18px;
+    display:flex; flex-direction:column; gap:22px;
+    box-shadow:var(--shadow);
+    color:var(--side-ink);
+    overflow-y:auto;
+  }
+  aside::-webkit-scrollbar{width:0}
+  .brand{display:flex; align-items:center; gap:13px}
+  .logo{
+    width:44px; height:44px; border-radius:13px; flex:0 0 auto;
+    display:grid; place-items:center; position:relative;
+    background:radial-gradient(circle at 50% 95%, #67e8d8, #5ba8f5 45%, var(--accent-2) 100%);
+    box-shadow:0 8px 22px rgba(74,111,165,0.4), inset 0 0 0 1px rgba(255,255,255,.25);
+    animation:flicker 3.2s var(--ease) infinite;
+  }
+  .logo svg{width:22px;height:22px;position:relative;z-index:2;filter:drop-shadow(0 1px 3px rgba(74,111,165,0.5))}
+  .logo::after{
+    content:""; position:absolute; inset:-5px; border-radius:18px; z-index:1;
+    background:radial-gradient(circle at 50% 80%, rgba(91,168,245,.5), transparent 70%);
+    animation:emberPulse 2.6s var(--ease) infinite;
+  }
+  @keyframes sweep{to{transform:rotate(360deg)}}
+  @keyframes flicker{0%,100%{box-shadow:0 8px 22px rgba(74,111,165,0.4), inset 0 0 0 1px rgba(255,255,255,.25)}50%{box-shadow:0 10px 28px rgba(74,111,165,0.55), inset 0 0 0 1px rgba(255,255,255,.35)}}
+  @keyframes emberPulse{0%,100%{opacity:.5;transform:scale(.95)}50%{opacity:.9;transform:scale(1.08)}}
+  .brand b{font-family:var(--font-display); font-weight:600; font-size:18px; line-height:1.05; letter-spacing:-.01em; display:block; color:var(--side-ink)}
+  .brand span{font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--side-muted)}
+
+  .nav{display:flex; flex-direction:column; gap:3px}
+  .nav .lbl{font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--side-lbl); margin:8px 6px 4px; font-weight:600}
+  .nav a{
+    color:var(--side-link); text-decoration:none; padding:10px 12px; border-radius:12px;
+    font-weight:500; font-size:14px; display:flex; align-items:center; gap:11px;
+    position:relative; transition:.18s var(--ease); cursor:pointer;
+  }
+  .nav a .ico{width:18px;height:18px;flex:0 0 auto;opacity:.85}
+  .nav a .badge{margin-left:auto; background:var(--side-badge-bg); color:var(--side-badge-ink); padding:2px 9px; border-radius:999px; font-size:11px; font-weight:600; font-family:var(--font-mono)}
+  .nav a:hover{background:var(--side-hover); color:var(--side-ink)}
+  .nav a.active{background:var(--side-active-bg); color:var(--side-ink)}
+  .nav a.active .ico{opacity:1; color:var(--accent)}
+  .nav a.active::before{content:""; position:absolute; left:-18px; top:50%; transform:translateY(-50%); width:3px; height:22px; border-radius:3px; background:linear-gradient(var(--accent),var(--accent-2)); box-shadow:0 0 12px var(--accent)}
+  .nav a.active .badge{background:var(--accent); color:#fff}
+
+  .profile{
+    margin-top:auto; background:var(--side-card); border:1px solid var(--side-card-border);
+    border-radius:15px; padding:13px; display:flex; gap:12px; align-items:center;
+  }
+  .avatar{width:38px;height:38px;border-radius:11px;flex:0 0 auto;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;font-weight:700;color:#fff;font-size:15px}
+  .profile b{display:block;font-size:13px;color:var(--side-ink)}
+  .profile small{color:var(--side-muted);font-size:11px}
+
+  /* ============================ MAIN ============================ */
+  main{display:flex; flex-direction:column; gap:16px; min-width:0; overflow-y:auto; padding-right:4px}
+  main::-webkit-scrollbar{width:7px}main::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:7px}
+  .topbar{display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap}
+  .title h1{font-family:var(--font-display); font-weight:600; font-size:32px; margin:0; letter-spacing:-.02em}
+  .title h1 .accent{font-style:italic; background:linear-gradient(90deg,var(--accent),var(--accent-2)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .title p{margin:6px 0 0; color:var(--muted); font-size:14px}
+  .top-tools{display:flex; align-items:center; gap:10px}
+  .search{
+    background:var(--panel); border:1px solid var(--line); backdrop-filter:blur(14px);
+    border-radius:13px; padding:10px 13px; width:280px; color:var(--muted); font-size:13px;
+    display:flex; align-items:center; gap:9px; box-shadow:var(--shadow-soft);
+  }
+  .search svg{width:16px;height:16px;opacity:.7}
+  .search kbd{margin-left:auto;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--muted)}
+
+  .icon-btn{
+    width:44px;height:44px;border-radius:13px;border:1px solid var(--line);
+    background:var(--panel);backdrop-filter:blur(14px);cursor:pointer;display:grid;place-items:center;
+    color:var(--ink-soft);box-shadow:var(--shadow-soft);transition:.18s var(--ease);
+  }
+  .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+  .icon-btn svg{width:19px;height:19px}
+
+  .theme-toggle{
+    border:1px solid var(--line); background:var(--panel); backdrop-filter:blur(14px);
+    border-radius:13px; height:44px; padding:4px; display:flex; gap:2px; cursor:pointer;
+    box-shadow:var(--shadow-soft); position:relative;
+  }
+  .theme-toggle button{
+    border:none; background:transparent; cursor:pointer; width:38px; border-radius:10px;
+    display:grid; place-items:center; color:var(--muted); transition:.2s var(--ease); position:relative; z-index:2;
+  }
+  .theme-toggle button svg{width:18px;height:18px}
+  .theme-toggle .knob{
+    position:absolute; top:4px; left:4px; width:38px; height:36px; border-radius:10px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2)); transition:transform .32s var(--ease);
+    box-shadow:0 6px 16px rgba(74,111,165,0.4); z-index:1;
+  }
+  html[data-theme="light"] .theme-toggle .knob{transform:translateX(40px)}
+  html[data-theme="dark"]  .theme-toggle button:first-of-type{color:#fff}
+  html[data-theme="light"] .theme-toggle button:last-of-type{color:#fff}
+
+  .brief{display:grid; grid-template-columns:1.55fr .75fr; gap:16px}
+  .card{
+    background:var(--panel); backdrop-filter:blur(16px);
+    border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--glow); padding:20px;
+  }
+  .morning{position:relative; overflow:hidden; border:1px solid var(--line-strong);
+    background:linear-gradient(135deg, var(--accent-soft), transparent 52%), var(--panel);
+    box-shadow:var(--glow), inset 0 1px 0 rgba(120,170,230,.10);}
+  .morning::after{content:""; position:absolute; width:380px; height:380px; right:-130px; top:-150px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent-soft), transparent 68%); opacity:.9;}
+  .morning::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
+    background:linear-gradient(var(--accent),var(--accent-2)); opacity:.8;}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:12px}
+  .eyebrow::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px var(--green-soft); animation:pulse 2s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 7px transparent}}
+  .morning h2{font-family:var(--font-display); font-weight:500; margin:0 0 10px; font-size:22px; letter-spacing:-.01em}
+  .morning p{color:var(--ink-soft); margin:0; max-width:640px; line-height:1.6; font-size:14px}
+  .morning p b{color:var(--ink); font-weight:600}
+  .actions{margin-top:16px; display:flex; gap:9px; flex-wrap:wrap}
+  .btn{
+    border:1px solid var(--line-strong); background:var(--panel-2); color:var(--ink);
+    padding:9px 14px; border-radius:11px; font-family:var(--font-body); font-weight:600; font-size:13px;
+    cursor:pointer; transition:.18s var(--ease); display:inline-flex; align-items:center; gap:7px;
+  }
+  .btn:hover{transform:translateY(-2px); border-color:var(--accent); color:var(--accent)}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; border:none; box-shadow:0 10px 24px rgba(74,111,165,0.35)}
+  .btn.primary:hover{color:#fff; filter:brightness(1.08)}
+  .btn.sm{padding:7px 11px;font-size:12px}
+
+  .scorebox{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px}
+  .ring{position:relative; width:140px; height:140px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .val{position:absolute; inset:0; display:grid; place-items:center}
+  .ring .val b{font-family:var(--font-display); font-size:44px; font-weight:600; letter-spacing:-.03em; line-height:1; background:linear-gradient(180deg,var(--accent-2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 0 14px var(--accent-soft))}
+  .scorebox .cap{color:var(--muted); font-size:12.5px; max-width:170px}
+
+  .metrics{display:grid; grid-template-columns:repeat(4,1fr); gap:14px}
+  .metric{padding:17px; border-radius:16px; background:var(--panel); border:1px solid var(--line); box-shadow:var(--shadow-soft); position:relative; overflow:hidden; transition:.2s var(--ease)}
+  .metric:hover{transform:translateY(-3px); border-color:var(--line-strong)}
+  .metric .ico{width:32px; height:32px; border-radius:10px; display:grid; place-items:center; margin-bottom:11px; background:var(--accent-soft); color:var(--accent-2); box-shadow:inset 0 0 0 1px var(--line-strong)}
+  .metric strong{font-family:var(--font-display); display:block; font-size:29px; font-weight:600; letter-spacing:-.02em; line-height:1}
+  .metric span{color:var(--muted); font-weight:500; font-size:12.5px; display:block; margin-top:5px}
+
+  .section-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px}
+  .section-head h2{font-family:var(--font-display); font-weight:500; font-size:19px; margin:0; letter-spacing:-.01em}
+  .tabs{display:flex; gap:7px; flex-wrap:wrap}
+  .tab{border:1px solid var(--line); background:transparent; color:var(--ink-soft); padding:7px 13px; border-radius:10px; font-family:var(--font-body); font-weight:600; font-size:12.5px; cursor:pointer; transition:.16s var(--ease)}
+  .tab:hover{border-color:var(--line-strong)}
+  .tab.active{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+
+  .worklist{display:flex; flex-direction:column; gap:11px}
+  .item{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:15px; padding:15px;
+    display:grid; grid-template-columns:54px 1fr 116px; gap:15px; align-items:center;
+    cursor:pointer; transition:.18s var(--ease); position:relative;
+  }
+  .item::before{content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px; border-radius:3px; background:transparent; transition:.18s}
+  .item:hover{transform:translateX(3px); border-color:var(--line-strong); background:var(--accent-soft)}
+  .item.selected{border-color:var(--accent); background:var(--accent-soft)}
+  .item.selected::before{background:linear-gradient(var(--accent),var(--accent-2))}
+  .prio{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;font-family:var(--font-mono);font-weight:700;font-size:16px;flex:0 0 auto}
+  .p-red{background:var(--red-soft);color:var(--red);box-shadow:inset 0 0 0 1px rgba(255,122,110,.35)}
+  .p-amber{background:var(--amber-soft);color:var(--amber);box-shadow:inset 0 0 0 1px rgba(255,194,75,.35)}
+  .p-green{background:var(--green-soft);color:var(--green);box-shadow:inset 0 0 0 1px rgba(67,224,168,.35)}
+  .item h3{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .item .meta{margin:5px 0 0;color:var(--muted);font-size:12.5px;line-height:1.4}
+  .chips{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink-soft);font-weight:600}
+  .chip.red{background:var(--red-soft);color:var(--red);border-color:transparent}
+  .chip.amber{background:var(--amber-soft);color:var(--amber);border-color:transparent}
+  .chip.blue{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+  .item .due{text-align:right;color:var(--ink-soft);font-weight:600;font-size:12.5px;font-family:var(--font-mono)}
+  .item .due small{display:block;color:var(--muted);font-weight:500;margin-top:2px}
+
+  .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-top:4px}
+  .step{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:14px;position:relative}
+  .step .num{width:26px;height:26px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:var(--font-mono);font-weight:700;font-size:13px;margin-bottom:9px}
+  .step strong{font-size:13px;display:block;line-height:1.25;font-weight:600}
+  .step span{display:block;color:var(--muted);font-size:11.5px;line-height:1.4;margin-top:5px}
+
+  /* ============================ RIGHT RAIL ============================ */
+  .right{display:flex; flex-direction:column; gap:16px; min-width:0; overflow-y:auto; padding-right:2px}
+  .right::-webkit-scrollbar{width:7px}.right::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:7px}
+  .app.chat-collapsed .right{opacity:0; pointer-events:none; overflow:hidden}
+  .panel h2{font-family:var(--font-display);font-weight:500;margin:0;font-size:18px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+  .panel h2 .tag{margin-left:auto;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 9px;border-radius:999px;font-weight:600}
+  .panel p.sub{color:var(--muted);line-height:1.5;margin:6px 0 0;font-size:13px}
+  .analysis{border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:14px;background:var(--panel-2)}
+  .analysis strong{display:block;margin-bottom:9px;font-family:var(--font-mono);font-size:12px;color:var(--accent)}
+  .reason{display:flex;gap:10px;margin:9px 0;color:var(--ink-soft);font-size:13px;line-height:1.45}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:6px;flex:0 0 auto;box-shadow:0 0 0 4px var(--accent-soft)}
+  .draft{background:var(--panel-2);border:1px dashed var(--line-strong);padding:13px;border-radius:13px;margin-top:12px;color:var(--ink-soft);font-size:13px;line-height:1.5}
+  .draft b{color:var(--ink)}
+
+  /* ---------- MANAGER MEMORY PANEL (new) ---------- */
+  .mem-add{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+  .mem-row{display:flex;gap:8px}
+  .mem-type{
+    flex:0 0 130px;background:var(--field-bg);border:1px solid var(--line);border-radius:11px;
+    color:var(--ink);font-family:var(--font-body);font-size:12.5px;font-weight:600;padding:9px 10px;cursor:pointer;
+  }
+  .mem-input{
+    flex:1;background:var(--field-bg);border:1px solid var(--line);border-radius:11px;
+    color:var(--ink);font-family:var(--font-body);font-size:13px;padding:9px 12px;outline:none;
+  }
+  .mem-input::placeholder{color:var(--muted)}
+  .mem-input:focus,.mem-type:focus{border-color:var(--accent)}
+  .mem-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;max-height:240px;overflow-y:auto;padding-right:2px}
+  .mem-list::-webkit-scrollbar{width:5px}.mem-list::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:5px}
+  .mem{
+    display:flex;align-items:flex-start;gap:10px;padding:11px 12px;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:12px;animation:rise .3s var(--ease) both;
+  }
+  .mem .mtag{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:3px 7px;border-radius:6px;flex:0 0 auto;margin-top:1px}
+  .mt-vip{background:var(--red-soft);color:var(--red)}
+  .mt-tone{background:var(--accent-soft);color:var(--accent)}
+  .mt-delegation_rule{background:var(--amber-soft);color:var(--amber)}
+  .mt-do_not_do{background:var(--red-soft);color:var(--red)}
+  .mt-preference,.mt-project_context,.mt-company_context{background:var(--green-soft);color:var(--green)}
+  .mem .mtext{flex:1;font-size:13px;line-height:1.4;color:var(--ink-soft)}
+  .mem .forget{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;flex:0 0 auto;transition:.15s}
+  .mem .forget:hover{color:var(--red)}
+  .mem-hint{font-size:11.5px;color:var(--muted);margin-top:10px;display:flex;align-items:center;gap:7px}
+  .mem-hint svg{width:14px;height:14px;flex:0 0 auto;color:var(--accent)}
+
+  /* ---- AI CHAT (collapsible) ---- */
+  .chat{display:flex;flex-direction:column;flex:1;min-height:380px;overflow:hidden;padding:0}
+  .chat-head{padding:16px 18px 13px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px}
+  .chat-orb{width:32px;height:32px;border-radius:10px;flex:0 0 auto;position:relative;background:radial-gradient(circle at 50% 95%,#67e8d8,#5ba8f5 50%,var(--accent-2));box-shadow:0 6px 18px rgba(91,168,245,.5)}
+  .chat-orb::after{content:"";position:absolute;inset:-3px;border-radius:13px;border:1.5px solid var(--accent);opacity:.5;animation:ripple 2.6s var(--ease) infinite}
+  @keyframes ripple{0%{transform:scale(.9);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+  .chat-head b{font-family:var(--font-display);font-weight:600;font-size:15px}
+  .chat-head small{display:block;color:var(--green);font-size:11px;font-weight:600}
+  .chat-head .close{margin-left:auto;border:none;background:var(--panel-2);width:30px;height:30px;border-radius:9px;cursor:pointer;color:var(--muted);display:grid;place-items:center;transition:.15s}
+  .chat-head .close:hover{color:var(--red);background:var(--red-soft)}
+  .chat-head .close svg{width:16px;height:16px}
+  .chat-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+  .chat-body::-webkit-scrollbar{width:6px}.chat-body::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:6px}
+  .msg{max-width:86%;padding:11px 14px;border-radius:15px;font-size:13px;line-height:1.5;animation:rise .3s var(--ease) both}
+  .msg.ai{align-self:flex-start;background:var(--chat-bubble-ai);border:1px solid var(--line);border-bottom-left-radius:5px;color:var(--ink)}
+  .msg.user{align-self:flex-end;background:var(--chat-bubble-user);border:1px solid var(--line);border-bottom-right-radius:5px;color:var(--ink)}
+  .msg b{color:var(--accent)}
+  .typing{display:flex;gap:4px}
+  .typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+  .suggest{display:flex;gap:7px;flex-wrap:wrap;padding:0 18px 11px}
+  .suggest button{border:1px solid var(--line);background:var(--panel-2);color:var(--ink-soft);font-family:var(--font-body);font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:999px;cursor:pointer;transition:.16s var(--ease)}
+  .suggest button:hover{border-color:var(--accent);color:var(--accent)}
+  .chat-input{display:flex;gap:9px;align-items:center;padding:13px 16px;border-top:1px solid var(--line);background:var(--panel-2)}
+  .chat-input input{flex:1;background:transparent;border:none;outline:none;color:var(--ink);font-family:var(--font-body);font-size:13.5px}
+  .chat-input input::placeholder{color:var(--muted)}
+  .send{width:38px;height:38px;border-radius:11px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;box-shadow:0 6px 16px rgba(74,111,165,0.4);transition:.16s var(--ease)}
+  .send:hover{transform:scale(1.07)}
+  .send svg{width:18px;height:18px}
+
+  /* floating button to RE-OPEN the chat when collapsed */
+  .chat-fab{
+    position:fixed; right:24px; bottom:24px; z-index:50;
+    width:60px;height:60px;border-radius:18px;border:none;cursor:pointer;
+    background:radial-gradient(circle at 50% 95%,#67e8d8,#5ba8f5 50%,var(--accent-2));
+    box-shadow:0 14px 34px rgba(91,168,245,.5);display:grid;place-items:center;
+    transform:scale(0) rotate(-20deg); opacity:0; transition:.3s var(--ease); pointer-events:none;
+  }
+  .app.chat-collapsed ~ .chat-fab{transform:scale(1) rotate(0); opacity:1; pointer-events:auto}
+  .chat-fab svg{width:26px;height:26px}
+  .chat-fab::after{content:"";position:absolute;inset:-4px;border-radius:22px;border:2px solid var(--accent);opacity:.5;animation:ripple 2.4s var(--ease) infinite}
+
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  main>*{animation:rise .55s var(--ease) both}
+  main>*:nth-child(2){animation-delay:.05s}
+  main>*:nth-child(3){animation-delay:.1s}
+  main>*:nth-child(4){animation-delay:.15s}
+  main>*:nth-child(5){animation-delay:.2s}
+
+  @media(max-width:1240px){
+    body{overflow:auto}
+    .app{grid-template-columns:220px minmax(0,1fr);height:auto;min-height:100vh}
+    .app.chat-collapsed{grid-template-columns:220px minmax(0,1fr)}
+    main,.right{overflow:visible}
+    .right{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+    .right>*{flex:1;min-width:300px}
+    .brief{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:780px){
+    .app{display:block;padding:14px}
+    aside{margin-bottom:14px}
+    .right{display:block}.right>*{margin-bottom:14px}
+    .metrics{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr}
+    .item{grid-template-columns:48px 1fr}.item .due{grid-column:2;text-align:left}
+    .search{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside>
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12 2c.4 3-1.8 4.2-2.8 6.1-1 1.9-.6 4 .9 4.6.5-1.2.2-2.4 1-3.4.2 1.9 1.6 2.7 2.3 4.1.8 1.6.1 3.6-1.4 4.4 3.6.2 6-2 6-5.2 0-4.6-4.2-6.1-4.4-10.6-1.3 1-2 2.6-1.9 4.3-1.6-.9-2-2.6-1.7-4.3z"/></svg>
+      </div>
+      <div><b>Vesta</b><span>Your work, in order</span></div>
+    </div>
+
+    <nav class="nav">
+      <div class="lbl">Workspace</div>
+      <a class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Today <span class="badge">16</span></a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Waiting on Me <span class="badge">8</span></a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16M4 4h13l-2 4 2 4H4"/></svg>Follow-ups <span class="badge">3</span></a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg>Draft Replies <span class="badge">4</span></a>
+      <div class="lbl">Intelligence</div>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11a4 4 0 10-8 0M3 20a7 7 0 0114 0M17 13a5 5 0 014 5"/></svg>Delegation</a>
+      <a id="navMemory"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 100 18M12 3a4 4 0 010 8M12 3v8"/></svg>Memory &amp; Rules</a>
+      <a><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 4 8-8M21 8v5h-5"/></svg>Weekly Review</a>
+    </nav>
+
+    <div class="profile">
+      <div class="avatar">A</div>
+      <div><b>Ali Sabbagh</b><small>Managing Director</small></div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main>
+    <div class="topbar">
+      <div class="title">
+        <h1>Good morning, <span class="accent">Ali</span></h1>
+        <p>Wednesday, 3 June — here's what genuinely needs you today.</p>
+      </div>
+      <div class="top-tools">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+          Search people, threads, tasks…
+          <kbd>⌘K</kbd>
+        </div>
+        <button class="icon-btn" id="openChatTop" title="Toggle Vesta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 01-9 8.4L3 21l1.1-3.6A8.4 8.4 0 1121 11.5z"/></svg>
+        </button>
+        <div class="theme-toggle" id="themeToggle" title="Switch light / dark mode">
+          <div class="knob"></div>
+          <button aria-label="Dark mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg></button>
+          <button aria-label="Light mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <section class="brief">
+      <div class="card morning">
+        <div class="eyebrow">Live morning brief</div>
+        <h2>One blocker is putting a client relationship at risk.</h2>
+        <p>You have <b>5 critical items</b>, <b>3 follow-ups</b>, and <b>1 approval blocking finance</b>. The top risk is the <b>Cedars Group</b> contract thread — they've followed up twice and need confirmation before 4 PM.</p>
+        <div class="actions">
+          <button class="btn primary">▶ Start Focus Mode</button>
+          <button class="btn">Generate Reply Drafts</button>
+          <button class="btn">Show Delegation Ideas</button>
+        </div>
+      </div>
+
+      <div class="card scorebox">
+        <div class="ring">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="60" fill="none" stroke="var(--ring-track)" stroke-width="11"/>
+            <circle cx="70" cy="70" r="60" fill="none" stroke="url(#g)" stroke-width="11" stroke-linecap="round"
+              stroke-dasharray="377" stroke-dashoffset="30" id="ringArc"/>
+            <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent-2)"/></linearGradient></defs>
+          </svg>
+          <div class="val"><b id="ringVal">92</b></div>
+        </div>
+        <div class="cap">Highest urgency score in your queue right now</div>
+      </div>
+    </section>
+
+    <section class="metrics">
+      <div class="metric"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5.2L4 18z"/></svg></div><strong>5</strong><span>Must reply today</span></div>
+      <div class="metric"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 19a6 6 0 0112 0M16 7h5M18.5 4.5v5"/></svg></div><strong>8</strong><span>People waiting on you</span></div>
+      <div class="metric"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v6h6M20 20v-6h-6M20 9A8 8 0 006 5M4 15a8 8 0 0014 4"/></svg></div><strong>3</strong><span>Repeated follow-ups</span></div>
+      <div class="metric"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20l-7-3V5l7 3 7-3v12z M12 8v12"/></svg></div><strong>4</strong><span>Drafts ready</span></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Today's Radar</h2>
+        <div class="tabs">
+          <button class="tab active" data-filter="all">All</button>
+          <button class="tab" data-filter="critical">Critical</button>
+          <button class="tab" data-filter="waiting">Waiting on me</button>
+          <button class="tab" data-filter="followup">Follow-ups</button>
+          <button class="tab" data-filter="delegate">Can delegate</button>
+        </div>
+      </div>
+      <div class="worklist" id="worklist">
+        <div class="item selected" data-type="critical followup waiting" data-title="Cedars Group contract approval" data-priority="92" data-detail="Cedars Group followed up twice. Last manager reply was 4 days ago. Deadline appears to be today at 4 PM. AI recommends replying or delegating legal review immediately." data-draft="Hi Maya, thanks for following up. I am reviewing the final contract notes now and will confirm the approval status before 4 PM today. If anything needs legal confirmation, I will loop them in immediately.">
+          <div class="prio p-red">92</div>
+          <div><h3>Cedars Group contract approval</h3><p class="meta">Outlook · Maya requested approval before 4 PM. Two follow-ups detected.</p><div class="chips"><span class="chip red">Must reply</span><span class="chip amber">2 follow-ups</span><span class="chip blue">Client</span></div></div>
+          <div class="due">Due today<small>4:00 PM</small></div>
+        </div>
+        <div class="item" data-type="waiting critical" data-title="Finance payment approval" data-priority="88" data-detail="Finance is waiting for your approval to release the supplier payment. The same approval was mentioned in email and Teams, so the AI marked it as a blocker." data-draft="Hi Rania, approved from my side. Please proceed with the supplier payment and send me the confirmation once completed.">
+          <div class="prio p-red">88</div>
+          <div><h3>Finance payment approval</h3><p class="meta">Teams + Outlook · Rania is blocked until you approve supplier payment.</p><div class="chips"><span class="chip red">Blocking team</span><span class="chip blue">Finance</span></div></div>
+          <div class="due">Waiting<small>2 days</small></div>
+        </div>
+        <div class="item" data-type="followup waiting" data-title="Hiring decision follow-up" data-priority="81" data-detail="HR asked for final decision on a candidate. You replied that you would confirm yesterday, but no final answer was sent." data-draft="Hi Lina, thanks for the reminder. Please proceed with the candidate. I approve moving to the offer stage.">
+          <div class="prio p-amber">81</div>
+          <div><h3>Hiring decision follow-up</h3><p class="meta">Outlook · HR followed up after your promised confirmation date passed.</p><div class="chips"><span class="chip amber">Promise detected</span><span class="chip amber">Follow-up</span></div></div>
+          <div class="due">Overdue<small>1 day</small></div>
+        </div>
+        <div class="item" data-type="delegate" data-title="IT laptop purchase request" data-priority="63" data-detail="IT needs purchase confirmation. AI suggests delegating budget validation to Operations before you approve." data-draft="Hi Omar, please check this laptop purchase request against the approved budget and send me your recommendation today.">
+          <div class="prio p-amber">63</div>
+          <div><h3>IT laptop purchase request</h3><p class="meta">Outlook · Approval needed, but can be delegated for budget check.</p><div class="chips"><span class="chip blue">Can delegate</span><span class="chip">IT</span></div></div>
+          <div class="due">This week</div>
+        </div>
+        <div class="item" data-type="waiting" data-title="Board meeting preparation" data-priority="57" data-detail="Calendar meeting tomorrow. AI collected recent emails, open decisions, and questions you may need to prepare." data-draft="Meeting prep pack is ready: agenda summary, open decisions, recent emails, and suggested questions for the board discussion.">
+          <div class="prio p-green">57</div>
+          <div><h3>Board meeting preparation</h3><p class="meta">Calendar · Meeting tomorrow. AI prepared context from related emails.</p><div class="chips"><span class="chip">Meeting prep</span><span class="chip blue">Context ready</span></div></div>
+          <div class="due">Tomorrow<small>10:00 AM</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><h2>How the assistant works</h2></div>
+      <div class="flow">
+        <div class="step"><div class="num">1</div><strong>Collects work</strong><span>Outlook, Teams, tasks, and calendar items.</span></div>
+        <div class="step"><div class="num">2</div><strong>Scores priority</strong><span>Urgency, follow-ups, deadlines, VIPs, blockers.</span></div>
+        <div class="step"><div class="num">3</div><strong>You review</strong><span>One dashboard instead of many inboxes.</span></div>
+        <div class="step"><div class="num">4</div><strong>You act fast</strong><span>Reply, delegate, remind, snooze, approve.</span></div>
+        <div class="step"><div class="num">5</div><strong>It learns</strong><span>Tone, people, and rules improve weekly.</span></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== RIGHT RAIL ===================== -->
+  <section class="right">
+    <div class="card panel">
+      <h2>AI Analysis <span class="tag">Live</span></h2>
+      <p class="sub" id="detail-title" style="font-weight:600;color:var(--ink);margin-top:10px">Cedars Group contract approval</p>
+      <div class="analysis">
+        <strong id="detail-score">PRIORITY · 92 / 100</strong>
+        <div class="reason"><div class="dot"></div><div id="detail-text">Cedars Group followed up twice. Last manager reply was 4 days ago. Deadline appears to be today at 4 PM. AI recommends replying or delegating legal review immediately.</div></div>
+        <div class="chips"><span class="chip red">Reply today</span><span class="chip amber">Risk: relationship delay</span></div>
+      </div>
+      <div class="draft" id="draft-text"><b>Suggested draft</b><br/>Hi Maya, thanks for following up. I am reviewing the final contract notes now and will confirm the approval status before 4 PM today. If anything needs legal confirmation, I will loop them in immediately.</div>
+      <div class="actions" style="margin-top:14px"><button class="btn primary sm">Approve Draft</button><button class="btn sm">Edit</button><button class="btn sm">Set Reminder</button></div>
+    </div>
+
+    <!-- ===== MANAGER MEMORY (new — enter & save memories the AI uses) ===== -->
+    <div class="card panel" id="memoryCard">
+      <h2>Manager Memory <span class="tag">Teaches AI</span></h2>
+      <p class="sub">Save VIPs, tone, delegation rules and context. The assistant uses these every time it prioritises and drafts.</p>
+
+      <div class="mem-add">
+        <div class="mem-row">
+          <select class="mem-type" id="memType">
+            <option value="vip">VIP person</option>
+            <option value="tone">Tone</option>
+            <option value="delegation_rule">Delegation rule</option>
+            <option value="do_not_do">Do NOT do</option>
+            <option value="project_context">Project context</option>
+            <option value="company_context">Company context</option>
+            <option value="preference">Preference</option>
+          </select>
+          <input class="mem-input" id="memInput" placeholder="e.g. Treat Cedars Group as VIP" />
+        </div>
+        <button class="btn primary" id="memSave" style="justify-content:center">＋ Remember this</button>
+      </div>
+
+      <div class="mem-list" id="memList"><!-- seeded by JS --></div>
+
+      <div class="mem-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22a10 10 0 100-20 10 10 0 000 20zM12 8v5M12 16h.01"/></svg>
+        Memories are private to you and editable any time. Forget one with the ✕.
+      </div>
+    </div>
+
+    <!-- ===== AI CHAT (collapsible) ===== -->
+    <div class="card panel chat" id="chatCard">
+      <div class="chat-head">
+        <div class="chat-orb"><svg viewBox="0 0 24 24" fill="#fff" stroke="none" style="width:16px;height:16px;position:absolute;inset:0;margin:auto"><path d="M12 2c.4 3-1.8 4.2-2.8 6.1-1 1.9-.6 4 .9 4.6.5-1.2.2-2.4 1-3.4.2 1.9 1.6 2.7 2.3 4.1.8 1.6.1 3.6-1.4 4.4 3.6.2 6-2 6-5.2 0-4.6-4.2-6.1-4.4-10.6-1.3 1-2 2.6-1.9 4.3-1.6-.9-2-2.6-1.7-4.3z"/></svg></div>
+        <div><b>Vesta</b><small>● Online · keeping things in order</small></div>
+        <button class="close" id="chatClose" title="Hide assistant">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="msg ai">Morning, Ali — Vesta here 🔥 I've scanned <b>Outlook</b>, <b>Teams</b> and your calendar and kept everything in order. The <b>Cedars Group</b> approval is the one I'd handle first — want me to draft the reply?</div>
+        <div class="msg user">What's blocking finance?</div>
+        <div class="msg ai">Rania needs your sign-off to release the <b>supplier payment</b>. It came up in both email and Teams, so I flagged it as a blocker. I can approve on your behalf or draft a note to her.</div>
+      </div>
+      <div class="suggest" id="suggest">
+        <button>Summarise my day</button>
+        <button>Draft the Cedars reply</button>
+        <button>Who's waiting on me?</button>
+      </div>
+      <div class="chat-input">
+        <input id="chatInput" placeholder="Ask the assistant anything…" />
+        <button class="send" id="chatSend"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- floating re-open button (shows only when chat is collapsed) -->
+<button class="chat-fab" id="chatFab" title="Open Vesta">
+  <svg viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12 2c.4 3-1.8 4.2-2.8 6.1-1 1.9-.6 4 .9 4.6.5-1.2.2-2.4 1-3.4.2 1.9 1.6 2.7 2.3 4.1.8 1.6.1 3.6-1.4 4.4 3.6.2 6-2 6-5.2 0-4.6-4.2-6.1-4.4-10.6-1.3 1-2 2.6-1.9 4.3-1.6-.9-2-2.6-1.7-4.3z"/></svg>
+</button>
+
+<script>
+  const root = document.documentElement;
+  const app = document.getElementById('app');
+  const $ = id => document.getElementById(id);
+
+  /* ---------- THEME TOGGLE ---------- */
+  $('themeToggle').addEventListener('click', () => {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+  });
+
+  /* ---------- CHAT OPEN / CLOSE ---------- */
+  function openChat(){ app.classList.remove('chat-collapsed'); }
+  function closeChat(){ app.classList.add('chat-collapsed'); }
+  $('chatClose').addEventListener('click', closeChat);
+  $('chatFab').addEventListener('click', openChat);
+  $('openChatTop').addEventListener('click', () => app.classList.toggle('chat-collapsed'));
+
+  /* ---------- WORKLIST SELECTION ---------- */
+  const items = document.querySelectorAll('.item');
+  items.forEach(item => item.addEventListener('click', () => {
+    items.forEach(i => i.classList.remove('selected'));
+    item.classList.add('selected');
+    $('detail-title').textContent = item.dataset.title;
+    $('detail-score').textContent = 'PRIORITY · ' + item.dataset.priority + ' / 100';
+    $('detail-text').textContent = item.dataset.detail;
+    $('draft-text').innerHTML = '<b>Suggested draft</b><br/>' + item.dataset.draft;
+    const p = +item.dataset.priority;
+    $('ringVal').textContent = p;
+    $('ringArc').style.strokeDashoffset = 377 - (377 * p / 100);
+  }));
+
+  /* ---------- TAB FILTERS ---------- */
+  const tabs = document.querySelectorAll('.tab[data-filter]');
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const f = tab.dataset.filter;
+    items.forEach(item => item.style.display = (f === 'all' || item.dataset.type.includes(f)) ? 'grid' : 'none');
+  }));
+
+  /* ---------- MANAGER MEMORY ---------- */
+  const TYPE_LABEL = {
+    vip:'VIP', tone:'Tone', delegation_rule:'Delegate',
+    do_not_do:'Never', project_context:'Project', company_context:'Company', preference:'Pref'
+  };
+  let memories = [
+    { type:'vip',             text:'CEO, CFO and Cedars Group are VIP — always top priority.' },
+    { type:'tone',            text:'Keep replies short, polite and direct.' },
+    { type:'delegation_rule', text:'Finance approvals can be delegated to Rania.' },
+    { type:'do_not_do',       text:'Never send any email without my explicit approval.' },
+  ];
+  const memList = $('memList');
+  function renderMemories(){
+    memList.innerHTML = '';
+    memories.forEach((m, i) => {
+      const el = document.createElement('div');
+      el.className = 'mem';
+      el.innerHTML =
+        '<span class="mtag mt-'+m.type+'">'+(TYPE_LABEL[m.type]||m.type)+'</span>' +
+        '<span class="mtext">'+m.text.replace(/</g,'&lt;')+'</span>' +
+        '<button class="forget" title="Forget this" data-i="'+i+'">✕</button>';
+      memList.appendChild(el);
+    });
+    memList.querySelectorAll('.forget').forEach(b =>
+      b.addEventListener('click', () => { memories.splice(+b.dataset.i,1); renderMemories(); }));
+  }
+  function saveMemory(){
+    const text = $('memInput').value.trim();
+    if(!text) return;
+    memories.unshift({ type:$('memType').value, text });
+    $('memInput').value=''; renderMemories();
+    addMsg('Saved to memory ✅ I\u2019ll apply “'+text.replace(/</g,'&lt;')+'” from now on.', 'ai');
+  }
+  $('memSave').addEventListener('click', saveMemory);
+  $('memInput').addEventListener('keydown', e => { if(e.key==='Enter') saveMemory(); });
+  $('navMemory').addEventListener('click', () => {
+    openChat();
+    $('memoryCard').scrollIntoView({behavior:'smooth', block:'center'});
+    $('memInput').focus();
+  });
+  renderMemories();
+
+  /* ---------- AI CHAT (mock now → real bot later via askAI) ---------- */
+  const chatBody = $('chatBody'), input = $('chatInput');
+  function addMsg(text, who){
+    const el = document.createElement('div');
+    el.className = 'msg ' + who; el.innerHTML = text;
+    chatBody.appendChild(el); chatBody.scrollTop = chatBody.scrollHeight;
+    return el;
+  }
+  function typing(){
+    const el = document.createElement('div');
+    el.className = 'msg ai'; el.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    chatBody.appendChild(el); chatBody.scrollTop = chatBody.scrollHeight; return el;
+  }
+  const mock = {
+    "summarise my day":"Today: <b>5 critical</b>, <b>3 follow-ups</b>, <b>1 finance blocker</b>. Start with Cedars Group (due 4 PM), then approve Rania's payment. I can clear two of these with one click.",
+    "draft the cedars reply":"Drafted ✍️ — “Hi Maya, reviewing the final notes now, I'll confirm approval before 4 PM today and loop in legal if needed.” Want me to send or edit?",
+    "who's waiting on me":"<b>8 people.</b> Most urgent: Maya (Cedars), Rania (Finance), Lina (HR). The first two are time-sensitive today."
+  };
+  function askAI(q){
+    const t = typing();
+    setTimeout(() => {
+      t.remove();
+      const key = q.toLowerCase().replace(/[?.!]/g,'').trim();
+      const reply = mock[key] || "Got it — I'll work on “" + q + "”. (Connect a model endpoint in <b>askAI()</b> to make this live.)";
+      addMsg(reply, 'ai');
+    }, 800);
+  }
+  function send(){
+    const q = input.value.trim(); if(!q) return;
+    addMsg(q, 'user'); input.value=''; askAI(q);
+  }
+  $('chatSend').addEventListener('click', send);
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') send(); });
+  document.querySelectorAll('#suggest button').forEach(b =>
+    b.addEventListener('click', () => { addMsg(b.textContent, 'user'); askAI(b.textContent); }));
+</script>
+</body>
+</html>
