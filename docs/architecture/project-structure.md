@@ -31,20 +31,41 @@ HTML mockup while staying idiomatic.
 │
 ├── components/
 │   ├── dashboard/                # Dashboard sections
-│   │   ├── DashboardClient.tsx   # Owns selection + chat-open state, lays out the grid
-│   │   ├── Sidebar.tsx           # Brand, nav, profile
-│   │   ├── Topbar.tsx            # Greeting, search, chat + theme toggles (client)
-│   │   ├── MorningBrief.tsx      # Hero brief + urgency ring
-│   │   ├── UrgencyRing.tsx       # SVG priority ring
-│   │   ├── KpiCards.tsx          # Top metric cards
-│   │   ├── TodaysRadar.tsx       # Work queue + filter tabs (client)
-│   │   ├── WorkItemRow.tsx       # A single radar row
-│   │   ├── AiAnalysisPanel.tsx   # Reasoning + suggested draft + safety copy
-│   │   ├── ManagerMemoryPanel.tsx# Add/forget manager memories (client)
-│   │   ├── AssistantChat.tsx     # Collapsible mock chat (client)
+│   │   ├── DashboardClient.tsx   # Owns shell state: selection, active view,
+│   │   │                         #   sidebar collapse + mobile drawer, rail
+│   │   │                         #   collapse + active tab, chat drawer
+│   │   ├── Sidebar.tsx           # Composes header/nav/footer; desktop column +
+│   │   │                         #   mobile overlay drawer
+│   │   ├── SidebarHeader.tsx     # Brand + collapse/expand toggle (no logo overlap)
+│   │   ├── SidebarNav.tsx        # Expanded/collapsed nav, badges, tooltips
+│   │   ├── SidebarFooter.tsx     # Profile card (simplified when collapsed)
+│   │   ├── Topbar.tsx            # Greeting + utility toolbar: search, Outlook
+│   │   │                         #   status, bell, settings, theme, rail toggle,
+│   │   │                         #   avatar, mobile hamburger
+│   │   ├── MorningBrief.tsx      # Compact brief: badge, headline, top-risk chip,
+│   │   │                         #   4 quick actions (0.3; ring removed)
+│   │   ├── UrgencyRing.tsx       # Full + CompactUrgencyRing SVG rings (kept for reuse)
+│   │   ├── MetricsStrip.tsx      # Compact KPI metrics strip (0.3; replaces KpiCards)
+│   │   ├── AiCommandCenter.tsx   # Gradient cards — RESERVED, not on Today page
+│   │   │                         #   (flag-gated SHOW_LARGE_COMMAND_CENTER=false)
+│   │   ├── KpiCards.tsx          # Old KPI cards — retained, no longer rendered
+│   │   ├── TodaysRadar.tsx       # Work queue + filter tabs (controlled or internal)
+│   │   ├── WorkItemRow.tsx       # A radar row (source, person, reason, action chips)
+│   │   ├── AiAssistantRail.tsx   # Contextual AI rail: Action/Draft/Memory/Activity
+│   │   ├── CollapsedRail.tsx     # Slim vertical icon strip for the collapsed rail
+│   │   ├── FocusModeDrawer.tsx   # "Clear My Day" preview drawer (demo)
+│   │   ├── MeetingPrepDrawer.tsx # "Meeting Prep" preview drawer (demo)
+│   │   ├── CleanInboxDrawer.tsx  # "Clean Inbox" preview drawer (demo)
+│   │   ├── MemoryView.tsx        # Full-page "Memory & Rules" workspace (0.4):
+│   │   │                         #   add form, category tabs, list, help panel
+│   │   ├── ManagerMemoryPanel.tsx# Compact add/forget memory card (retained, reused)
+│   │   ├── AssistantChat.tsx     # Right-side chat drawer opened by a FAB (client)
 │   │   └── HowItWorks.tsx        # 5-step explainer strip
 │   ├── ui/                       # Shared primitives
 │   │   ├── Chip.tsx
+│   │   ├── Drawer.tsx            # Shared right-side slide-in drawer
+│   │   ├── Toast.tsx             # ToastProvider + useToast (demo feedback)
+│   │   ├── StateView.tsx         # Empty/loading/disconnected/error states
 │   │   └── Icon.tsx              # Stroked icon set + Vesta flame mark
 │   └── __tests__/                # Component tests (Vitest)
 │
@@ -65,6 +86,36 @@ HTML mockup while staying idiomatic.
 ├── vitest.config.ts, vitest.setup.ts, playwright.config.ts
 ├── .eslintrc.json, .prettierrc.json, .env.example, .gitignore
 ```
+
+## Layout behavior
+
+- **Sidebar** collapses between a full panel (~280px) and an icon-only rail
+  (~88px). Below `lg` it is hidden and opens as a mobile overlay drawer from the
+  topbar hamburger. The collapse toggle never overlaps the logo (see
+  `docs/design/visual-direction-v2.md`).
+- **Main area** swaps between the **Today** view (compact brief, metrics strip,
+  Today's Radar, how-it-works) and the **Memory & Rules** view, driven by the left
+  nav. (Phase 0.3 removed the large AI Command Center cards and the six KPI cards
+  from this view; quick actions now live in the compact brief.)
+- **Right rail** is the **Contextual AI Assistant Rail** on the Today view, with
+  Action/Draft/Memory/Activity tabs. The topbar AI toggle collapses it to a slim
+  64px icon strip (clicking an icon re-expands to that tab). Below `lg` it stacks
+  below the main content.
+- **Assistant chat** is a floating "Ask Vesta" button (bottom-right) that opens a
+  right-side drawer with a backdrop; closes on the X, backdrop click, or Escape.
+
+> Phase 0.1 ("dashboard polish") refreshed the light theme into a premium light
+> SaaS palette, added the topbar utility toolbar, AI Command Center, the
+> contextual AI rail, and the sidebar collapse fix. Phase 0.2 added demo
+> interactions (toasts, drawers, UI states). Phase 0.3 ("focus & simplicity")
+> simplified the Today page: compact brief, metrics strip, command-center cards
+> removed, Today's Radar promoted. Phase 0.4 ("final UI fixes") cleaned the topbar
+> (icon-only rail toggle, profile name, simplified Outlook status, badge/heading
+> clip fixes), tinted the light-mode AI rail (`--rail-bg`), removed Delegate from
+> the brief, made Memory & Rules a full page, and fixed Today's Radar scrolling.
+> Full details: `docs/design/visual-direction-v2.md`,
+> `docs/design/final-ui-fixes-phase-0-4.md`, and `docs/demo/demo-behavior.md`.
+> Still demo-only (no backend/AI).
 
 ## Data flow (Phase 0)
 

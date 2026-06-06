@@ -27,6 +27,67 @@ Do not implement:
 - AI API calls.
 - Database sync.
 
+### Phase 0.1 — Dashboard Polish
+
+Status: **Done.** Premium light SaaS refresh of the Phase 0 dashboard (still
+demo-only — no Supabase, Graph, AI, auth, migrations, or secrets):
+
+- Redesigned light theme palette; dark mode preserved.
+- Topbar utility toolbar (search, Outlook status, bell, settings, theme, AI-rail
+  toggle, avatar, mobile hamburger).
+- AI Command Center gradient cards (Clear My Day, Meeting Prep, Delegate Work,
+  Clean Inbox).
+- Six manager-focused KPI cards.
+- Sidebar split into header/nav/footer; collapse no longer overlaps the logo.
+- Contextual AI Assistant Rail with Action/Draft/Memory/Activity tabs, collapsible
+  to a 64px icon strip; stacks on small screens.
+- Polished Today's Radar (more filters), Morning Brief, and responsive behavior.
+
+See `docs/design/visual-direction-v2.md`.
+
+### Phase 0.2 — Demo Interactions (interim)
+
+Status: **Done (superseded by 0.3 layout).** Added presentation-ready demo
+behavior on top of 0.1, still demo-only:
+
+- Light theme made the default; dark mode preserved.
+- Toast system (`components/ui/Toast.tsx`) for demo action feedback.
+- Reusable UI states (`components/ui/StateView.tsx`): empty radar, loading,
+  Outlook not connected, AI unavailable, no memories, no drafts.
+- Shared `Drawer` + preview drawers: Focus Mode, Meeting Prep, Clean Inbox.
+- Controllable Today's Radar filter; richer rows (sender + suggested action).
+- Right rail: clearer item context + action buttons that show demo feedback.
+
+### Phase 0.3 — Dashboard Focus & Simplicity Polish
+
+Status: **Done.** Simplified the Today page so the work queue is the focus
+(plan: `docs/design/phase-0-3-dashboard-focus-polish-plan.md`). Still demo-only:
+
+- Compact Morning Brief: badge + headline + one summary line + a small
+  "Top risk" chip + four quick actions (Clear My Day, Draft Replies, Delegate,
+  Meeting Prep). The large urgency ring was removed to stop repeating the score.
+- Large AI Command Center cards removed from the Today page (component kept,
+  gated behind `SHOW_LARGE_COMMAND_CENTER = false` for a future page).
+- Six KPI cards replaced by a compact `MetricsStrip` (4 primary + 2 secondary).
+- Today's Radar promoted; reachable earlier on a laptop screen.
+- "Ask Vesta" FAB becomes compact (icon-only) while the AI rail is expanded.
+
+See `docs/demo/demo-behavior.md` for what is real vs. placeholder.
+
+### Phase 0.4 — Final UI/UX Fixes
+
+Status: **Done.** A focused fix pass (no redesign), still demo-only. Plan/details:
+`docs/design/final-ui-fixes-phase-0-4.md`.
+
+- Topbar: removed the standalone "AI" button (rail toggle is now icon-only),
+  profile chip shows avatar + name, Outlook status simplified to "Connected".
+- Fixed the notification badge clipping and the "Good morning, Ali" italic clip.
+- Right AI rail gets a light-mode tint (`--rail-bg`) so it doesn't merge with cards.
+- Removed "Delegate" from the Morning Brief quick actions (kept in Radar + rail).
+- Memory & Rules rebuilt as a full-page workspace (header, add form, category
+  tabs, list, side help panel).
+- Fixed Today's Radar scrolling (viewport-constrained grid rows + `min-h-0`).
+
 ## Phase 1 — Database Foundation
 
 Goal:

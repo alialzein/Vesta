@@ -15,6 +15,7 @@ const config: Config = {
         panel: 'var(--panel)',
         'panel-solid': 'var(--panel-solid)',
         'panel-2': 'var(--panel-2)',
+        'panel-soft': 'var(--panel-soft)',
         ink: 'var(--ink)',
         'ink-soft': 'var(--ink-soft)',
         muted: 'var(--muted)',
@@ -34,6 +35,7 @@ const config: Config = {
       borderRadius: {
         DEFAULT: 'var(--radius)',
         lg: 'var(--radius-lg)',
+        sm: 'var(--radius-sm)',
       },
       fontFamily: {
         display: ['var(--font-display)'],

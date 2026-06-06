@@ -6,14 +6,33 @@ The dashboard is the manager's daily command center. It should not look or behav
 
 ## Current design direction
 
-The current visual direction is strong:
+> **Updated in Phase 0.1–0.3.** The dashboard ships a **premium light SaaS** theme
+> by default (intentionally designed, not an inverted dark theme) with dark mode
+> preserved. The right panel is a **Contextual AI Assistant Rail** with
+> Action/Draft/Memory/Activity tabs. **Phase 0.3** then made the Today page
+> work-first: the Morning Brief is **compact** (no large urgency ring), the six KPI
+> cards became a **compact metrics strip**, and the large **AI Command Center**
+> cards were removed from the Today page (the four actions live as compact quick
+> actions in the brief). Guiding principle: _work first, intelligence second, news
+> later_. **Phase 0.4** added final fixes: an icon-only AI-rail toggle (no separate
+> "AI" button), a profile chip with name, a simplified "Outlook Connected" status,
+> a tinted light-mode AI rail, Delegate removed from the brief, a **full-page**
+> Memory & Rules workspace, and a Today's Radar scroll fix. Details:
+> `docs/design/visual-direction-v2.md`,
+> `docs/design/phase-0-3-dashboard-focus-polish-plan.md`,
+> `docs/design/final-ui-fixes-phase-0-4.md`, and `docs/demo/demo-behavior.md`.
 
-- Dark executive dashboard.
-- Left navigation.
-- Morning brief hero card.
-- Top metric cards.
-- Today's Radar list.
-- Right AI Analysis panel.
+The visual direction is strong:
+
+- Light SaaS executive dashboard with an optional dark mode.
+- Left navigation (collapsible; collapse never overlaps the logo).
+- Topbar utility toolbar (search, Outlook status, notifications, settings, theme,
+  AI-rail toggle, profile).
+- Compact Morning Brief with a "Top risk" chip and quick actions.
+- Compact metrics strip (Decision Debt, People Blocked, Follow-up Risk, Drafts
+  Ready, + Promises / Time to Clear).
+- Today's Radar list — the primary, focal section.
+- Right Contextual AI Assistant Rail.
 - Manager Memory panel.
 
 Keep this direction.
@@ -126,9 +145,10 @@ Teach AI
 Not urgent
 ```
 
-## AI Analysis Panel
+## Contextual AI Assistant Rail (formerly "AI Analysis Panel")
 
-Must include:
+Tabbed (Action / Draft / Memory / Activity) and contextual to the selected
+Today's Radar item. Must include:
 
 ```txt
 Item title
