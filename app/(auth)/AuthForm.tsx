@@ -4,19 +4,18 @@ import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { signIn, signUp, type AuthState } from './actions';
 import { VestaAuthCore } from './VestaAuthCore';
-import { Icon, MicrosoftLogo } from '@/components/ui/Icon';
+import { createClient } from '@/lib/supabase/client';
+import { Icon, MicrosoftLogo, GoogleLogo } from '@/components/ui/Icon';
 
-/** Rotating phrases shown while a sign-in action is pending. */
+type OAuthProvider = 'azure' | 'google';
+const PROVIDER_LABEL: Record<OAuthProvider, string> = { azure: 'Microsoft', google: 'Google' };
+
+/** Rotating phrases shown while the email sign-in action is pending. */
 const SIGNIN_PHRASES = ['Signing you in', 'Preparing your workspace', 'Loading Vesta'] as const;
 const SIGNUP_PHRASES = [
   'Creating your account',
   'Preparing your workspace',
   'Loading Vesta',
-] as const;
-const MS_PHRASES = [
-  'Connecting to Microsoft',
-  'Preparing your workspace',
-  'Organizing your command center',
 ] as const;
 
 /** Cycle through phrases on an interval while `active`; reset to 0 when idle. */
@@ -68,28 +67,32 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
   const [confirm, setConfirm] = useState('');
   const mismatch = mode === 'signup' && confirm.length > 0 && password !== confirm;
 
-  // Microsoft sign-in is demo-only in this phase (real OAuth arrives in Phase 3).
-  const [msLoading, setMsLoading] = useState(false);
-  const [msNote, setMsNote] = useState<string | null>(null);
-  const msPhrase = usePhraseCycle(msLoading, MS_PHRASES);
+  // OAuth SSO (Phase 2b). signInWithOAuth redirects the browser to the provider;
+  // if the provider is not yet configured in Supabase, it returns an error and
+  // we surface it gracefully (the screen keeps working).
+  const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
+  const [oauthError, setOauthError] = useState<string | null>(null);
 
-  function handleMicrosoft() {
-    if (msLoading) return;
-    setMsNote(null);
-    setMsLoading(true);
-    // Demo: show the loading transition, then explain the Phase 3 plan. This
-    // button is sign-in (SSO) only; connecting the Outlook mailbox for email is
-    // a separate step in Settings (also Phase 3).
-    window.setTimeout(() => {
-      setMsLoading(false);
-      setMsNote(
-        'Microsoft single sign-on arrives in Phase 3. Connecting your Outlook mailbox for email is a separate step in Settings. Use your email below to sign in for now.',
-      );
-    }, 1400);
+  async function handleOAuth(provider: OAuthProvider) {
+    if (oauthLoading) return;
+    setOauthError(null);
+    setOauthLoading(provider);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    // On success the browser navigates to the provider; on error we recover.
+    if (error) {
+      setOauthLoading(null);
+      setOauthError(`${PROVIDER_LABEL[provider]} sign-in isn’t available yet. ${error.message}`);
+    }
   }
 
   const inputClass =
     'w-full rounded-[11px] border border-line bg-field py-[11px] pl-10 pr-3 text-[14px] text-ink outline-none transition placeholder:text-muted focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)]';
+
+  const ssoBusy = oauthLoading !== null;
 
   return (
     <div className="relative z-[1] w-full max-w-[420px]">
@@ -122,38 +125,63 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
           className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--accent)] to-transparent opacity-40"
         />
 
-        {/* Primary CTA — Continue with Microsoft (demo-only). */}
-        <button
-          type="button"
-          onClick={handleMicrosoft}
-          disabled={msLoading}
-          aria-busy={msLoading}
-          className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-line-strong bg-white px-4 py-3 text-[14px] font-semibold text-[#1b1f24] shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition hover:brightness-[1.03] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-80"
-        >
-          {msLoading ? (
-            <Icon
-              name="refresh"
-              className="animate-spin-slow h-[16px] w-[16px] text-[#1b1f24]"
-              aria-hidden="true"
-            />
-          ) : (
-            <MicrosoftLogo className="h-[18px] w-[18px]" />
-          )}
-          <span aria-live="polite">{msLoading ? `${msPhrase}…` : 'Continue with Microsoft'}</span>
-        </button>
+        {/* Primary CTAs — single sign-on (identity only). */}
+        <div className="flex flex-col gap-[10px]">
+          <button
+            type="button"
+            onClick={() => handleOAuth('azure')}
+            disabled={ssoBusy}
+            aria-busy={oauthLoading === 'azure'}
+            className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-line-strong bg-white px-4 py-3 text-[14px] font-semibold text-[#1b1f24] shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition hover:brightness-[1.03] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-80"
+          >
+            {oauthLoading === 'azure' ? (
+              <Icon
+                name="refresh"
+                className="animate-spin-slow h-[16px] w-[16px] text-[#1b1f24]"
+                aria-hidden="true"
+              />
+            ) : (
+              <MicrosoftLogo className="h-[18px] w-[18px]" />
+            )}
+            <span aria-live="polite">
+              {oauthLoading === 'azure' ? 'Connecting to Microsoft…' : 'Continue with Microsoft'}
+            </span>
+          </button>
 
-        {/* Clarify intent: this is sign-in (SSO); mailbox connection is separate. */}
+          <button
+            type="button"
+            onClick={() => handleOAuth('google')}
+            disabled={ssoBusy}
+            aria-busy={oauthLoading === 'google'}
+            className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-line-strong bg-white px-4 py-3 text-[14px] font-semibold text-[#1b1f24] shadow-[0_8px_20px_rgba(0,0,0,0.12)] transition hover:brightness-[1.03] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-80"
+          >
+            {oauthLoading === 'google' ? (
+              <Icon
+                name="refresh"
+                className="animate-spin-slow h-[16px] w-[16px] text-[#1b1f24]"
+                aria-hidden="true"
+              />
+            ) : (
+              <GoogleLogo className="h-[18px] w-[18px]" />
+            )}
+            <span aria-live="polite">
+              {oauthLoading === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
+            </span>
+          </button>
+        </div>
+
+        {/* Clarify intent: SSO is identity only; mailbox connection is separate. */}
         <p className="mt-2 text-center text-[11px] leading-snug text-muted">
-          Use your Microsoft account to sign in. You&apos;ll connect your Outlook mailbox for email
-          later in Settings.
+          Single sign-on confirms who you are. You&apos;ll connect your email mailbox (Outlook,
+          Gmail, or IMAP) for Vesta to read later in Settings.
         </p>
 
-        {msNote && (
+        {oauthError && (
           <p
-            role="status"
-            className="mt-3 rounded-[10px] border border-line bg-panel-2 px-3 py-2 text-[12px] text-ink-soft"
+            role="alert"
+            className="mt-3 rounded-[10px] border border-[color:var(--red)] bg-red-soft px-3 py-2 text-[12px] text-red"
           >
-            {msNote}
+            {oauthError}
           </p>
         )}
 
@@ -276,7 +304,7 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
             </p>
           )}
 
-          <SubmitButton mode={mode} disabled={mismatch || msLoading} />
+          <SubmitButton mode={mode} disabled={mismatch || ssoBusy} />
         </form>
       </div>
 
@@ -288,7 +316,7 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
           onClick={() => {
             setMode((m) => (m === 'signin' ? 'signup' : 'signin'));
             setConfirm('');
-            setMsNote(null);
+            setOauthError(null);
           }}
           className="font-semibold text-accent hover:underline"
         >

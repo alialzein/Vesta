@@ -173,13 +173,26 @@ Outlook **mailbox** for email is a separate **"Connect Outlook"** step in
 Settings/onboarding (Microsoft Graph OAuth — not SMTP/IMAP), planned for Phase 3.
 The login screen states this explicitly so the two are not confused.
 
-**Expanded direction (planned).** Login will be multi-provider (email/password +
-Google + Microsoft SSO via Supabase Auth), a first-run **onboarding tour** will
-collect personality/preferences into `manager_memories` (+ briefing preferences),
-and the mailbox layer is **OAuth-first** (Outlook MVP → Gmail next → generic IMAP
-opt-in later), kept separate from login. Full plan:
-`docs/product/auth-onboarding-and-mailbox-plan.md`. Suggested inserts: Phase 2b
-(SSO providers), Phase 2c (onboarding tour) before Phase 3 (Connect Outlook).
+**Expanded direction.** Login is multi-provider (email/password + Google +
+Microsoft SSO via Supabase Auth), a first-run **onboarding tour** collects
+personality/preferences into `manager_memories` (+ briefing preferences), and the
+mailbox layer supports **both OAuth (Outlook, then Gmail; auto-refreshed) and
+IMAP**, kept separate from login. Full plan:
+`docs/product/auth-onboarding-and-mailbox-plan.md`.
+
+### Phase 2b — SSO login providers (in progress)
+
+Status: **Code done; pending provider config.** "Continue with Microsoft" and
+"Continue with Google" call `supabase.auth.signInWithOAuth` and redirect to
+`/auth/callback`; they degrade gracefully until each provider is enabled in
+Supabase. Setup steps: `docs/architecture/auth-providers-setup.md`. SSO is
+identity-only — mailbox connection is separate (Phase 3).
+
+### Phase 2c — First-run onboarding wizard (next)
+
+A short, skippable full-screen wizard on first login (role → tone → VIPs →
+topics → connect mailbox) writing to `manager_memories` + a `profiles.onboarded_at`
+flag. No external setup. Then Phase 3 (Connect Outlook).
 
 Testing: a **Playwright auth fixture** (`e2e/auth.setup.ts`) signs a shared dev
 test user in and saves `storageState`, so the auth-protected dashboard e2e runs
