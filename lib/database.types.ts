@@ -916,7 +916,35 @@ export type Database = {
       };
     };
     Views: Record<never, never>;
-    Functions: Record<never, never>;
+    Functions: {
+      upsert_graph_token: {
+        Args: {
+          p_integration_id: UUID;
+          p_access: string;
+          p_refresh: string | null;
+          p_expires: Timestamptz;
+          p_scopes: string[];
+        };
+        Returns: undefined;
+      };
+      get_graph_token: {
+        Args: { p_integration_id: UUID };
+        Returns: {
+          encrypted_access_token: string | null;
+          encrypted_refresh_token: string | null;
+          access_token_expires_at: Timestamptz | null;
+          granted_scopes: string[];
+        }[];
+      };
+      update_graph_access_token: {
+        Args: { p_integration_id: UUID; p_access: string; p_expires: Timestamptz };
+        Returns: undefined;
+      };
+      delete_graph_token: {
+        Args: { p_integration_id: UUID };
+        Returns: undefined;
+      };
+    };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
   };

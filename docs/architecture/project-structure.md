@@ -141,9 +141,15 @@ middleware.ts                      # refreshes session, protects routes
 lib/supabase/
 ├── client.ts                      # browser client (anon key)
 ├── server.ts                      # server client bound to request cookies
+├── service.ts                     # service-role client (server-only; private RPCs)
 ├── middleware.ts                  # updateSession + isPublicPath (route guard)
 ├── auth.ts                        # getCurrentUser / requireUser / getProfile
 └── account.ts                     # getAccountView (display name/initials/email)
+lib/graph/                         # Phase 3 — Microsoft Graph / Outlook
+├── crypto.ts                      # AES-256-GCM token encryption (server-only)
+├── oauth.ts                       # config, authorize URL, code exchange, refresh
+├── client.ts                      # Graph REST helper (/me)
+└── tokens.ts                      # store + getValidAccessToken (auto-refresh)
 app/
 ├── (auth)/
 │   ├── actions.ts                 # signIn / signUp / signOut server actions
@@ -159,6 +165,12 @@ e2e/
 ├── dashboard.spec.ts              # runs authenticated (auth fixture)
 └── login.spec.ts                  # runs logged-out
 ├── auth/callback/route.ts         # email-confirmation / OAuth code exchange
+├── api/outlook/
+│   ├── connect/route.ts           # start Outlook OAuth (redirect to Microsoft)
+│   └── callback/route.ts          # exchange code, /me, save integration + tokens
+├── settings/
+│   ├── page.tsx                   # Settings (Outlook connection card)
+│   └── actions.ts                 # disconnectOutlook / testOutlook
 ├── onboarding/
 │   ├── page.tsx                   # first-run gate -> OnboardingWizard (or redirect)
 │   ├── OnboardingWizard.tsx       # full-screen wizard (client)
