@@ -27,25 +27,48 @@ export function MorningBrief({
   onAction: (action: BriefAction) => void;
 }) {
   return (
-    <section className="relative isolate rounded-[var(--radius)] border border-line-strong bg-panel p-[18px] shadow-glow">
-      {/* Decorative gradient wash on its own layer so it can never affect the
-          content box height (avoids a backdrop-blur + layered-gradient paint bug
-          that collapsed the card). */}
+    <section className="relative isolate z-[1] rounded-[var(--radius)] border border-line-strong bg-panel p-[18px] shadow-glow">
+      {/* Live AI signal accents (Phase 0.5, Section B).
+          IMPORTANT: the decorative layers live in their OWN clipped, content-free
+          wrapper — NOT via `overflow-hidden` on the card itself. Putting
+          `overflow-hidden` + layered background-image gradients on the
+          content/flex element triggers a Chromium paint bug that collapses the
+          card to a sliver (see docs/design/visual-direction-v2.md). This wrapper
+          clips every effect (incl. the left signal bar) to the rounded corner
+          while the content box stays untouched. */}
       <span
-        className="pointer-events-none absolute inset-0 -z-10 rounded-[var(--radius)] bg-[linear-gradient(120deg,var(--accent-soft),transparent_60%)]"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[var(--radius)]"
         aria-hidden="true"
-      />
-      <span
-        className="pointer-events-none absolute bottom-0 left-0 top-0 -z-10 w-[3px] rounded-l-[var(--radius)] bg-gradient-to-b from-accent to-accent-2 opacity-80"
-        aria-hidden="true"
-      />
+      >
+        {/* Soft top-left corner glow. */}
+        <span className="absolute inset-0 bg-[radial-gradient(420px_180px_at_0%_0%,var(--accent-soft),transparent_70%)]" />
+        {/* Very low-opacity drifting shimmer — the "AI signal" layer. */}
+        <span className="animate-vesta-shimmer absolute inset-y-0 -left-1/4 w-1/2 bg-[linear-gradient(100deg,transparent,var(--accent-soft),transparent)] opacity-50" />
+        {/* Left signal bar — clipped to the rounded corner by this wrapper. */}
+        <span className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-accent to-accent-2" />
+      </span>
 
       <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-[10px]">
-            <span className="inline-flex items-center gap-2 rounded-full bg-panel-2 px-[10px] py-[4px] text-[10.5px] font-semibold uppercase tracking-[0.16em] text-accent">
-              <span className="h-[6px] w-[6px] rounded-full bg-green shadow-[0_0_0_3px_var(--green-soft)]" />
+            <span className="inline-flex items-center gap-[7px] rounded-full bg-panel-2 px-[10px] py-[4px] text-[10.5px] font-semibold uppercase tracking-[0.16em] text-accent">
+              {/* Pulsing live dot with an expanding ripple ring. */}
+              <span className="relative grid h-[7px] w-[7px] place-items-center">
+                <span
+                  className="animate-vesta-ripple absolute h-[7px] w-[7px] rounded-full bg-green"
+                  aria-hidden="true"
+                />
+                <span className="animate-vesta-pulse relative h-[6px] w-[6px] rounded-full bg-green shadow-[0_0_0_2px_var(--green-soft)]" />
+              </span>
               Live morning brief
+              {/* Tiny signal waveform (opacity comes from the pulse keyframe, so
+                  the bars use the solid accent token — no /opacity modifier,
+                  which Tailwind cannot apply to the hex CSS var). */}
+              <span className="ml-[1px] flex items-end gap-[2px]" aria-hidden="true">
+                <span className="animate-vesta-pulse h-[6px] w-[2px] rounded-full bg-accent [animation-delay:-0.2s]" />
+                <span className="animate-vesta-pulse h-[9px] w-[2px] rounded-full bg-accent [animation-delay:-0.9s]" />
+                <span className="animate-vesta-pulse h-[5px] w-[2px] rounded-full bg-accent [animation-delay:-1.5s]" />
+              </span>
             </span>
             <span className="inline-flex items-center gap-[5px] rounded-full bg-red-soft px-[9px] py-[3px] font-mono text-[11px] font-semibold text-red">
               <Icon name="trend" className="h-[12px] w-[12px]" />

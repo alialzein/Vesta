@@ -235,3 +235,65 @@ Memory & Rules (add form + category tabs), sidebar collapse keeps nav access, th
 defaults to light + toggles, rail collapse/expand, rail tab switch + demo action
 feedback, Radar filters, and selecting a Radar item updates the rail. E2E
 (Playwright) covers the same critical flows. See `components/__tests__/` and `e2e/`.
+
+## AI brand polish, motion & loading (0.5)
+
+Phase 0.5 made Vesta feel like a calm, AI-native command center without
+redesigning the structure. See `docs/design/loading-experience-v1.md` and
+`docs/design/ai-motion-principles.md`.
+
+- **Radar rows** are one cleaner surface (softer `--panel-soft` background,
+  low-contrast border, lighter chips, smaller priority badge, inline action pill,
+  slightly more compact) — less "box inside box". Selected rows show a soft left
+  signal glow that respects the rounded corner (row `overflow-hidden`).
+- **Morning Brief** is now a **live AI signal card**: a pulsing live dot with an
+  expanding ripple, a tiny signal waveform, a very low-opacity drifting shimmer,
+  and a left accent bar clipped by the card radius (`overflow-hidden`). Compact
+  height preserved; Delegate still absent.
+- **Vesta initialization screen** (`components/dashboard/VestaSplashScreen.tsx`)
+  shows on first load: an orbital AI signal system (three rings + traveling nodes +
+  radar sweep + breathing core + faint grid), rotating copy, tagline, and a
+  progress bar. Demo-only timed overlay (~1.8s → fade out); 0ms under test;
+  reduced-motion safe.
+- **Atmospheric depth**: `<DashboardAtmosphere />` paints fixed, low-opacity
+  blue/cyan blooms (`--atmos-*`) + a faint masked grid behind the dashboard.
+  Light mode stays clean; dark mode gains depth. Content sits above it via
+  `relative z-[1]`.
+- **AI rail**: LIVE badge gains a pulse + ripple; active-tab glow; a calm scanning
+  shimmer on Next Best Action; lighter, less-boxed priority metadata.
+- **Motion system**: calm `vesta-*` keyframes (pulse, ripple, shimmer, orbit,
+  breathe, sweep, progress), consistent timing, a global `:focus-visible` accent
+  ring, and a `prefers-reduced-motion` block that disables all decorative motion.
+
+### 0.5 revision
+
+The first 0.5 pass was too subtle and the splash was see-through (a solid color had
+been placed inside `background-image`). The revision:
+
+- **Dark mode is the default theme** now (stronger, more futuristic brand impact);
+  light mode is still one toggle away and fully supported.
+- The splash is a **true full-screen, opaque** `VestaSplashScreen` at `z-[300]`
+  (`.vesta-splash` uses a `background` shorthand whose base color is solid). No
+  dashboard content shows through; **plays on every full page load** (the
+  dashboard mounts once, so internal navigation does not replay it).
+- Radar rows are now **borderless until hover/selected**, with a borderless
+  priority tint and borderless chips — maximally "one surface".
+- Atmosphere is a real component (`DashboardAtmosphere`) with a mint glow near the
+  rail, tuned brighter for the dark default.
+
+### 0.5 final polish
+
+- **No grid behind readable content.** The atmosphere grid used to show through
+  the translucent dark-mode cards as "graph paper" behind Today's Radar. Fix:
+  dark-mode `--panel` is now an **opaque** solid dark-blue (`#131c2b`) so nothing
+  bleeds through cards, and the **grid was removed from the dashboard atmosphere
+  entirely** (only soft radial blooms remain, visible in the shell gaps / margins
+  / behind the transparent header). A grid now lives **only on the splash**.
+  Rule: never put a grid behind Today's Radar, work rows, Morning Brief text, or
+  rail text cards.
+- Today's Radar reads as a calm, solid work surface; the selected row keeps its
+  soft blue tint + left cyan accent (no pattern).
+- **Splash refinements:** a soft radial field behind the orb, more orbiting
+  signal nodes (5), a small live equalizer above the wordmark, brighter tagline,
+  and a branded cyan→mint progress bar with a soft glow. Still opaque, full-screen,
+  reduced-motion safe. `SPLASH_DURATION_MS ≈ 1800`.

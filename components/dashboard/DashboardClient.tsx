@@ -21,6 +21,8 @@ import { AssistantChat } from './AssistantChat';
 import { FocusModeDrawer } from './FocusModeDrawer';
 import { MeetingPrepDrawer } from './MeetingPrepDrawer';
 import { CleanInboxDrawer } from './CleanInboxDrawer';
+import { VestaSplashScreen } from './VestaSplashScreen';
+import { DashboardAtmosphere } from './DashboardAtmosphere';
 import { Icon } from '@/components/ui/Icon';
 
 /**
@@ -29,6 +31,16 @@ import { Icon } from '@/components/ui/Icon';
  * is kept for a possible future "expanded actions" page. Flip to true to show.
  */
 const SHOW_LARGE_COMMAND_CENTER = false;
+
+/**
+ * Initial splash visibility. Shown on the very first paint (so no dashboard ever
+ * flashes behind it) and plays its full duration on every full page load.
+ * DashboardClient mounts once, so internal navigation does not replay it. Never
+ * auto-shown under test (so it cannot block component tests).
+ */
+function initialSplashVisible(): boolean {
+  return process.env.NODE_ENV !== 'test';
+}
 
 /**
  * Owns the dashboard shell state:
@@ -45,6 +57,10 @@ const SHOW_LARGE_COMMAND_CENTER = false;
 export function DashboardClient() {
   const { showToast } = useToast();
 
+  // Branded initialization splash (Phase 0.5). Demo-only timed overlay shown once
+  // per browser session; never auto-shown under test. See VestaSplashScreen.
+  const [showSplash, setShowSplash] = useState(initialSplashVisible);
+
   const [selected, setSelected] = useState<WorkItem>(demoWorkItems[0]);
   const [view, setView] = useState<NavView>('today');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -58,6 +74,11 @@ export function DashboardClient() {
   const [focusOpen, setFocusOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [cleanOpen, setCleanOpen] = useState(false);
+
+  /** Called when the splash finishes its timed sequence. */
+  function handleSplashDone() {
+    setShowSplash(false);
+  }
 
   const onToday = view === 'today';
   const highPriority = priorityBand(selected.priorityScore) === 'red';
@@ -92,12 +113,17 @@ export function DashboardClient() {
 
   return (
     <>
+      {showSplash && <VestaSplashScreen onDone={handleSplashDone} />}
+
+      {/* Subtle Vesta atmosphere behind everything (decorative, z-0). */}
+      <DashboardAtmosphere />
+
       <div
         className={[
           // grid-rows-[minmax(0,1fr)] constrains the single row to the viewport
           // height so the inner scroll containers (main / rail) actually scroll
           // instead of overflowing a body that is overflow:hidden.
-          'grid h-screen w-screen grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 p-3 transition-[grid-template-columns] duration-300 sm:p-4',
+          'relative grid h-screen w-screen grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 p-3 transition-[grid-template-columns] duration-300 sm:p-4',
           sidebarCollapsed
             ? 'lg:grid-cols-[88px_minmax(0,1fr)]'
             : 'lg:grid-cols-[280px_minmax(0,1fr)]',
@@ -115,7 +141,7 @@ export function DashboardClient() {
         {/* Content area: main + optional right rail */}
         <div
           className={[
-            'grid min-h-0 min-w-0 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 transition-[grid-template-columns] duration-300',
+            'relative z-[1] grid min-h-0 min-w-0 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 transition-[grid-template-columns] duration-300',
             onToday
               ? railCollapsed
                 ? 'lg:grid-cols-[minmax(0,1fr)_64px]'

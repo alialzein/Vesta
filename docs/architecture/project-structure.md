@@ -60,6 +60,8 @@ HTML mockup while staying idiomatic.
 │   │   │                         #   add form, category tabs, list, help panel
 │   │   ├── ManagerMemoryPanel.tsx# Compact add/forget memory card (retained, reused)
 │   │   ├── AssistantChat.tsx     # Right-side chat drawer opened by a FAB (client)
+│   │   ├── VestaSplashScreen.tsx # Full-screen opaque branded init splash (0.5 rev)
+│   │   ├── DashboardAtmosphere.tsx# Subtle blue/cyan radial blooms (no grid) (0.5)
 │   │   └── HowItWorks.tsx        # 5-step explainer strip
 │   ├── ui/                       # Shared primitives
 │   │   ├── Chip.tsx
@@ -113,8 +115,23 @@ HTML mockup while staying idiomatic.
 > (icon-only rail toggle, profile name, simplified Outlook status, badge/heading
 > clip fixes), tinted the light-mode AI rail (`--rail-bg`), removed Delegate from
 > the brief, made Memory & Rules a full page, and fixed Today's Radar scrolling.
+> Phase 0.5 ("AI brand polish") reduced "boxes-in-boxes" in the radar rows, turned
+> the Morning Brief into a live AI signal card (pulse + shimmer + corner-respecting
+> accent), added a branded Vesta initialization screen, a subtle blue atmospheric
+> background, a LIVE pulse in the AI rail, and calm AI motion with full
+> reduced-motion support. The 0.5 **revision** then made the splash a true
+> full-screen, opaque `VestaSplashScreen` (orbital rings + radar + nodes, shown
+> on every full page load; the earlier version was see-through),
+> promoted the atmosphere to a `DashboardAtmosphere` component, pushed the radar
+> rows borderless-until-hover, and made **dark mode the default theme**. The 0.5
+> **final polish** then made dark-mode card surfaces opaque (`--panel` solid
+> dark-blue) and **removed the grid from the dashboard atmosphere** (it read as
+> graph paper behind the work list) — leaving only soft radial blooms in the
+> shell background; a grid now lives only on the splash. The splash also gained a
+> soft radial field, more nodes, an equalizer, and a branded progress bar.
 > Full details: `docs/design/visual-direction-v2.md`,
-> `docs/design/final-ui-fixes-phase-0-4.md`, and `docs/demo/demo-behavior.md`.
+> `docs/design/final-ui-fixes-phase-0-4.md`, `docs/design/loading-experience-v1.md`,
+> `docs/design/ai-motion-principles.md`, and `docs/demo/demo-behavior.md`.
 > Still demo-only (no backend/AI).
 
 ## Data flow (Phase 0)

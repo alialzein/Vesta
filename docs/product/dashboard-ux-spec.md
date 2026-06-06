@@ -6,9 +6,9 @@ The dashboard is the manager's daily command center. It should not look or behav
 
 ## Current design direction
 
-> **Updated in Phase 0.1–0.3.** The dashboard ships a **premium light SaaS** theme
-> by default (intentionally designed, not an inverted dark theme) with dark mode
-> preserved. The right panel is a **Contextual AI Assistant Rail** with
+> **Updated in Phase 0.1–0.5.** The dashboard ships **dark mode by default** as of
+> the 0.5 revision (a futuristic executive look); a premium light SaaS theme is one
+> toggle away and fully supported. The right panel is a **Contextual AI Assistant Rail** with
 > Action/Draft/Memory/Activity tabs. **Phase 0.3** then made the Today page
 > work-first: the Morning Brief is **compact** (no large urgency ring), the six KPI
 > cards became a **compact metrics strip**, and the large **AI Command Center**
@@ -17,10 +17,25 @@ The dashboard is the manager's daily command center. It should not look or behav
 > later_. **Phase 0.4** added final fixes: an icon-only AI-rail toggle (no separate
 > "AI" button), a profile chip with name, a simplified "Outlook Connected" status,
 > a tinted light-mode AI rail, Delegate removed from the brief, a **full-page**
-> Memory & Rules workspace, and a Today's Radar scroll fix. Details:
+> Memory & Rules workspace, and a Today's Radar scroll fix. **Phase 0.5** added AI
+> brand polish: lighter "boxes-in-boxes" radar rows, a **live AI signal** Morning
+> Brief (pulse + shimmer + corner-respecting accent), a branded **Vesta loading
+> screen**, a subtle blue atmospheric background, a LIVE pulse in the AI rail, and
+> calm AI motion with full reduced-motion support. The **0.5 revision** then made
+> the splash a true full-screen, opaque `VestaSplashScreen` (plays on each load),
+> pushed radar rows borderless-until-hover, promoted the atmosphere to a
+> `DashboardAtmosphere` component, and made **dark mode the default theme**. The
+> **0.5 final polish** made dark-mode cards **opaque** and **removed the grid from
+> behind the work list** (atmosphere is now soft blooms in the shell background
+> only; a grid lives only on the splash), and refined the splash. Rule: never put
+> a grid/pattern behind readable content.
+> Details:
 > `docs/design/visual-direction-v2.md`,
 > `docs/design/phase-0-3-dashboard-focus-polish-plan.md`,
-> `docs/design/final-ui-fixes-phase-0-4.md`, and `docs/demo/demo-behavior.md`.
+> `docs/design/final-ui-fixes-phase-0-4.md`,
+> `docs/design/phase-0-5-ai-brand-polish-plan.md`,
+> `docs/design/loading-experience-v1.md`, `docs/design/ai-motion-principles.md`,
+> and `docs/demo/demo-behavior.md`.
 
 The visual direction is strong:
 
@@ -203,6 +218,20 @@ Completed in this session
 Focus Mode goal:
 
 > Clear the highest-risk work with the fewest decisions.
+
+## Loading / initialization (0.5)
+
+On first load, Vesta shows a short branded **initialization screen**
+(`components/dashboard/VestaSplashScreen.tsx`): a **full-screen, opaque** AI signal
+system (orbital rings + traveling nodes + radar sweep + breathing core + faint
+grid), a rotating status phrase, the "Your work, in order" tagline, and a progress
+bar, for ~1.8s before fading to the dashboard. It owns the viewport (no dashboard
+content shows through) and **plays on every full page load** (it does not replay
+on internal navigation, since the dashboard mounts once).
+Demo-only (a timed splash, not a real data gate), runs for 0ms under the test
+environment so it never blocks tests, and is reduced-motion safe. Future
+production use: first login/session or genuine data loading only.
+See `docs/design/loading-experience-v1.md`.
 
 ## Empty states
 
