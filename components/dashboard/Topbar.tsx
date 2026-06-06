@@ -5,10 +5,12 @@ import { useTheme } from '@/lib/theme';
 import { Icon } from '@/components/ui/Icon';
 
 type TopbarProps = {
-  onToggleChat: () => void;
+  showRailToggle: boolean;
+  railCollapsed: boolean;
+  onToggleRail: () => void;
 };
 
-export function Topbar({ onToggleChat }: TopbarProps) {
+export function Topbar({ showRailToggle, railCollapsed, onToggleRail }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -24,24 +26,13 @@ export function Topbar({ onToggleChat }: TopbarProps) {
 
       <div className="flex items-center gap-[10px]">
         {/* Search (decorative in Phase 0) */}
-        <div className="flex w-[280px] items-center gap-[9px] rounded-[13px] border border-line bg-panel px-[13px] py-[10px] text-[13px] text-muted shadow-soft backdrop-blur-[14px]">
+        <div className="hidden w-[280px] items-center gap-[9px] rounded-[13px] border border-line bg-panel px-[13px] py-[10px] text-[13px] text-muted shadow-soft backdrop-blur-[14px] sm:flex">
           <Icon name="search" className="h-4 w-4 opacity-70" />
           Search people, threads, tasks…
           <kbd className="ml-auto rounded-md border border-line px-[6px] py-px font-mono text-[11px] text-muted">
             ⌘K
           </kbd>
         </div>
-
-        {/* Toggle assistant */}
-        <button
-          type="button"
-          onClick={onToggleChat}
-          title="Toggle Vesta"
-          aria-label="Toggle assistant"
-          className="grid h-11 w-11 place-items-center rounded-[13px] border border-line bg-panel text-ink-soft shadow-soft backdrop-blur-[14px] transition hover:border-accent hover:text-accent"
-        >
-          <Icon name="chat" className="h-[19px] w-[19px]" />
-        </button>
 
         {/* Theme toggle */}
         <button
@@ -67,6 +58,23 @@ export function Topbar({ onToggleChat }: TopbarProps) {
             <Icon name="sun" className="h-[18px] w-[18px]" />
           </span>
         </button>
+
+        {/* Right-rail collapse/expand — clear chevron, only on Today view */}
+        {showRailToggle && (
+          <button
+            type="button"
+            onClick={onToggleRail}
+            title={railCollapsed ? 'Show AI Analysis' : 'Hide AI Analysis'}
+            aria-label={railCollapsed ? 'Show AI Analysis panel' : 'Hide AI Analysis panel'}
+            className="hidden h-11 items-center gap-2 rounded-[13px] border border-line bg-panel px-3 text-ink-soft shadow-soft backdrop-blur-[14px] transition hover:border-accent hover:text-accent lg:flex"
+          >
+            <span className="text-[12px] font-semibold">AI</span>
+            <Icon
+              name="chevronRight"
+              className={`h-[18px] w-[18px] transition-transform duration-300 ${railCollapsed ? '' : 'rotate-180'}`}
+            />
+          </button>
+        )}
       </div>
     </div>
   );

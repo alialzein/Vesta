@@ -41,6 +41,9 @@ const PATHS = {
   send: <path d="M5 12h14M13 6l6 6-6 6" />,
   info: <path d="M12 22a10 10 0 100-20 10 10 0 000 20zM12 8v5M12 16h.01" />,
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  chevronLeft: <path d="M15 6l-6 6 6 6" />,
+  chevronRight: <path d="M9 6l6 6-6 6" />,
+  sparkle: <path d="M12 3l1.8 4.7L18.5 9l-4.7 1.8L12 15l-1.8-4.2L5.5 9l4.7-1.3L12 3z" />,
 } as const;
 
 export type IconName = keyof typeof PATHS;
