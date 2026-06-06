@@ -108,10 +108,16 @@ the premium experience or the security model.
 
 ### Strategy & priority
 
+**Decision: support BOTH OAuth and IMAP as mailbox connection options.** OAuth is
+the preferred path; IMAP is offered for any other provider. **OAuth connections
+stay connected automatically** — once set, Vesta refreshes the stored refresh
+token in the background so the user never has to reconnect (until they disconnect
+or the provider revokes access).
+
 ```txt
-1. Microsoft Graph (Outlook)   — MVP. OAuth. Webhooks. Rich data. (Phase 3–5)
-2. Google (Gmail API)          — next. OAuth. Push notifications. Rich-ish data.
-3. Generic IMAP/SMTP           — later, explicit opt-in. Polling. Thinner data.
+1. Microsoft Graph (Outlook)   — OAuth, primary. Webhooks. Rich data. Auto-refresh. (Phase 3)
+2. Google (Gmail API)          — OAuth. Push notifications. Auto-refresh. (after Outlook)
+3. Generic IMAP/SMTP           — supported option for any other email. Polling. Encrypted creds.
 ```
 
 ### Why OAuth-first (not IMAP-first)
@@ -178,8 +184,10 @@ This keeps the documented build order intact and only inserts login providers
   real data yet, show good **empty states** (specific designs to be decided later).
 - **Account linking** (same person via multiple providers): **deferred** — one
   primary login method per user for the MVP; revisit later.
-- **Generic IMAP:** **post-pilot**, opt-in only. MVP/early uses OAuth (Outlook,
-  then Gmail); IMAP comes after the pilot with encrypted credential storage.
+- **Mailbox = both OAuth and IMAP** (product owner decision). OAuth (Outlook, then
+  Gmail) is the primary, auto-maintained path; **IMAP/SMTP is also a first-class
+  option** for any other provider, with encrypted credential storage. OAuth
+  connections auto-refresh so they stay connected once set.
 
 ### Still to decide later
 

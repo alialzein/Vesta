@@ -1,13 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // useFormState / useFormStatus are server-action hooks provided by the Next.js
 // runtime; they are not callable in plain jsdom. Stub them so the test can
-// exercise the AuthForm's own UI logic. The server actions are mocked to avoid
-// pulling in server-only modules (and to assert no real call is made).
-// vi.hoisted lets the mock factory (hoisted to the top) reference these spies.
+// exercise the AuthForm's own UI logic. The server actions and the Supabase
+// browser client are mocked so no real network/auth happens.
 const { signIn, signUp } = vi.hoisted(() => ({ signIn: vi.fn(), signUp: vi.fn() }));
+const { signInWithOAuth } = vi.hoisted(() => ({
+  signInWithOAuth: vi.fn(
+    async (): Promise<{ data: Record<string, unknown>; error: { message: string } | null }> => ({
+      data: {},
+      error: null,
+    }),
+  ),
+}));
 vi.mock('react-dom', async (importActual) => {
   const actual = await importActual<typeof import('react-dom')>();
   return {
@@ -17,10 +24,17 @@ vi.mock('react-dom', async (importActual) => {
   };
 });
 vi.mock('@/app/(auth)/actions', () => ({ signIn, signUp }));
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({ auth: { signInWithOAuth } }),
+}));
 
 import { AuthForm } from '@/app/(auth)/AuthForm';
 
 describe('AuthForm', () => {
+  beforeEach(() => {
+    signInWithOAuth.mockClear();
+  });
+
   it('renders the sign-in form with the AI core and status chip', () => {
     render(<AuthForm />);
     expect(screen.getByRole('heading', { name: /Welcome back/i })).toBeInTheDocument();
@@ -28,20 +42,51 @@ describe('AuthForm', () => {
     expect(screen.getByText('AI workspace ready')).toBeInTheDocument();
   });
 
-  it('shows Microsoft as the primary CTA, with an email divider and fields', () => {
+  it('shows Microsoft + Google SSO, an email divider, and email fields', () => {
     render(<AuthForm />);
     expect(screen.getByRole('button', { name: /Continue with Microsoft/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue with Google/i })).toBeInTheDocument();
     expect(screen.getByText(/or use email/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
 
-  it('clarifies Microsoft is sign-in only and Outlook connects in Settings', () => {
+  it('clarifies SSO is identity-only and the mailbox connects later in Settings', () => {
     render(<AuthForm />);
     expect(
-      screen.getByText(/connect your Outlook mailbox for email later in Settings/i),
+      screen.getByText(/connect your email mailbox .* for Vesta to read later in Settings/i),
     ).toBeInTheDocument();
+  });
+
+  it('calls Supabase signInWithOAuth with azure when Microsoft is clicked', async () => {
+    const user = userEvent.setup();
+    render(<AuthForm />);
+
+    await user.click(screen.getByRole('button', { name: /Continue with Microsoft/i }));
+
+    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1));
+    expect(signInWithOAuth).toHaveBeenCalledWith(expect.objectContaining({ provider: 'azure' }));
+  });
+
+  it('calls Supabase signInWithOAuth with google when Google is clicked', async () => {
+    const user = userEvent.setup();
+    render(<AuthForm />);
+
+    await user.click(screen.getByRole('button', { name: /Continue with Google/i }));
+
+    await waitFor(() => expect(signInWithOAuth).toHaveBeenCalledTimes(1));
+    expect(signInWithOAuth).toHaveBeenCalledWith(expect.objectContaining({ provider: 'google' }));
+  });
+
+  it('surfaces an error if a provider is not configured', async () => {
+    signInWithOAuth.mockResolvedValueOnce({ data: {}, error: { message: 'Provider not enabled' } });
+    const user = userEvent.setup();
+    render(<AuthForm />);
+
+    await user.click(screen.getByRole('button', { name: /Continue with Microsoft/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/isn.t available yet/i);
   });
 
   it('shows the trust cues', () => {
@@ -49,20 +94,6 @@ describe('AuthForm', () => {
     expect(screen.getByText('Secure')).toBeInTheDocument();
     expect(screen.getByText('Private')).toBeInTheDocument();
     expect(screen.getByText('Approval-first')).toBeInTheDocument();
-  });
-
-  it('shows a demo loading state on Microsoft click and makes no real call', async () => {
-    const user = userEvent.setup();
-    render(<AuthForm />);
-
-    const msButton = screen.getByRole('button', { name: /Continue with Microsoft/i });
-    await user.click(msButton);
-
-    // Button enters a busy/loading state immediately (no backend call).
-    expect(msButton).toHaveAttribute('aria-busy', 'true');
-    expect(msButton).toBeDisabled();
-    expect(signIn).not.toHaveBeenCalled();
-    expect(signUp).not.toHaveBeenCalled();
   });
 
   it('switches to sign-up mode and reveals full-name + confirm-password fields', async () => {
