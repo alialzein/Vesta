@@ -14,7 +14,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     // Unit + component tests live next to code in __tests__ folders.
+    // Live-DB tests under supabase/tests run via vitest.db.config.ts instead.
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
-    exclude: ['node_modules', '.next', 'e2e'],
+    exclude: ['node_modules', '.next', 'e2e', 'supabase'],
   },
 });

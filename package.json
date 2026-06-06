@@ -13,10 +13,12 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:db": "vitest run --config vitest.db.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.45.4",
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1"
@@ -31,13 +33,14 @@
     "@types/react-dom": "18.3.0",
     "@vitejs/plugin-react": "4.3.2",
     "autoprefixer": "10.4.20",
+    "dotenv": "16.4.5",
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.35",
     "eslint-config-prettier": "9.1.0",
     "jsdom": "25.0.1",
     "postcss": "8.4.47",
     "prettier": "3.3.3",
-    "supabase": "1.207.9",
+    "supabase": "2.105.0",
     "tailwindcss": "3.4.13",
     "typescript": "5.6.3",
     "vitest": "2.1.2"
