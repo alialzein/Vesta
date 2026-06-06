@@ -27,6 +27,7 @@ export type Database = {
           full_name: string | null;
           timezone: string;
           role: string | null;
+          onboarded_at: Timestamptz | null;
           created_at: Timestamptz;
           updated_at: Timestamptz;
         };
@@ -36,6 +37,7 @@ export type Database = {
           full_name?: string | null;
           timezone?: string;
           role?: string | null;
+          onboarded_at?: Timestamptz | null;
           created_at?: Timestamptz;
           updated_at?: Timestamptz;
         };

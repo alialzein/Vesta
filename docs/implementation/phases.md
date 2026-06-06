@@ -188,11 +188,20 @@ Status: **Code done; pending provider config.** "Continue with Microsoft" and
 Supabase. Setup steps: `docs/architecture/auth-providers-setup.md`. SSO is
 identity-only — mailbox connection is separate (Phase 3).
 
-### Phase 2c — First-run onboarding wizard (next)
+### Phase 2c — First-run onboarding wizard
 
-A short, skippable full-screen wizard on first login (role → tone → VIPs →
-topics → connect mailbox) writing to `manager_memories` + a `profiles.onboarded_at`
-flag. No external setup. Then Phase 3 (Connect Outlook).
+Status: **Done.** A short, skippable full-screen wizard at `/onboarding`
+(role → tone → VIPs → topics → connect-mailbox placeholder). On finish it saves
+the answers as the user's own `manager_memories` (approval-first; no AI) and sets
+`profiles.role`; finish/skip stamps `profiles.onboarded_at`. The dashboard
+redirects first-run users (`onboarded_at` null) to `/onboarding`; an onboarded
+user visiting `/onboarding` is sent to the dashboard. Migration
+`20260606160001_add_profiles_onboarded_at.sql`.
+
+**Dev user:** `scripts/create-dev-user.mjs` marks the dev test user
+(`dev@vesta.app`) onboarded, so it skips the wizard and lands on the demo-data
+dashboard for testing — real users still see onboarding. Component tests cover the
+wizard; the dashboard e2e (dev user) is unaffected. Then Phase 3 (Connect Outlook).
 
 Testing: a **Playwright auth fixture** (`e2e/auth.setup.ts`) signs a shared dev
 test user in and saves `storageState`, so the auth-protected dashboard e2e runs
