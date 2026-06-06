@@ -31,17 +31,19 @@ HTML mockup while staying idiomatic.
 │
 ├── components/
 │   ├── dashboard/                # Dashboard sections
-│   │   ├── DashboardClient.tsx   # Owns selection + chat-open state, lays out the grid
-│   │   ├── Sidebar.tsx           # Brand, nav, profile
-│   │   ├── Topbar.tsx            # Greeting, search, chat + theme toggles (client)
-│   │   ├── MorningBrief.tsx      # Hero brief + urgency ring
-│   │   ├── UrgencyRing.tsx       # SVG priority ring
+│   │   ├── DashboardClient.tsx   # Owns shell state: selection, active view,
+│   │   │                         #   sidebar collapse, rail collapse, chat drawer
+│   │   ├── Sidebar.tsx           # Collapsible nav (full <-> icon rail); switches views
+│   │   ├── Topbar.tsx            # Greeting, search, theme toggle, AI-rail chevron toggle
+│   │   ├── MorningBrief.tsx      # Hero brief with a compact urgency ring in its header
+│   │   ├── UrgencyRing.tsx       # Full + CompactUrgencyRing SVG rings
 │   │   ├── KpiCards.tsx          # Top metric cards
 │   │   ├── TodaysRadar.tsx       # Work queue + filter tabs (client)
 │   │   ├── WorkItemRow.tsx       # A single radar row
-│   │   ├── AiAnalysisPanel.tsx   # Reasoning + suggested draft + safety copy
+│   │   ├── AiAnalysisPanel.tsx   # Right-rail reasoning + suggested draft + safety copy
+│   │   ├── MemoryView.tsx        # Main-area "Memory & Rules" view (left-nav target)
 │   │   ├── ManagerMemoryPanel.tsx# Add/forget manager memories (client)
-│   │   ├── AssistantChat.tsx     # Collapsible mock chat (client)
+│   │   ├── AssistantChat.tsx     # Right-side chat drawer opened by a FAB (client)
 │   │   └── HowItWorks.tsx        # 5-step explainer strip
 │   ├── ui/                       # Shared primitives
 │   │   ├── Chip.tsx
@@ -65,6 +67,16 @@ HTML mockup while staying idiomatic.
 ├── vitest.config.ts, vitest.setup.ts, playwright.config.ts
 ├── .eslintrc.json, .prettierrc.json, .env.example, .gitignore
 ```
+
+## Layout behavior
+
+- **Sidebar** collapses between a full panel and an icon-only rail (toggle at top).
+- **Main area** swaps between the **Today** view (brief, KPIs, radar, how-it-works)
+  and the **Memory & Rules** view, driven by the left nav.
+- **Right rail** holds only the AI Analysis panel on the Today view; a chevron
+  toggle in the top bar collapses/expands it.
+- **Assistant chat** is a floating "Ask Vesta" button (bottom-right) that opens a
+  right-side drawer with a backdrop; closes on the X, backdrop click, or Escape.
 
 ## Data flow (Phase 0)
 
