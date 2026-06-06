@@ -83,7 +83,7 @@ export function AssistantChat({ open, onClose }: AssistantChatProps) {
       >
         {/* Head */}
         <div className="flex items-center gap-[11px] border-b border-line px-[18px] py-4">
-          <div className="relative h-8 w-8 flex-none rounded-[10px] bg-[radial-gradient(circle_at_50%_95%,#67e8d8,#5ba8f5_50%,var(--accent-2))] shadow-[0_6px_18px_rgba(91,168,245,.5)]" />
+          <div className="relative h-8 w-8 flex-none rounded-[10px] bg-[radial-gradient(circle_at_50%_95%,#43c7ff,#2f7deb_50%,var(--accent-2))] shadow-[0_6px_18px_rgba(47,125,235,.5)]" />
           <div>
             <b className="font-display text-[15px] font-semibold">Vesta</b>
             <small className="block text-[11px] font-semibold text-green">
@@ -150,7 +150,7 @@ export function AssistantChat({ open, onClose }: AssistantChatProps) {
             type="button"
             onClick={send}
             aria-label="Send message"
-            className="grid h-[38px] w-[38px] place-items-center rounded-[11px] border-none bg-gradient-to-br from-accent to-accent-2 shadow-[0_6px_16px_rgba(74,111,165,0.4)] transition hover:scale-105"
+            className="grid h-[38px] w-[38px] place-items-center rounded-[11px] border-none bg-gradient-to-br from-accent to-accent-2 shadow-[0_6px_16px_rgba(47,125,235,0.4)] transition hover:scale-105"
           >
             <Icon name="send" className="h-[18px] w-[18px] text-white" />
           </button>

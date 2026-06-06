@@ -94,7 +94,7 @@ export function ManagerMemoryPanel() {
         <button
           type="button"
           onClick={addMemory}
-          className="justify-center rounded-[11px] border-none bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[9px] text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(74,111,165,0.35)] transition hover:brightness-110"
+          className="justify-center rounded-[11px] border-none bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[9px] text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(47,125,235,0.3)] transition hover:brightness-110"
         >
           ＋ Remember this
         </button>

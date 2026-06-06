@@ -1,0 +1,405 @@
+'use client';
+
+import type { MemoryType, RailTab, WorkItem, WorkItemSource } from '@/lib/types';
+import { priorityBand } from '@/lib/priority';
+import { Chip } from '@/components/ui/Chip';
+import { Icon, type IconName } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
+
+/** Standard demo-feedback line for placeholder Outlook actions. */
+const DEMO_ACTION_MSG = 'Demo action recorded. Real Outlook actions will be added in Phase 2.';
+
+const SOURCE_LABEL: Record<WorkItemSource, string> = {
+  outlook: 'Outlook',
+  teams: 'Teams',
+  manual: 'Manual',
+  ai_commitment: 'AI commitment',
+  calendar: 'Calendar',
+};
+
+const CATEGORY_LABEL: Record<string, string> = {
+  critical: 'Critical',
+  waiting: 'Blocker',
+  followup: 'Follow-up',
+  delegate: 'Can delegate',
+  decision: 'Decision',
+  promise: 'Promise',
+  drafts: 'Draft ready',
+  fyi: 'FYI',
+};
+
+/** Pick the most meaningful category to show as the item's primary label. */
+function primaryCategory(item: WorkItem): string {
+  const order = ['decision', 'waiting', 'promise', 'followup', 'delegate', 'critical'];
+  const found = order.find((c) => item.categories.includes(c as WorkItem['categories'][number]));
+  return CATEGORY_LABEL[found ?? item.categories[0]] ?? 'Work item';
+}
+
+/**
+ * Contextual AI Assistant Rail.
+ *
+ * Shows the selected work item's AI context across four tabs (Action, Draft,
+ * Memory, Activity). User-visible reasoning only (AGENTS.md: no hidden
+ * chain-of-thought) and keeps the required safety copy on the Draft tab.
+ *
+ * Demo only: action buttons do not perform anything in Phase 0.1.
+ */
+
+const TABS: { id: RailTab; label: string; icon: IconName }[] = [
+  { id: 'action', label: 'Action', icon: 'sparkle' },
+  { id: 'draft', label: 'Draft', icon: 'edit' },
+  { id: 'memory', label: 'Memory', icon: 'brain' },
+  { id: 'activity', label: 'Activity', icon: 'activity' },
+];
+
+const MEMORY_LABEL: Record<MemoryType, string> = {
+  vip: 'VIP',
+  tone: 'Tone',
+  delegation_rule: 'Delegate',
+  do_not_do: 'Never',
+  project_context: 'Project',
+  company_context: 'Company',
+  preference: 'Pref',
+};
+
+const MEMORY_TONE: Record<MemoryType, string> = {
+  vip: 'bg-red-soft text-red',
+  tone: 'bg-accent-soft text-accent',
+  delegation_rule: 'bg-amber-soft text-amber',
+  do_not_do: 'bg-red-soft text-red',
+  project_context: 'bg-green-soft text-green',
+  company_context: 'bg-green-soft text-green',
+  preference: 'bg-green-soft text-green',
+};
+
+const bandLabel: Record<ReturnType<typeof priorityBand>, string> = {
+  red: 'High priority',
+  amber: 'Medium priority',
+  green: 'Low priority',
+};
+
+type AiAssistantRailProps = {
+  item: WorkItem;
+  activeTab: RailTab;
+  onTabChange: (tab: RailTab) => void;
+  /** Collapses the rail to the slim icon strip. Optional (omitted on mobile). */
+  onCollapse?: () => void;
+};
+
+export function AiAssistantRail({
+  item,
+  activeTab,
+  onTabChange,
+  onCollapse,
+}: AiAssistantRailProps) {
+  const band = priorityBand(item.priorityScore);
+
+  return (
+    <div className="flex flex-col rounded-[var(--radius)] border border-[color:var(--rail-border)] bg-[image:var(--rail-bg)] shadow-glow">
+      {/* Header — selected item title + live badge + collapse toggle */}
+      <div className="border-b border-line p-5">
+        <div className="flex items-center gap-[9px]">
+          <span className="grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-accent-soft text-accent">
+            <Icon name="sparkle" className="h-[16px] w-[16px]" />
+          </span>
+          <span className="font-display text-[15px] font-medium tracking-tight">AI Assistant</span>
+          <span className="ml-auto inline-flex items-center gap-[5px] rounded-full bg-accent-soft px-[9px] py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-accent">
+            <span className="h-[6px] w-[6px] rounded-full bg-green shadow-[0_0_0_3px_var(--green-soft)]" />
+            Live
+          </span>
+          {/* Collapse toggle lives in the panel itself (small + simple). */}
+          {onCollapse && (
+            <button
+              type="button"
+              onClick={onCollapse}
+              aria-label="Collapse AI assistant rail"
+              title="Collapse"
+              className="grid h-7 w-7 flex-none place-items-center rounded-[8px] border border-line bg-panel-solid text-muted transition hover:border-accent hover:text-accent"
+            >
+              <Icon name="panelRight" className="h-[15px] w-[15px]" />
+            </button>
+          )}
+        </div>
+
+        <p className="mt-[12px] text-[14px] font-semibold leading-snug text-ink">{item.title}</p>
+
+        <div className="mt-[10px] flex items-center gap-[10px]">
+          <span
+            className={[
+              'grid h-[42px] w-[42px] flex-none place-items-center rounded-[12px] font-mono text-[15px] font-bold',
+              band === 'red'
+                ? 'bg-red-soft text-red'
+                : band === 'amber'
+                  ? 'bg-amber-soft text-amber'
+                  : 'bg-green-soft text-green',
+            ].join(' ')}
+          >
+            {item.priorityScore}
+          </span>
+          <div className="leading-tight">
+            <span className="block font-mono text-[11px] text-muted">
+              PRIORITY · {item.priorityScore}/100
+            </span>
+            <span className="block text-[12.5px] font-semibold text-ink-soft">
+              {bandLabel[band]}
+            </span>
+          </div>
+        </div>
+
+        {/* Context grid — makes the selected item unambiguous. */}
+        <dl className="mt-[14px] grid grid-cols-2 gap-x-3 gap-y-[10px]">
+          <ContextCell label="Source" value={SOURCE_LABEL[item.source]} icon="inbox" />
+          {item.person && <ContextCell label="From" value={item.person} icon="people" />}
+          <ContextCell label="Due" value={item.dueDetail ?? item.dueLabel} icon="clock" />
+          <ContextCell label="Category" value={primaryCategory(item)} icon="list" />
+        </dl>
+      </div>
+
+      {/* Segmented control */}
+      <div
+        role="tablist"
+        aria-label="AI assistant sections"
+        className="flex gap-1 border-b border-line p-[6px]"
+      >
+        {TABS.map((tab) => {
+          const isActive = tab.id === activeTab;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onTabChange(tab.id)}
+              className={[
+                'flex flex-1 items-center justify-center gap-[5px] rounded-[10px] px-2 py-[7px] text-[12px] font-semibold transition',
+                isActive
+                  ? 'bg-panel-solid text-accent shadow-soft'
+                  : 'text-muted hover:text-ink-soft',
+              ].join(' ')}
+            >
+              <Icon name={tab.icon} className="h-[14px] w-[14px]" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab panels */}
+      <div role="tabpanel" className="p-5">
+        {activeTab === 'action' && <ActionTab item={item} />}
+        {activeTab === 'draft' && <DraftTab item={item} />}
+        {activeTab === 'memory' && <MemoryTab item={item} />}
+        {activeTab === 'activity' && <ActivityTab item={item} />}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------- Tab panels ------------------------------- */
+
+function ActionTab({ item }: { item: WorkItem }) {
+  const { showToast } = useToast();
+
+  return (
+    <div className="flex flex-col gap-[14px]">
+      {/* Next Best Action — the single most important section. */}
+      <div className="relative overflow-hidden rounded-[16px] border border-accent bg-[linear-gradient(135deg,var(--accent-soft),transparent_65%)] p-[16px] shadow-[0_0_0_3px_var(--accent-soft)]">
+        <span
+          className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)]"
+          aria-hidden="true"
+        />
+        <span className="relative inline-flex items-center gap-[6px] font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-accent">
+          <Icon name="sparkle" className="h-[14px] w-[14px]" />
+          Next best action
+        </span>
+        <p className="relative mt-[8px] font-display text-[16px] font-semibold leading-snug text-ink">
+          {item.nextBestAction}
+        </p>
+        <button
+          type="button"
+          onClick={() => showToast(DEMO_ACTION_MSG)}
+          className="relative mt-[12px] inline-flex items-center gap-[7px] rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[8px] text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110"
+        >
+          <Icon name="check" className="h-[14px] w-[14px]" />
+          Do this now
+        </button>
+      </div>
+
+      {/* Why this matters */}
+      <div className="rounded-[14px] border border-line bg-panel-solid p-[14px]">
+        <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+          Why this matters
+        </span>
+        <div className="mt-[8px] flex gap-[10px] text-[13px] leading-snug text-ink-soft">
+          <span className="mt-[6px] h-[7px] w-[7px] flex-none rounded-full bg-accent shadow-[0_0_0_4px_var(--accent-soft)]" />
+          <span>{item.urgencyReason}</span>
+        </div>
+        <div className="mt-[10px] flex flex-wrap gap-[6px]">
+          {item.riskChips.map((chip) => (
+            <Chip key={chip.label} {...chip} />
+          ))}
+        </div>
+      </div>
+
+      {/* Action buttons — demo feedback only. */}
+      <div className="flex flex-wrap gap-[9px]">
+        <RailButton primary icon="check" onClick={() => showToast(DEMO_ACTION_MSG, 'success')}>
+          Approve Draft
+        </RailButton>
+        <RailButton icon="shield" onClick={() => showToast(DEMO_ACTION_MSG)}>
+          Ask Legal
+        </RailButton>
+        <RailButton icon="delegate" onClick={() => showToast(DEMO_ACTION_MSG)}>
+          Delegate
+        </RailButton>
+        <RailButton icon="snooze" onClick={() => showToast(DEMO_ACTION_MSG)}>
+          Snooze
+        </RailButton>
+      </div>
+    </div>
+  );
+}
+
+/** A label/value cell in the rail header context grid. */
+function ContextCell({ label, value, icon }: { label: string; value: string; icon: IconName }) {
+  return (
+    <div className="min-w-0">
+      <dt className="flex items-center gap-[5px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+        <Icon name={icon} className="h-[12px] w-[12px]" />
+        {label}
+      </dt>
+      <dd className="m-0 mt-[3px] truncate text-[12.5px] font-semibold text-ink-soft">{value}</dd>
+    </div>
+  );
+}
+
+function DraftTab({ item }: { item: WorkItem }) {
+  const { showToast } = useToast();
+
+  return (
+    <div className="flex flex-col gap-[12px]">
+      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+        Suggested draft
+      </span>
+      <div className="rounded-[13px] border border-dashed border-line-strong bg-panel-solid p-[14px] text-[13px] leading-relaxed text-ink-soft">
+        {item.suggestedDraft}
+      </div>
+
+      {/* Safety copy — required by the UX spec. */}
+      <p className="flex items-start gap-2 text-[11.5px] leading-snug text-muted">
+        <Icon name="shield" className="mt-px h-[14px] w-[14px] flex-none text-accent" />
+        Vesta will not send emails without your explicit approval. Please review before sending.
+      </p>
+
+      <div className="flex flex-wrap gap-[9px]">
+        <RailButton primary icon="check" onClick={() => showToast(DEMO_ACTION_MSG, 'success')}>
+          Approve Draft
+        </RailButton>
+        <RailButton icon="edit" onClick={() => showToast(DEMO_ACTION_MSG)}>
+          Edit
+        </RailButton>
+      </div>
+    </div>
+  );
+}
+
+function MemoryTab({ item }: { item: WorkItem }) {
+  const { showToast } = useToast();
+
+  return (
+    <div className="flex flex-col gap-[12px]">
+      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+        Memory &amp; rules used
+      </span>
+
+      {item.memoryUsed.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {item.memoryUsed.map((m) => (
+            <div
+              key={m.id}
+              className="flex items-start gap-[10px] rounded-xl border border-line bg-panel-solid px-3 py-[11px]"
+            >
+              <span
+                className={`mt-px flex-none rounded-md px-[7px] py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wide ${MEMORY_TONE[m.type]}`}
+              >
+                {MEMORY_LABEL[m.type]}
+              </span>
+              <span className="flex-1 text-[12.5px] leading-snug text-ink-soft">{m.text}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-xl border border-line bg-panel-solid px-3 py-4 text-center text-[12.5px] text-muted">
+          No rules applied to this item yet.
+        </p>
+      )}
+
+      {/* Add memory placeholder */}
+      <button
+        type="button"
+        onClick={() =>
+          showToast('Demo only. Saving manager memory needs your approval and arrives in Phase 2.')
+        }
+        className="flex items-center justify-center gap-[7px] rounded-[11px] border border-dashed border-line-strong bg-panel-solid px-3 py-[10px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+      >
+        <Icon name="plus" className="h-[15px] w-[15px]" />
+        Add a memory or rule
+      </button>
+
+      <p className="text-[11.5px] leading-snug text-muted">
+        This memory affects future prioritization. You can edit or delete it anytime.
+      </p>
+    </div>
+  );
+}
+
+function ActivityTab({ item }: { item: WorkItem }) {
+  return (
+    <div className="flex flex-col gap-[10px]">
+      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+        Thread activity
+      </span>
+      <dl className="flex flex-col divide-y divide-line overflow-hidden rounded-[13px] border border-line bg-panel-solid">
+        {item.activity.map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between gap-3 px-[14px] py-[11px]"
+          >
+            <dt className="text-[12.5px] text-muted">{row.label}</dt>
+            <dd className="m-0 text-[12.5px] font-semibold text-ink-soft">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/* ------------------------------- Primitives ------------------------------- */
+
+function RailButton({
+  children,
+  icon,
+  primary = false,
+  onClick,
+}: {
+  children: React.ReactNode;
+  icon: IconName;
+  primary?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'inline-flex items-center gap-[6px] rounded-[11px] px-[11px] py-[7px] text-[12px] font-semibold transition',
+        primary
+          ? 'bg-gradient-to-br from-accent to-accent-2 text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] hover:brightness-110'
+          : 'border border-line-strong bg-panel-solid text-ink hover:-translate-y-[2px] hover:border-accent hover:text-accent',
+      ].join(' ')}
+    >
+      <Icon name={icon} className="h-[14px] w-[14px]" />
+      {children}
+    </button>
+  );
+}

@@ -12,15 +12,26 @@ describe('TodaysRadar', () => {
     }
   });
 
-  it('filters items when a non-"all" tab is clicked', async () => {
+  it('filters items when the "Can delegate" tab is clicked', async () => {
     const user = userEvent.setup();
     render(<TodaysRadar items={demoWorkItems} selectedId={null} onSelect={() => {}} />);
 
-    await user.click(screen.getByRole('button', { name: 'Can delegate' }));
+    await user.click(screen.getByRole('tab', { name: 'Can delegate' }));
 
     // Only the delegate item remains; a critical-only item is gone.
     expect(screen.getByText('IT laptop purchase request')).toBeInTheDocument();
     expect(screen.queryByText('Finance payment approval')).not.toBeInTheDocument();
+  });
+
+  it('filters to Decisions', async () => {
+    const user = userEvent.setup();
+    render(<TodaysRadar items={demoWorkItems} selectedId={null} onSelect={() => {}} />);
+
+    await user.click(screen.getByRole('tab', { name: 'Decisions' }));
+
+    expect(screen.getByText('Cedars Group contract approval')).toBeInTheDocument();
+    // Board prep is not a decision item.
+    expect(screen.queryByText('Board meeting preparation')).not.toBeInTheDocument();
   });
 
   it('calls onSelect with the clicked item', async () => {
@@ -28,8 +39,8 @@ describe('TodaysRadar', () => {
     const onSelect = vi.fn();
     render(<TodaysRadar items={demoWorkItems} selectedId={null} onSelect={onSelect} />);
 
-    const list = screen.getByText('Cedars Group contract approval').closest('button')!;
-    await user.click(within(list).getByText('Cedars Group contract approval'));
+    const row = screen.getByText('Cedars Group contract approval').closest('button')!;
+    await user.click(within(row).getByText('Cedars Group contract approval'));
 
     expect(onSelect).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Cedars Group contract approval' }),

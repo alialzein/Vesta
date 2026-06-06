@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/lib/theme';
+import { ToastProvider } from '@/components/ui/Toast';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -15,11 +16,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // data-theme is managed by ThemeProvider on the client; default to dark
-    // so first paint matches the canonical mockup.
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    // data-theme is managed by ThemeProvider on the client; default to light
+    // so first paint matches the presentation-ready light demo theme.
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,15 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { KpiCards } from '@/components/dashboard/KpiCards';
+import type { ReactElement } from 'react';
+import { MetricsStrip } from '@/components/dashboard/MetricsStrip';
 import { MorningBrief } from '@/components/dashboard/MorningBrief';
-import { AiAnalysisPanel } from '@/components/dashboard/AiAnalysisPanel';
+import { AiCommandCenter } from '@/components/dashboard/AiCommandCenter';
+import { AiAssistantRail } from '@/components/dashboard/AiAssistantRail';
 import { ManagerMemoryPanel } from '@/components/dashboard/ManagerMemoryPanel';
-import { demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
+import { ToastProvider } from '@/components/ui/Toast';
+import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 
-describe('KpiCards', () => {
-  it('renders each KPI value and label', () => {
-    render(<KpiCards metrics={demoKpis} />);
+/** Some components use the toast context; wrap them in a provider. */
+function renderWithToast(ui: ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
+
+describe('MetricsStrip', () => {
+  it('renders every metric label', () => {
+    render(<MetricsStrip metrics={demoKpis} />);
     for (const kpi of demoKpis) {
       expect(screen.getByText(kpi.label)).toBeInTheDocument();
     }
@@ -17,20 +25,88 @@ describe('KpiCards', () => {
 });
 
 describe('MorningBrief', () => {
-  it('renders the headline and urgency ring score', () => {
-    render(<MorningBrief brief={demoMorningBrief} />);
+  it('renders the headline and a compact top-risk chip (no large ring)', () => {
+    render(<MorningBrief brief={demoMorningBrief} onAction={() => {}} />);
     expect(screen.getByText(demoMorningBrief.headline)).toBeInTheDocument();
-    expect(screen.getByText(String(demoMorningBrief.topUrgencyScore))).toBeInTheDocument();
+    expect(screen.getByText(`Top risk: ${demoMorningBrief.topUrgencyScore}`)).toBeInTheDocument();
+  });
+
+  it('reports the chosen quick action to the parent', async () => {
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    render(<MorningBrief brief={demoMorningBrief} onAction={onAction} />);
+    await user.click(screen.getByRole('button', { name: /Clear My Day/i }));
+    expect(onAction).toHaveBeenCalledWith('focus');
   });
 });
 
-describe('AiAnalysisPanel', () => {
-  it('shows the selected item reasoning and required safety copy', () => {
-    render(<AiAnalysisPanel item={demoWorkItems[0]} />);
-    expect(screen.getByText(demoWorkItems[0].title)).toBeInTheDocument();
-    expect(screen.getByText(demoWorkItems[0].urgencyReason)).toBeInTheDocument();
-    // Safety copy must be present (UX spec requirement).
-    expect(screen.getByText(/Please review before sending/i)).toBeInTheDocument();
+describe('AiCommandCenter', () => {
+  it('renders every command card and fires onCardAction when a CTA is clicked', async () => {
+    const user = userEvent.setup();
+    const onCardAction = vi.fn();
+    render(<AiCommandCenter cards={demoCommandCards} onCardAction={onCardAction} />);
+
+    expect(screen.getByRole('heading', { name: /AI Command Center/i })).toBeInTheDocument();
+    for (const card of demoCommandCards) {
+      expect(screen.getByText(card.title)).toBeInTheDocument();
+    }
+
+    await user.click(screen.getByRole('button', { name: /Start — Clear My Day/i }));
+    expect(onCardAction).toHaveBeenCalledWith('cmd-clear-day');
+  });
+});
+
+describe('AiAssistantRail', () => {
+  it('shows item context, next best action, and switches tabs', async () => {
+    const user = userEvent.setup();
+    const onTabChange = vi.fn();
+    const item = demoWorkItems[0];
+    const { rerender } = renderWithToast(
+      <AiAssistantRail item={item} activeTab="action" onTabChange={onTabChange} />,
+    );
+
+    // Header context: title + person are visible.
+    expect(screen.getByText(item.title)).toBeInTheDocument();
+    expect(screen.getByText(item.person!)).toBeInTheDocument();
+    expect(screen.getByText(item.nextBestAction)).toBeInTheDocument();
+
+    // Switching to the Draft tab is reported to the parent.
+    await user.click(screen.getByRole('tab', { name: /Draft/i }));
+    expect(onTabChange).toHaveBeenCalledWith('draft');
+
+    // Render the draft tab and assert the required safety copy is present.
+    rerender(
+      <ToastProvider>
+        <AiAssistantRail item={item} activeTab="draft" onTabChange={onTabChange} />
+      </ToastProvider>,
+    );
+    expect(screen.getByText(item.suggestedDraft)).toBeInTheDocument();
+    expect(
+      screen.getByText(/will not send emails without your explicit approval/i),
+    ).toBeInTheDocument();
+  });
+
+  it('shows demo feedback when an action button is clicked', async () => {
+    const user = userEvent.setup();
+    const item = demoWorkItems[0];
+    renderWithToast(<AiAssistantRail item={item} activeTab="action" onTabChange={() => {}} />);
+
+    await user.click(screen.getByRole('button', { name: /^Approve Draft$/i }));
+    expect(screen.getByText(/Demo action recorded/i)).toBeInTheDocument();
+  });
+
+  it('lists the memory/rules used on the Memory tab', () => {
+    const item = demoWorkItems[0];
+    renderWithToast(<AiAssistantRail item={item} activeTab="memory" onTabChange={() => {}} />);
+    for (const memory of item.memoryUsed) {
+      expect(screen.getByText(memory.text)).toBeInTheDocument();
+    }
+  });
+
+  it('shows thread facts on the Activity tab', () => {
+    const item = demoWorkItems[0];
+    renderWithToast(<AiAssistantRail item={item} activeTab="activity" onTabChange={() => {}} />);
+    expect(screen.getByText(item.activity[0].value)).toBeInTheDocument();
   });
 });
 

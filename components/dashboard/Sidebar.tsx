@@ -1,21 +1,11 @@
 'use client';
 
-import { DEMO_USER } from '@/lib/demo-data';
-import { Icon, VestaMark, type IconName } from '@/components/ui/Icon';
+import { useEffect } from 'react';
+import { SidebarHeader } from './SidebarHeader';
+import { SidebarNav, type NavGroup } from './SidebarNav';
+import { SidebarFooter } from './SidebarFooter';
 
 export type NavView = 'today' | 'memory';
-
-type NavItem = {
-  label: string;
-  icon: IconName;
-  badge?: number;
-  view?: NavView;
-};
-
-type NavGroup = {
-  heading: string;
-  items: NavItem[];
-};
 
 const NAV: NavGroup[] = [
   {
@@ -24,7 +14,7 @@ const NAV: NavGroup[] = [
       { label: 'Today', icon: 'home', badge: 16, view: 'today' },
       { label: 'Waiting on Me', icon: 'clock', badge: 8 },
       { label: 'Follow-ups', icon: 'reply', badge: 3 },
-      { label: 'Draft Replies', icon: 'list', badge: 4 },
+      { label: 'Draft Replies', icon: 'drafts', badge: 4 },
     ],
   },
   {
@@ -42,119 +32,87 @@ type SidebarProps = {
   onToggleCollapsed: () => void;
   activeView: NavView;
   onSelectView: (view: NavView) => void;
+  /** Mobile drawer state (the sidebar is hidden on < lg and shown as an overlay). */
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 };
 
-export function Sidebar({ collapsed, onToggleCollapsed, activeView, onSelectView }: SidebarProps) {
-  return (
+export function Sidebar({
+  collapsed,
+  onToggleCollapsed,
+  activeView,
+  onSelectView,
+  mobileOpen,
+  onCloseMobile,
+}: SidebarProps) {
+  // Close the mobile drawer on Escape.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseMobile();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileOpen, onCloseMobile]);
+
+  // The mobile drawer is never collapsed; full nav is always shown there.
+  const panel = (mobile: boolean) => (
     <aside
       className={[
-        'v-scroll relative hidden flex-col gap-5 overflow-y-auto overflow-x-hidden rounded-lg border border-[color:var(--side-border)] bg-[image:var(--side-bg)] text-[color:var(--side-ink)] shadow-panel transition-all duration-300 lg:flex',
-        collapsed ? 'items-center p-[14px_10px]' : 'p-[22px_18px]',
+        'v-scroll flex flex-col gap-2 overflow-y-auto overflow-x-hidden border-[color:var(--side-border)] bg-[image:var(--side-bg)] text-[color:var(--side-ink)] shadow-panel transition-all duration-300',
+        mobile
+          ? 'h-full w-[280px] border-r p-[22px_18px]'
+          : [
+              'hidden rounded-lg border lg:flex',
+              collapsed ? 'p-[16px_10px]' : 'p-[22px_18px]',
+            ].join(' '),
       ].join(' ')}
+      aria-label="Primary navigation"
     >
-      {/* Collapse toggle */}
-      <button
-        type="button"
-        onClick={onToggleCollapsed}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        title={collapsed ? 'Expand' : 'Collapse'}
-        className="absolute right-2 top-3 grid h-7 w-7 place-items-center rounded-lg border border-[color:var(--side-card-border)] bg-[color:var(--side-card)] text-[color:var(--side-muted)] transition hover:text-accent"
-      >
-        <Icon
-          name="chevronLeft"
-          className={`h-4 w-4 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
-        />
-      </button>
+      <SidebarHeader
+        collapsed={mobile ? false : collapsed}
+        onToggleCollapsed={mobile ? onCloseMobile : onToggleCollapsed}
+      />
+      <SidebarNav
+        groups={NAV}
+        collapsed={mobile ? false : collapsed}
+        activeView={activeView}
+        onSelectView={(v) => {
+          onSelectView(v);
+          if (mobile) onCloseMobile();
+        }}
+      />
+      <SidebarFooter collapsed={mobile ? false : collapsed} />
+    </aside>
+  );
 
-      {/* Brand */}
-      <div className={`flex items-center gap-[13px] ${collapsed ? 'justify-center' : 'pr-8'}`}>
-        <div className="grid h-11 w-11 flex-none place-items-center rounded-[13px] bg-[radial-gradient(circle_at_50%_95%,#67e8d8,#5ba8f5_45%,var(--accent-2)_100%)] shadow-[0_8px_22px_rgba(74,111,165,0.4),inset_0_0_0_1px_rgba(255,255,255,.25)]">
-          <VestaMark className="relative z-10 h-[22px] w-[22px] text-white drop-shadow" />
-        </div>
-        {!collapsed && (
-          <div>
-            <b className="block font-display text-[18px] font-semibold leading-[1.05] tracking-tight text-[color:var(--side-ink)]">
-              Vesta
-            </b>
-            <span className="text-[10px] uppercase tracking-[0.22em] text-[color:var(--side-muted)]">
-              Your work, in order
-            </span>
-          </div>
-        )}
-      </div>
+  return (
+    <>
+      {/* Desktop sidebar (column in the dashboard grid) */}
+      {panel(false)}
 
-      {/* Nav */}
-      <nav className="flex w-full flex-col gap-[3px]">
-        {NAV.map((group) => (
-          <div key={group.heading} className="flex flex-col gap-[3px]">
-            {!collapsed && (
-              <div className="mx-[6px] mb-1 mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--side-lbl)]">
-                {group.heading}
-              </div>
-            )}
-            {collapsed && <div className="my-2 h-px w-full bg-[color:var(--side-border)]" />}
-            {group.items.map((item) => {
-              const isActive = item.view !== undefined && item.view === activeView;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => item.view && onSelectView(item.view)}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={collapsed ? item.label : undefined}
-                  className={[
-                    'relative flex cursor-pointer items-center rounded-xl text-sm font-medium transition',
-                    collapsed ? 'h-10 w-10 justify-center' : 'gap-[11px] px-3 py-[10px]',
-                    isActive
-                      ? 'bg-[image:var(--side-active-bg)] text-[color:var(--side-ink)]'
-                      : 'text-[color:var(--side-link)] hover:bg-[color:var(--side-hover)] hover:text-[color:var(--side-ink)]',
-                  ].join(' ')}
-                >
-                  <Icon
-                    name={item.icon}
-                    className={`h-[18px] w-[18px] flex-none ${isActive ? 'text-accent' : 'opacity-85'}`}
-                  />
-                  {!collapsed && item.label}
-                  {!collapsed && item.badge !== undefined && (
-                    <span
-                      className={[
-                        'ml-auto rounded-full px-[9px] py-[2px] font-mono text-[11px] font-semibold',
-                        isActive
-                          ? 'bg-accent text-white'
-                          : 'bg-[color:var(--side-badge-bg)] text-[color:var(--side-badge-ink)]',
-                      ].join(' ')}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                  {/* Collapsed badge dot */}
-                  {collapsed && item.badge !== undefined && (
-                    <span className="absolute right-1 top-1 h-[6px] w-[6px] rounded-full bg-accent" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
-
-      {/* Profile */}
+      {/* Mobile drawer + backdrop */}
       <div
+        onClick={onCloseMobile}
+        aria-hidden="true"
         className={[
-          'mt-auto flex items-center rounded-[15px] border border-[color:var(--side-card-border)] bg-[color:var(--side-card)]',
-          collapsed ? 'justify-center p-2' : 'gap-3 p-[13px]',
+          'fixed inset-0 z-[80] bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 lg:hidden',
+          mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+        ].join(' ')}
+      />
+      <div
+        role="dialog"
+        aria-label="Navigation menu"
+        aria-hidden={!mobileOpen}
+        className={[
+          'fixed left-0 top-0 z-[90] h-screen transition-transform duration-300 ease-ease lg:hidden',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
         ].join(' ')}
       >
-        <div className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] bg-gradient-to-br from-accent to-accent-2 text-[15px] font-bold text-white">
-          {DEMO_USER.initials}
-        </div>
-        {!collapsed && (
-          <div>
-            <b className="block text-[13px] text-[color:var(--side-ink)]">{DEMO_USER.fullName}</b>
-            <small className="text-[11px] text-[color:var(--side-muted)]">{DEMO_USER.role}</small>
-          </div>
-        )}
+        {/* Only mount the drawer contents when open so the full nav is not
+            duplicated in the accessibility tree while closed. */}
+        {mobileOpen && panel(true)}
       </div>
-    </aside>
+    </>
   );
 }
