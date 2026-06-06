@@ -173,6 +173,14 @@ Outlook **mailbox** for email is a separate **"Connect Outlook"** step in
 Settings/onboarding (Microsoft Graph OAuth — not SMTP/IMAP), planned for Phase 3.
 The login screen states this explicitly so the two are not confused.
 
+**Expanded direction (planned).** Login will be multi-provider (email/password +
+Google + Microsoft SSO via Supabase Auth), a first-run **onboarding tour** will
+collect personality/preferences into `manager_memories` (+ briefing preferences),
+and the mailbox layer is **OAuth-first** (Outlook MVP → Gmail next → generic IMAP
+opt-in later), kept separate from login. Full plan:
+`docs/product/auth-onboarding-and-mailbox-plan.md`. Suggested inserts: Phase 2b
+(SSO providers), Phase 2c (onboarding tour) before Phase 3 (Connect Outlook).
+
 Testing: a **Playwright auth fixture** (`e2e/auth.setup.ts`) signs a shared dev
 test user in and saves `storageState`, so the auth-protected dashboard e2e runs
 authenticated while the login e2e runs logged-out. The dev account is created via

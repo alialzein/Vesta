@@ -1,5 +1,12 @@
 # Microsoft Graph Outlook Integration
 
+> **Scope note.** The MVP mailbox integration is **Microsoft Graph / Outlook only**
+> and is **separate from login** (login is multi-provider via Supabase Auth —
+> email/password, Google, Microsoft SSO). A future expansion adds Gmail (OAuth)
+> and, later, generic IMAP as an opt-in. That direction is planned in
+> `docs/product/auth-onboarding-and-mailbox-plan.md`; this document remains
+> authoritative for the Outlook MVP.
+
 ## MVP scopes
 
 Start with least privilege.
