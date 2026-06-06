@@ -49,7 +49,7 @@ export function TodaysRadar({
   const visible = useMemo(() => filterWorkItems(items, filter), [items, filter]);
 
   return (
-    <section className="rounded-[var(--radius)] border border-line bg-panel p-5 shadow-glow backdrop-blur-[16px]">
+    <section className="relative z-[1] rounded-[var(--radius)] border border-line bg-panel p-5 shadow-glow">
       <div className="mb-[16px] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-baseline gap-[10px]">
           <h2 className="m-0 font-display text-[19px] font-medium tracking-tight">
@@ -85,7 +85,7 @@ export function TodaysRadar({
         </div>
       </div>
 
-      <div className="flex flex-col gap-[10px]">
+      <div className="flex flex-col gap-[7px]">
         {visible.length > 0 ? (
           visible.map((item) => (
             <WorkItemRow

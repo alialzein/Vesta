@@ -8,7 +8,7 @@ and what becomes real in Phase 1/2.
 
 ## What is currently real
 
-- The full dashboard UI and layout (light + dark themes; light is the default).
+- The full dashboard UI and layout (dark + light themes; dark is the default).
 - Local React state and navigation:
   - Selecting a Today's Radar item updates the right AI Assistant Rail.
   - Today's Radar filters (All / Decisions / Blockers / Follow-ups / Promises /
@@ -23,22 +23,23 @@ and what becomes real in Phase 1/2.
 
 ## What is demo-only / placeholder
 
-| Surface                                                | Behavior today                          | Becomes real in                             |
-| ------------------------------------------------------ | --------------------------------------- | ------------------------------------------- |
-| Topbar **Search**                                      | Decorative input, no results            | Later (search index)                        |
-| Topbar **Outlook status**                              | Static "Synced 2 min ago"               | Phase 3 (Graph OAuth)                       |
-| Topbar **Notifications** bell                          | Static count, no panel                  | Phase 5/11                                  |
-| Topbar **Settings**                                    | No-op button                            | Later (settings page)                       |
-| Topbar **Profile** avatar                              | No menu                                 | Phase 2 (auth/profile)                      |
-| Morning Brief quick actions                            | Open drawers / filter radar / toast     | Phase 9/11                                  |
-| **Clear My Day**                                       | Opens Focus Mode preview drawer         | Phase 11                                    |
-| **Meeting Prep**                                       | Opens Meeting Prep preview drawer       | Phase 11/12                                 |
-| **Delegate**                                           | Filters radar to "Can delegate" + toast | Phase 9/10                                  |
-| **Draft Replies**                                      | Toast only                              | Phase 9                                     |
-| Rail **Approve Draft / Ask Legal / Delegate / Snooze** | Toast: "Demo action recorded…"          | Phase 9                                     |
-| Rail **Add a memory or rule**                          | Toast (needs approval later)            | Phase 10                                    |
-| **Ask Vesta** chat                                     | Canned/mock replies only                | Phase 7+                                    |
-| **AI Command Center** large cards                      | Not rendered on Today page (flag-gated) | Reserved for a future expanded-actions page |
+| Surface                                                | Behavior today                                  | Becomes real in                             |
+| ------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------- |
+| Topbar **Search**                                      | Decorative input, no results                    | Later (search index)                        |
+| Topbar **Outlook status**                              | Static "Synced 2 min ago"                       | Phase 3 (Graph OAuth)                       |
+| Topbar **Notifications** bell                          | Static count, no panel                          | Phase 5/11                                  |
+| Topbar **Settings**                                    | No-op button                                    | Later (settings page)                       |
+| Topbar **Profile** avatar                              | No menu                                         | Phase 2 (auth/profile)                      |
+| Morning Brief quick actions                            | Open drawers / filter radar / toast             | Phase 9/11                                  |
+| **Clear My Day**                                       | Opens Focus Mode preview drawer                 | Phase 11                                    |
+| **Meeting Prep**                                       | Opens Meeting Prep preview drawer               | Phase 11/12                                 |
+| **Delegate**                                           | Filters radar to "Can delegate" + toast         | Phase 9/10                                  |
+| **Draft Replies**                                      | Toast only                                      | Phase 9                                     |
+| Rail **Approve Draft / Ask Legal / Delegate / Snooze** | Toast: "Demo action recorded…"                  | Phase 9                                     |
+| Rail **Add a memory or rule**                          | Toast (needs approval later)                    | Phase 10                                    |
+| **Ask Vesta** chat                                     | Canned/mock replies only                        | Phase 7+                                    |
+| **AI Command Center** large cards                      | Not rendered on Today page (flag-gated)         | Reserved for a future expanded-actions page |
+| **Vesta splash screen** (0.5 rev)                      | Full-screen branded splash (~1.8s) on each load | First login/session or real data loading    |
 
 All action buttons that imply an external effect show the standard line:
 

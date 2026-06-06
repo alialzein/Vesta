@@ -103,8 +103,15 @@ export function AiAssistantRail({
             <Icon name="sparkle" className="h-[16px] w-[16px]" />
           </span>
           <span className="font-display text-[15px] font-medium tracking-tight">AI Assistant</span>
-          <span className="ml-auto inline-flex items-center gap-[5px] rounded-full bg-accent-soft px-[9px] py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-accent">
-            <span className="h-[6px] w-[6px] rounded-full bg-green shadow-[0_0_0_3px_var(--green-soft)]" />
+          {/* LIVE status with a breathing pulse + ripple (Phase 0.5, Section E). */}
+          <span className="ml-auto inline-flex items-center gap-[6px] rounded-full bg-accent-soft px-[9px] py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-accent">
+            <span className="relative grid h-[6px] w-[6px] place-items-center">
+              <span
+                className="animate-vesta-ripple absolute h-[6px] w-[6px] rounded-full bg-green"
+                aria-hidden="true"
+              />
+              <span className="animate-vesta-pulse relative h-[6px] w-[6px] rounded-full bg-green shadow-[0_0_0_2px_var(--green-soft)]" />
+            </span>
             Live
           </span>
           {/* Collapse toggle lives in the panel itself (small + simple). */}
@@ -126,7 +133,7 @@ export function AiAssistantRail({
         <div className="mt-[10px] flex items-center gap-[10px]">
           <span
             className={[
-              'grid h-[42px] w-[42px] flex-none place-items-center rounded-[12px] font-mono text-[15px] font-bold',
+              'grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] font-mono text-[14px] font-bold',
               band === 'red'
                 ? 'bg-red-soft text-red'
                 : band === 'amber'
@@ -137,11 +144,11 @@ export function AiAssistantRail({
             {item.priorityScore}
           </span>
           <div className="leading-tight">
-            <span className="block font-mono text-[11px] text-muted">
-              PRIORITY · {item.priorityScore}/100
-            </span>
             <span className="block text-[12.5px] font-semibold text-ink-soft">
               {bandLabel[band]}
+            </span>
+            <span className="block font-mono text-[10.5px] text-muted">
+              {item.priorityScore}/100 priority
             </span>
           </div>
         </div>
@@ -171,10 +178,10 @@ export function AiAssistantRail({
               aria-selected={isActive}
               onClick={() => onTabChange(tab.id)}
               className={[
-                'flex flex-1 items-center justify-center gap-[5px] rounded-[10px] px-2 py-[7px] text-[12px] font-semibold transition',
+                'flex flex-1 items-center justify-center gap-[5px] rounded-[10px] px-2 py-[7px] text-[12px] font-semibold transition-all duration-200',
                 isActive
-                  ? 'bg-panel-solid text-accent shadow-soft'
-                  : 'text-muted hover:text-ink-soft',
+                  ? 'bg-panel-solid text-accent shadow-[0_0_0_1px_var(--accent-soft),0_6px_16px_rgba(47,125,235,0.14)]'
+                  : 'text-muted hover:bg-panel-2 hover:text-ink-soft',
               ].join(' ')}
             >
               <Icon name={tab.icon} className="h-[14px] w-[14px]" />
@@ -206,6 +213,11 @@ function ActionTab({ item }: { item: WorkItem }) {
       <div className="relative overflow-hidden rounded-[16px] border border-accent bg-[linear-gradient(135deg,var(--accent-soft),transparent_65%)] p-[16px] shadow-[0_0_0_3px_var(--accent-soft)]">
         <span
           className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)]"
+          aria-hidden="true"
+        />
+        {/* Slow scanning shimmer — signals the AI is "thinking" (calm, subtle). */}
+        <span
+          className="animate-vesta-shimmer pointer-events-none absolute inset-y-0 -left-1/3 w-1/2 bg-[linear-gradient(100deg,transparent,var(--accent-soft),transparent)] opacity-60"
           aria-hidden="true"
         />
         <span className="relative inline-flex items-center gap-[6px] font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-accent">

@@ -88,6 +88,56 @@ Status: **Done.** A focused fix pass (no redesign), still demo-only. Plan/detail
   tabs, list, side help panel).
 - Fixed Today's Radar scrolling (viewport-constrained grid rows + `min-h-0`).
 
+### Phase 0.5 — AI Brand Polish, Motion & Loading
+
+Status: **Done.** A polish pass (no redesign), still demo-only. Plan/details:
+`docs/design/phase-0-5-ai-brand-polish-plan.md`,
+`docs/design/loading-experience-v1.md`, `docs/design/ai-motion-principles.md`.
+
+- Today's Radar rows reduced "boxes-in-boxes": softer single-surface rows, quieter
+  source/category/action chips, slightly more compact, cleaner selected glow.
+- Morning Brief upgraded into a live AI signal card: pulsing live dot + ripple,
+  tiny signal waveform, low-opacity drifting shimmer, and a left accent that now
+  respects the rounded corner (card `overflow-hidden`). No Delegate added.
+- New branded **Vesta initialization screen** (`components/loading/`): orbital AI
+  signal sphere, rotating copy, ~1.8s then fade-out. Demo-only; 0ms under test;
+  reduced-motion safe.
+- Subtle blue **atmospheric background** (`.dashboard-atmosphere` + `--atmos-*`),
+  kept very low opacity so light mode stays clean and text contrast is unaffected.
+- Right AI rail refined: LIVE pulse + ripple, lighter priority metadata.
+- Calm AI motion (`vesta-*` keyframes), global `:focus-visible` ring, and full
+  `prefers-reduced-motion` support.
+
+#### Phase 0.5 revision
+
+The first 0.5 pass was too subtle and the splash rendered see-through. The revision:
+
+- **Dark mode is now the default theme** (stronger brand); light is still toggleable.
+- **Rebuilt the loading screen** as a true full-screen, **opaque** `VestaSplashScreen`
+  (`components/dashboard/`): orbital rings + traveling nodes + radar sweep +
+  breathing core + grid + progress, played **on every full page load**,
+  `SPLASH_DURATION_MS ≈ 1800`, 0ms in test, reduced-motion safe, `data-testid`s.
+  (Root cause of the old transparency: a solid color inside `background-image`.)
+- Promoted the atmosphere to a `DashboardAtmosphere` component (blue/cyan blooms +
+  faint masked grid), more present in dark mode.
+- Radar rows pushed further: borderless-until-hover, borderless priority tint and
+  chips — one clean surface.
+- AI rail: active-tab glow + a calm scanning shimmer on Next Best Action.
+
+#### Phase 0.5 final polish
+
+- **Removed the grid from behind the work list.** Dark-mode card surfaces are now
+  **opaque** (`--panel` solid dark-blue) and the atmosphere **grid was removed**
+  from the dashboard (it read as graph paper behind tickets) — only soft radial
+  blooms remain in the shell background; a grid lives only on the splash. Rule:
+  no grid/pattern behind Today's Radar, work rows, Morning Brief text, or rail
+  text cards.
+- Today's Radar reads as a calm solid surface; selected row keeps blue tint + left
+  cyan accent (no pattern).
+- **Splash refined** (not replaced): soft radial field, 5 orbiting nodes, a small
+  live equalizer, brighter tagline, branded cyan→mint progress bar, better spacing.
+  `SPLASH_DURATION_MS ≈ 1800` (tuned interactively).
+
 ## Phase 1 — Database Foundation
 
 Goal:

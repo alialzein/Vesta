@@ -16,9 +16,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    // data-theme is managed by ThemeProvider on the client; default to light
-    // so first paint matches the presentation-ready light demo theme.
-    <html lang="en" data-theme="light" suppressHydrationWarning>
+    // data-theme is managed by ThemeProvider on the client; default to dark
+    // so first paint matches the dark, futuristic demo brand (Phase 0.5).
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
       <body>
         <ThemeProvider>
           <ToastProvider>{children}</ToastProvider>

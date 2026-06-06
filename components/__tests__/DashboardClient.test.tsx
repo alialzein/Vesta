@@ -21,20 +21,20 @@ describe('DashboardClient shell', () => {
     document.documentElement.removeAttribute('data-theme');
   });
 
-  it('defaults to the light theme', () => {
+  it('defaults to the dark theme', () => {
     renderDashboard();
-    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
-  it('toggles the theme to dark and back', async () => {
+  it('toggles the theme to light and back', async () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(screen.getByRole('button', { name: /Switch to dark mode/i }));
-    expect(document.documentElement.dataset.theme).toBe('dark');
-
     await user.click(screen.getByRole('button', { name: /Switch to light mode/i }));
     expect(document.documentElement.dataset.theme).toBe('light');
+
+    await user.click(screen.getByRole('button', { name: /Switch to dark mode/i }));
+    expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
   it('shows the Today view with the brief and radar, focused on work', () => {

@@ -63,7 +63,7 @@ export function Sidebar({
         mobile
           ? 'h-full w-[280px] border-r p-[22px_18px]'
           : [
-              'hidden rounded-lg border lg:flex',
+              'relative z-[1] hidden rounded-lg border lg:flex',
               collapsed ? 'p-[16px_10px]' : 'p-[22px_18px]',
             ].join(' '),
       ].join(' ')}
