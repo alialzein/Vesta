@@ -24,6 +24,7 @@ import { CleanInboxDrawer } from './CleanInboxDrawer';
 import { VestaSplashScreen } from './VestaSplashScreen';
 import { DashboardAtmosphere } from './DashboardAtmosphere';
 import { Icon } from '@/components/ui/Icon';
+import type { AccountView } from '@/lib/supabase/account';
 
 /**
  * Demo feature flag (Phase 0.3): the large AI Command Center gradient cards are
@@ -54,7 +55,7 @@ function initialSplashVisible(): boolean {
  * All data is demo data (lib/demo-data.ts). No network/DB/AI calls.
  * Quick actions are local React behavior only — see docs/demo/demo-behavior.md.
  */
-export function DashboardClient() {
+export function DashboardClient({ account }: { account?: AccountView } = {}) {
   const { showToast } = useToast();
 
   // Branded initialization splash (Phase 0.5). Demo-only timed overlay shown once
@@ -136,6 +137,7 @@ export function DashboardClient() {
           onSelectView={setView}
           mobileOpen={sidebarMobileOpen}
           onCloseMobile={() => setSidebarMobileOpen(false)}
+          account={account}
         />
 
         {/* Content area: main + optional right rail */}
@@ -151,7 +153,7 @@ export function DashboardClient() {
         >
           {/* Main column */}
           <main className="v-scroll flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pr-1">
-            <Topbar onOpenSidebar={() => setSidebarMobileOpen(true)} />
+            <Topbar onOpenSidebar={() => setSidebarMobileOpen(true)} account={account} />
 
             {onToday ? (
               <>

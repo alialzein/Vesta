@@ -153,6 +153,12 @@ Deliverables:
 
 ## Phase 2 — Auth and Profile
 
+Status: **Done.** Email/password auth via Supabase (`@supabase/ssr`), middleware
+session refresh + route protection, `/login` (sign-in/sign-up) + `/auth/callback`,
+a `profiles` auto-create trigger on signup, sign-out in the sidebar, and the
+dashboard greeting/profile sourced from the signed-in account. Live DB test
+covers the trigger; component test covers the auth form.
+
 Goal:
 
 - Manager can log in and has a profile.

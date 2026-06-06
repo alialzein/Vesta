@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { SidebarHeader } from './SidebarHeader';
 import { SidebarNav, type NavGroup } from './SidebarNav';
 import { SidebarFooter } from './SidebarFooter';
+import type { AccountView } from '@/lib/supabase/account';
 
 export type NavView = 'today' | 'memory';
 
@@ -35,6 +36,8 @@ type SidebarProps = {
   /** Mobile drawer state (the sidebar is hidden on < lg and shown as an overlay). */
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  /** Signed-in account; falls back to demo identity when absent. */
+  account?: AccountView;
 };
 
 export function Sidebar({
@@ -44,6 +47,7 @@ export function Sidebar({
   onSelectView,
   mobileOpen,
   onCloseMobile,
+  account,
 }: SidebarProps) {
   // Close the mobile drawer on Escape.
   useEffect(() => {
@@ -82,7 +86,7 @@ export function Sidebar({
           if (mobile) onCloseMobile();
         }}
       />
-      <SidebarFooter collapsed={mobile ? false : collapsed} />
+      <SidebarFooter collapsed={mobile ? false : collapsed} account={account} />
     </aside>
   );
 

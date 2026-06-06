@@ -3,10 +3,13 @@
 import { DEMO_USER, demoNotificationCount } from '@/lib/demo-data';
 import { useTheme } from '@/lib/theme';
 import { Icon } from '@/components/ui/Icon';
+import type { AccountView } from '@/lib/supabase/account';
 
 type TopbarProps = {
   /** Opens the sidebar drawer on small screens (hamburger). */
   onOpenSidebar: () => void;
+  /** Signed-in account; falls back to demo identity when absent. */
+  account?: AccountView;
 };
 
 /**
@@ -17,8 +20,9 @@ type TopbarProps = {
  *
  * Demo-only: search, notifications and settings are placeholders.
  */
-export function Topbar({ onOpenSidebar }: TopbarProps) {
+export function Topbar({ onOpenSidebar, account }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
+  const firstName = account?.firstName ?? DEMO_USER.firstName;
 
   return (
     <div className="flex items-start justify-between gap-4">
@@ -36,7 +40,7 @@ export function Topbar({ onOpenSidebar }: TopbarProps) {
         <div className="min-w-0">
           <h1 className="m-0 truncate pb-[2px] font-display text-[24px] font-semibold leading-[1.2] tracking-tight sm:text-[30px]">
             Good morning,{' '}
-            <span className="grad-text inline-block pr-[4px] italic">{DEMO_USER.firstName}</span>
+            <span className="grad-text inline-block pr-[4px] italic">{firstName}</span>
           </h1>
           <p className="mt-[3px] truncate text-[13px] text-muted sm:text-sm">
             {DEMO_USER.todayLabel} — here&apos;s what genuinely needs you today.

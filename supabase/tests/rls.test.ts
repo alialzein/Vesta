@@ -67,7 +67,8 @@ describeIf('RLS and security boundaries (live DB)', () => {
   });
 
   it('service role can write sync_cursors (service-owned table)', async () => {
-    // Needs a real user + profile to satisfy FKs. Create both via service role.
+    // Needs a real user to satisfy FKs. The Phase 2 signup trigger
+    // auto-creates the matching profiles row, so we do not insert it manually.
     const email = `rls-test-${Date.now()}@example.com`;
     const { data: created, error: userErr } = await serviceClient!.auth.admin.createUser({
       email,
@@ -75,13 +76,6 @@ describeIf('RLS and security boundaries (live DB)', () => {
     });
     expect(userErr).toBeNull();
     const userId = created.user!.id;
-
-    // profiles.id references auth.users.id; create the profile row explicitly.
-    // (A signup trigger to auto-create profiles is added in Phase 2 Auth.)
-    const { error: profileErr } = await serviceClient!
-      .from('profiles')
-      .insert({ id: userId, email });
-    expect(profileErr).toBeNull();
 
     const { data, error } = await serviceClient!
       .from('sync_cursors')
@@ -94,6 +88,32 @@ describeIf('RLS and security boundaries (live DB)', () => {
     if (data?.id) createdSyncCursorIds.push(data.id);
 
     // Clean up the test user (cascades to profile + sync_cursor rows).
+    await serviceClient!.auth.admin.deleteUser(userId);
+  });
+
+  it('auto-creates a profiles row when a user signs up (Phase 2 trigger)', async () => {
+    const email = `trigger-test-${Date.now()}@example.com`;
+    const { data: created, error: userErr } = await serviceClient!.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: { full_name: 'Trigger Test' },
+    });
+    expect(userErr).toBeNull();
+    const userId = created.user!.id;
+
+    // The on_auth_user_created trigger should have inserted the profile.
+    const { data: profile, error } = await serviceClient!
+      .from('profiles')
+      .select('id, email, full_name, timezone')
+      .eq('id', userId)
+      .single();
+
+    expect(error).toBeNull();
+    expect(profile?.id).toBe(userId);
+    expect(profile?.email).toBe(email);
+    expect(profile?.full_name).toBe('Trigger Test');
+    expect(profile?.timezone).toBe('UTC');
+
     await serviceClient!.auth.admin.deleteUser(userId);
   });
 

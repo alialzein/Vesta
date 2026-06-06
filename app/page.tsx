@@ -1,12 +1,18 @@
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
+import { requireUser } from '@/lib/supabase/auth';
+import { getAccountView } from '@/lib/supabase/account';
 
 /**
- * Phase 0 dashboard shell.
+ * Protected dashboard route (Phase 2).
  *
- * Renders the Arctic Frost command center from demo data only.
- * Later phases replace lib/demo-data.ts with Supabase-backed queries and
- * may move data loading into this server component.
+ * Requires an authenticated session (middleware also guards this, and
+ * requireUser is the data-layer backstop). The signed-in account is passed to
+ * the dashboard for the greeting + profile; the rest of the dashboard still
+ * renders demo data until later phases wire real Supabase queries.
  */
-export default function DashboardPage() {
-  return <DashboardClient />;
+export default async function DashboardPage() {
+  await requireUser();
+  const account = await getAccountView();
+
+  return <DashboardClient account={account ?? undefined} />;
 }
