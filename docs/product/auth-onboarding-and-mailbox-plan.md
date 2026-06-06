@@ -168,12 +168,23 @@ This keeps the documented build order intact and only inserts login providers
 
 ---
 
-## 7. Open decisions (to confirm before building)
+## 7. Decisions (confirmed with product owner)
 
-- Onboarding: a full-screen wizard vs an inline checklist on the dashboard?
-- Do we require connecting a mailbox to proceed, or allow "explore with demo data"?
-- Account linking across providers (same person, Google + Microsoft) — MVP or later?
-- IMAP: in-scope for v1 of the product, or strictly post-pilot?
+- **Onboarding:** a **short full-screen wizard** on first login (3–5 steps:
+  role → tone → VIPs → topics → connect mailbox), **skippable & resumable**, with
+  everything editable later in Settings/Memory. A small dashboard "finish setup"
+  nudge covers anything skipped.
+- **No demo data.** Do not gate the app on connecting a mailbox. When there is no
+  real data yet, show good **empty states** (specific designs to be decided later).
+- **Account linking** (same person via multiple providers): **deferred** — one
+  primary login method per user for the MVP; revisit later.
+- **Generic IMAP:** **post-pilot**, opt-in only. MVP/early uses OAuth (Outlook,
+  then Gmail); IMAP comes after the pilot with encrypted credential storage.
+
+### Still to decide later
+
+- Exact empty-state designs per screen (when no mailbox/data).
+- Onboarding question set finalization (reuse briefing plan §5).
 
 ---
 

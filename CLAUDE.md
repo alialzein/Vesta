@@ -12,6 +12,17 @@ Follow `AGENTS.md` first. This file only adds Claude-specific working style pref
 6. Do not silently change architecture decisions.
 7. Ask before destructive changes.
 
+## UI rules (non-negotiable)
+
+- **Every screen must support both light and dark mode.** This includes auth/login,
+  onboarding, dashboards, drawers, empty states, and any new page or component.
+  Use the theme CSS variables / Tailwind tokens (e.g. `bg-panel`, `text-ink`,
+  `border-line`, `--atmos-*`) — never hardcode colors that only work in one theme.
+- The user's theme choice persists across logout/login and reloads (saved in
+  `localStorage` as `vesta-theme`; applied pre-paint in `app/layout.tsx`). Default
+  is dark; do not reset the user's choice.
+- When adding UI, verify it in **both** themes before considering it done.
+
 ## Project priorities
 
 The first working product must prioritize:
