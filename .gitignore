@@ -20,6 +20,7 @@ coverage/
 playwright-report/
 test-results/
 /playwright/.cache/
+/playwright/.auth/
 
 # ---------- Environment & secrets (NEVER commit) ----------
 .env

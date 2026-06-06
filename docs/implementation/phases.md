@@ -159,6 +159,26 @@ a `profiles` auto-create trigger on signup, sign-out in the sidebar, and the
 dashboard greeting/profile sourced from the signed-in account. Live DB test
 covers the trigger; component test covers the auth form.
 
+Login AI brand polish (`feature/login-ai-polish`): a small animated Vesta signal
+core, subtle AI background atmosphere, refined card/inputs (focus glow, leading
+icons), a premium loading button (rotating copy → splash hand-off), confirm-password
+on sign-up, and trust cues — reduced-motion safe. A second polish pass added
+**"Continue with Microsoft"** as the primary CTA (demo-only; real OAuth is Phase 3),
+an "or use email" divider with email/password as the secondary option, an
+"AI workspace ready" status chip, and a slightly larger orb. See
+`docs/design/login-experience-v1.md`.
+
+**Decision:** the login Microsoft button is **sign-in / SSO only**. Connecting the
+Outlook **mailbox** for email is a separate **"Connect Outlook"** step in
+Settings/onboarding (Microsoft Graph OAuth — not SMTP/IMAP), planned for Phase 3.
+The login screen states this explicitly so the two are not confused.
+
+Testing: a **Playwright auth fixture** (`e2e/auth.setup.ts`) signs a shared dev
+test user in and saves `storageState`, so the auth-protected dashboard e2e runs
+authenticated while the login e2e runs logged-out. The dev account is created via
+`node scripts/create-dev-user.mjs` (creds in `.env.local`). **Temporary for dev:
+remove the dev user and re-enable Supabase "Confirm email" before launch.**
+
 Goal:
 
 - Manager can log in and has a profile.
