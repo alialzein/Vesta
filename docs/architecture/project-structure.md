@@ -134,6 +134,34 @@ HTML mockup while staying idiomatic.
 > `docs/design/ai-motion-principles.md`, and `docs/demo/demo-behavior.md`.
 > Still demo-only (no backend/AI).
 
+## Auth layer (Phase 2)
+
+```txt
+middleware.ts                      # refreshes session, protects routes
+lib/supabase/
+├── client.ts                      # browser client (anon key)
+├── server.ts                      # server client bound to request cookies
+├── middleware.ts                  # updateSession + isPublicPath (route guard)
+├── auth.ts                        # getCurrentUser / requireUser / getProfile
+└── account.ts                     # getAccountView (display name/initials/email)
+app/
+├── (auth)/
+│   ├── actions.ts                 # signIn / signUp / signOut server actions
+│   ├── AuthForm.tsx               # client sign-in/sign-up form
+│   └── login/page.tsx             # /login (public)
+├── auth/callback/route.ts         # email-confirmation / OAuth code exchange
+└── page.tsx                       # protected: requireUser() -> DashboardClient(account)
+supabase/migrations/
+└── 20260606150001_profiles_signup_trigger.sql  # auto-create profile on signup
+```
+
+Auth model: Supabase email/password via `@supabase/ssr`. Middleware refreshes the
+session on every request and redirects unauthenticated users to `/login` (and
+authenticated users away from `/login`). `requireUser()` is the data-layer
+backstop in the protected page. The dashboard greeting + sidebar profile come
+from the signed-in account; the rest of the dashboard still renders demo data
+until later phases wire real queries. Sign-out lives in the sidebar footer.
+
 ## Data flow (Phase 0)
 
 ```txt

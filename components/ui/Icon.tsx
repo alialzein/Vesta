@@ -74,6 +74,9 @@ const PATHS = {
   plus: <path d="M12 5v14M5 12h14" />,
   shield: <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" />,
   activity: <path d="M3 12h4l3 8 4-16 3 8h4" />,
+  signout: (
+    <path d="M15 12H3m0 0l4-4m-4 4l4 4M10 7V5a2 2 0 012-2h6a2 2 0 012 2v14a2 2 0 01-2 2h-6a2 2 0 01-2-2v-2" />
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;

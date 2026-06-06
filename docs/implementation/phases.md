@@ -153,6 +153,12 @@ Deliverables:
 
 ## Phase 2 — Auth and Profile
 
+Status: **Done.** Email/password auth via Supabase (`@supabase/ssr`), middleware
+session refresh + route protection, `/login` (sign-in/sign-up) + `/auth/callback`,
+a `profiles` auto-create trigger on signup, sign-out in the sidebar, and the
+dashboard greeting/profile sourced from the signed-in account. Live DB test
+covers the trigger; component test covers the auth form.
+
 Goal:
 
 - Manager can log in and has a profile.
@@ -299,6 +305,10 @@ Deliverables:
 - Promise and Commitment Tracker.
 - Strong Focus Mode.
 - Relationship Risk Heatmap later.
+- Personal Intelligence Brief ("Briefing" page) — a separate, future track with its
+  own phases A–F. See `docs/product/personal-intelligence-brief-plan.md`. Build only
+  after the core Outlook + AI dashboard pilot is stable; news/intelligence must never
+  appear above Today's Radar.
 
 ## Phase 13 — Teams Later
 
