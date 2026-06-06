@@ -159,9 +159,14 @@ e2e/
 ├── dashboard.spec.ts              # runs authenticated (auth fixture)
 └── login.spec.ts                  # runs logged-out
 ├── auth/callback/route.ts         # email-confirmation / OAuth code exchange
-└── page.tsx                       # protected: requireUser() -> DashboardClient(account)
+├── onboarding/
+│   ├── page.tsx                   # first-run gate -> OnboardingWizard (or redirect)
+│   ├── OnboardingWizard.tsx       # full-screen wizard (client)
+│   └── actions.ts                 # completeOnboarding / skipOnboarding (saves memories)
+└── page.tsx                       # protected: requireUser() + onboarding gate -> Dashboard
 supabase/migrations/
-└── 20260606150001_profiles_signup_trigger.sql  # auto-create profile on signup
+├── 20260606150001_profiles_signup_trigger.sql  # auto-create profile on signup
+└── 20260606160001_add_profiles_onboarded_at.sql # onboarding completion flag
 ```
 
 Auth model: Supabase email/password via `@supabase/ssr`. Middleware refreshes the

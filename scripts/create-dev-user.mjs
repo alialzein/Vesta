@@ -32,6 +32,7 @@ if (!url || !serviceKey || !email || !password) {
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
 // Try to create; if it already exists, update the password so it stays usable.
+let userId;
 const { data: created, error } = await admin.auth.admin.createUser({
   email,
   password,
@@ -41,17 +42,32 @@ const { data: created, error } = await admin.auth.admin.createUser({
 
 if (error) {
   if (/already|registered|exists/i.test(error.message)) {
-    // Find the existing user and reset its password.
     const { data: list } = await admin.auth.admin.listUsers();
     const existing = list?.users.find((u) => u.email === email);
-    if (existing) {
-      await admin.auth.admin.updateUserById(existing.id, { password, email_confirm: true });
-      console.log(`Dev user already existed; password reset. id=${existing.id} email=${email}`);
-      process.exit(0);
+    if (!existing) {
+      console.error('Dev user exists but could not be found to update.');
+      process.exit(1);
     }
+    await admin.auth.admin.updateUserById(existing.id, { password, email_confirm: true });
+    userId = existing.id;
+    console.log(`Dev user already existed; password reset. id=${userId} email=${email}`);
+  } else {
+    console.error('Failed to create dev user:', error.message);
+    process.exit(1);
   }
-  console.error('Failed to create dev user:', error.message);
-  process.exit(1);
+} else {
+  userId = created.user?.id;
+  console.log(`Dev user created. id=${userId} email=${email}`);
 }
 
-console.log(`Dev user created. id=${created.user?.id} email=${email}`);
+// Mark the dev user as already onboarded so it skips the first-run wizard and
+// goes straight to the (demo-data) dashboard for testing. Real users still see
+// onboarding. The profiles row is created by the signup trigger.
+if (userId) {
+  const { error: pErr } = await admin
+    .from('profiles')
+    .update({ onboarded_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (pErr) console.warn('Could not set onboarded_at (run after the migration):', pErr.message);
+  else console.log('Dev user marked onboarded (skips the onboarding wizard).');
+}
