@@ -15,11 +15,14 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 const STORAGE_KEY = 'vesta-theme';
 
 /**
- * Applies the Arctic Frost palette by toggling `data-theme` on <html>,
- * exactly as the original mockup did. Defaults to dark.
+ * Applies the Arctic Frost palette by toggling `data-theme` on <html>.
+ *
+ * Defaults to the premium light theme (the presentation-ready demo default,
+ * see docs/design/visual-direction-v2.md). A stored choice still wins, so
+ * users who switch to dark keep it across reloads.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>('light');
 
   // Read persisted choice on mount (client only).
   useEffect(() => {

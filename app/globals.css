@@ -6,13 +6,18 @@
 
 /* ============================================================
    THEMING — Arctic Frost, two full independent palettes.
-   [data-theme="dark"]  -> Dark mode
-   [data-theme="light"] -> White mode (light sidebar)
-   Ported verbatim from the original mockup.
+   [data-theme="dark"]  -> Dark executive mode
+   [data-theme="light"] -> Premium light SaaS mode (v2 — Phase 0.1)
+
+   The light palette was redesigned in Phase 0.1 to feel intentionally
+   designed (soft blue-tinted background, clean white cards, softer
+   borders/shadows) rather than an inverted dark theme. See
+   docs/design/visual-direction-v2.md.
    ============================================================ */
 :root {
   --radius: 18px;
   --radius-lg: 24px;
+  --radius-sm: 12px;
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Outfit', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -61,50 +66,85 @@ html[data-theme='dark'] {
   --grain-opacity: 0.05;
   --ring-track: rgba(120, 170, 230, 0.1);
   --field-bg: rgba(120, 170, 230, 0.05);
+  /* Soft card surface (used by KPI containers, radar rows). */
+  --panel-soft: rgba(120, 170, 230, 0.05);
+  /* Right AI rail surface — subtle glassy gradient in dark mode. */
+  --rail-bg: linear-gradient(180deg, rgba(91, 168, 245, 0.07), rgba(20, 28, 40, 0.6));
+  --rail-border: var(--line);
+  /* AI Command Center gradient cards. */
+  --cmd-1a: rgba(91, 168, 245, 0.22);
+  --cmd-1b: rgba(103, 232, 216, 0.1);
+  --cmd-2a: rgba(67, 232, 216, 0.2);
+  --cmd-2b: rgba(91, 168, 245, 0.08);
+  --cmd-3a: rgba(255, 194, 75, 0.18);
+  --cmd-3b: rgba(91, 168, 245, 0.08);
+  --cmd-4a: rgba(67, 224, 168, 0.18);
+  --cmd-4b: rgba(91, 168, 245, 0.08);
 }
 
-/* ---------- WHITE MODE ---------- */
+/* ---------- LIGHT MODE (premium light SaaS — Phase 0.1 v2) ---------- */
 html[data-theme='light'] {
-  --bg: #eef3fa;
-  --bg-grad-1: rgba(74, 111, 165, 0.13);
-  --bg-grad-2: rgba(212, 228, 247, 0.3);
-  --panel: rgba(255, 255, 255, 0.86);
+  /* Soft blue-tinted page background. */
+  --bg: #eef5ff;
+  --bg-grad-1: rgba(47, 125, 235, 0.08);
+  --bg-grad-2: rgba(67, 199, 255, 0.1);
+  /* Clean white cards. */
+  --panel: #ffffff;
   --panel-solid: #ffffff;
-  --panel-2: rgba(35, 55, 85, 0.025);
-  --ink: #27384f;
-  --ink-soft: #4a5d75;
-  --muted: #8b98a8;
-  --line: rgba(35, 55, 85, 0.1);
-  --line-strong: rgba(35, 55, 85, 0.18);
-  --accent: #4a6fa5;
-  --accent-2: #6f9bd6;
-  --accent-soft: rgba(74, 111, 165, 0.12);
-  --red: #cc5b53;
-  --red-soft: rgba(204, 91, 83, 0.1);
-  --amber: #bc8a2e;
-  --amber-soft: rgba(188, 138, 46, 0.13);
-  --green: #2f9277;
-  --green-soft: rgba(47, 146, 119, 0.12);
-  --side-bg: linear-gradient(180deg, #ffffff, #eaf1fa);
-  --side-border: rgba(35, 55, 85, 0.08);
-  --side-ink: #27384f;
-  --side-muted: #8995a6;
-  --side-link: #4a5d75;
-  --side-hover: rgba(74, 111, 165, 0.07);
-  --side-active-bg: linear-gradient(100deg, var(--accent-soft), transparent);
-  --side-badge-bg: rgba(35, 55, 85, 0.07);
-  --side-badge-ink: #4a5d75;
-  --side-card: #eef3fb;
-  --side-card-border: rgba(35, 55, 85, 0.08);
-  --side-lbl: #a6b1c0;
-  --shadow: 0 24px 60px rgba(35, 55, 85, 0.12);
-  --shadow-soft: 0 10px 30px rgba(35, 55, 85, 0.07);
-  --glow: 0 0 0 1px var(--line), 0 18px 48px rgba(35, 55, 85, 0.09);
-  --chat-bubble-ai: rgba(74, 111, 165, 0.1);
-  --chat-bubble-user: rgba(35, 55, 85, 0.05);
-  --grain-opacity: 0.02;
-  --ring-track: rgba(35, 55, 85, 0.08);
+  /* Soft card background for nested surfaces. */
+  --panel-2: #f7faff;
+  --panel-soft: #f7faff;
+  /* Readable text contrast. */
+  --ink: #1c2f4a;
+  --ink-soft: #44587a;
+  --muted: #6f8197;
+  /* Softer borders. */
+  --line: #dce7f5;
+  --line-strong: #c8d8ee;
+  --accent: #2f7deb;
+  --accent-2: #43c7ff;
+  --accent-soft: rgba(47, 125, 235, 0.1);
+  --red: #ef5b5b;
+  --red-soft: rgba(239, 91, 91, 0.1);
+  --amber: #d99a26;
+  --amber-soft: rgba(243, 184, 74, 0.16);
+  --green: #1ca888;
+  --green-soft: rgba(56, 221, 182, 0.14);
+  --side-bg: linear-gradient(180deg, #ffffff, #f3f8ff);
+  --side-border: #e2ecf9;
+  --side-ink: #1c2f4a;
+  --side-muted: #6f8197;
+  --side-link: #44587a;
+  --side-hover: rgba(47, 125, 235, 0.07);
+  --side-active-bg: linear-gradient(100deg, rgba(47, 125, 235, 0.14), rgba(67, 199, 255, 0.05));
+  --side-badge-bg: #eef3fb;
+  --side-badge-ink: #44587a;
+  --side-card: #f4f8ff;
+  --side-card-border: #e2ecf9;
+  --side-lbl: #9aa9bd;
+  /* Softer, layered shadows. */
+  --shadow: 0 24px 60px rgba(28, 47, 74, 0.1);
+  --shadow-soft: 0 8px 24px rgba(28, 47, 74, 0.06);
+  --glow: 0 0 0 1px var(--line), 0 14px 40px rgba(28, 47, 74, 0.07);
+  --chat-bubble-ai: rgba(47, 125, 235, 0.08);
+  --chat-bubble-user: #f0f4fb;
+  --grain-opacity: 0;
+  --ring-track: #e4edf9;
   --field-bg: #ffffff;
+  /* Right AI rail — a distinct blue-tinted gradient so it reads as a dedicated
+     assistant zone (clearly separate from the white content cards and the page
+     background). Nested cards inside the rail stay white to pop. */
+  --rail-bg: linear-gradient(180deg, #e9f1ff, #eaf3ff 60%, #e6eeff);
+  --rail-border: #d3e2f7;
+  /* AI Command Center gradient cards (light, soft tints). */
+  --cmd-1a: rgba(47, 125, 235, 0.14);
+  --cmd-1b: rgba(67, 199, 255, 0.1);
+  --cmd-2a: rgba(67, 199, 255, 0.16);
+  --cmd-2b: rgba(56, 221, 182, 0.1);
+  --cmd-3a: rgba(243, 184, 74, 0.18);
+  --cmd-3b: rgba(47, 125, 235, 0.06);
+  --cmd-4a: rgba(56, 221, 182, 0.18);
+  --cmd-4b: rgba(47, 125, 235, 0.06);
 }
 
 @layer base {
@@ -196,4 +236,21 @@ html[data-theme='light'] {
 
 .animate-rise {
   animation: rise 0.4s var(--ease) both;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 1.4s linear infinite;
+}
+
+/* Respect users who prefer reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-spin-slow {
+    animation: none;
+  }
 }

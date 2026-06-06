@@ -9,7 +9,14 @@
  * Nothing in this file should ever ship real user data or secrets.
  */
 
-import type { ChatMessage, KpiMetric, ManagerMemory, MorningBrief, WorkItem } from './types';
+import type {
+  ChatMessage,
+  CommandCard,
+  KpiMetric,
+  ManagerMemory,
+  MorningBrief,
+  WorkItem,
+} from './types';
 
 export const DEMO_USER = {
   firstName: 'Ali',
@@ -20,26 +27,127 @@ export const DEMO_USER = {
   todayLabel: 'Wednesday, 3 June',
 };
 
+/**
+ * Display-only integration status for the topbar. Phase 0.1 is demo-only;
+ * later phases derive this from a real Microsoft Graph connection.
+ */
+export const demoIntegrationStatus = {
+  provider: 'Outlook',
+  connected: true,
+  detail: 'Synced 2 min ago',
+};
+
+/** Unread-style count shown on the topbar notification bell (demo only). */
+export const demoNotificationCount = 3;
+
 export const demoMorningBrief: MorningBrief = {
   headline: 'One blocker is putting a client relationship at risk.',
   body: 'You have <b>5 critical items</b>, <b>3 follow-ups</b>, and <b>1 approval blocking finance</b>. The top risk is the <b>Cedars Group</b> contract thread — they have followed up twice and need confirmation before 4 PM.',
+  summaryLine:
+    '5 critical · 3 follow-ups · 1 finance blocker. Cedars Group needs confirmation before 4 PM.',
   topUrgencyScore: 92,
 };
 
+/**
+ * AI Command Center cards — quick AI-assisted flows shown under the Morning
+ * Brief. Demo only: the CTAs do not run anything in Phase 0.1.
+ */
+export const demoCommandCards: CommandCard[] = [
+  {
+    id: 'cmd-clear-day',
+    title: 'Clear My Day',
+    description: 'Turn urgent decisions, follow-ups, and drafts into a focused action plan.',
+    cta: 'Start',
+    icon: 'sparkle',
+    accent: 1,
+  },
+  {
+    id: 'cmd-meeting-prep',
+    title: 'Meeting Prep',
+    description: "Prepare a one-page brief for today's important meetings.",
+    cta: 'Prepare',
+    icon: 'calendar',
+    accent: 2,
+  },
+  {
+    id: 'cmd-delegate',
+    title: 'Delegate Work',
+    description: 'Find tasks that can be delegated and draft the handoff messages.',
+    cta: 'Review',
+    icon: 'delegate',
+    accent: 3,
+  },
+  {
+    id: 'cmd-clean-inbox',
+    title: 'Clean Inbox',
+    description: 'Group FYI, newsletters, and low-risk messages so they do not interrupt you.',
+    cta: 'Clean',
+    icon: 'inbox',
+    accent: 4,
+  },
+];
+
 export const demoKpis: KpiMetric[] = [
-  { id: 'kpi-reply', value: 5, label: 'Must reply today', filter: 'critical' },
-  { id: 'kpi-waiting', value: 8, label: 'People waiting on you', filter: 'waiting' },
-  { id: 'kpi-followup', value: 3, label: 'Repeated follow-ups', filter: 'followup' },
-  { id: 'kpi-drafts', value: 4, label: 'Drafts ready', filter: 'drafts' },
+  {
+    id: 'kpi-decision-debt',
+    value: 5,
+    label: 'Decision Debt',
+    helper: 'Awaiting your call',
+    tone: 'red',
+    filter: 'decision',
+  },
+  {
+    id: 'kpi-people-blocked',
+    value: 8,
+    label: 'People Blocked',
+    helper: 'Waiting on you',
+    tone: 'amber',
+    filter: 'waiting',
+  },
+  {
+    id: 'kpi-followup-risk',
+    value: 3,
+    label: 'Follow-up Risk',
+    helper: 'Repeated follow-ups',
+    tone: 'amber',
+    filter: 'followup',
+  },
+  {
+    id: 'kpi-promises-risk',
+    value: 2,
+    label: 'Promises at Risk',
+    helper: '1 overdue',
+    tone: 'red',
+    filter: 'promise',
+  },
+  {
+    id: 'kpi-drafts-ready',
+    value: 4,
+    label: 'Drafts Ready',
+    helper: 'For your approval',
+    tone: 'blue',
+    filter: 'drafts',
+  },
+  {
+    id: 'kpi-time-to-clear',
+    value: 1.5,
+    unit: 'h',
+    label: 'Time to Clear',
+    helper: 'Estimated focus time',
+    tone: 'green',
+    filter: 'critical',
+  },
 ];
 
 export const demoWorkItems: WorkItem[] = [
   {
     id: 'wi-cedars',
     title: 'Cedars Group contract approval',
-    categories: ['critical', 'followup', 'waiting'],
+    categories: ['critical', 'followup', 'waiting', 'decision', 'drafts'],
     source: 'outlook',
-    summary: 'Outlook · Maya requested approval before 4 PM. Two follow-ups detected.',
+    person: 'Maya Khoury',
+    summary: 'Maya requested approval before 4 PM. Two follow-ups detected.',
+    suggestedAction: 'Approve draft reply',
     priorityScore: 92,
     chips: [
       { label: 'Must reply', tone: 'red' },
@@ -50,19 +158,32 @@ export const demoWorkItems: WorkItem[] = [
     dueDetail: '4:00 PM',
     urgencyReason:
       'Cedars Group followed up twice. Last manager reply was 4 days ago. Deadline appears to be today at 4 PM. AI recommends replying or delegating legal review immediately.',
+    nextBestAction: 'Approve the draft reply to Maya now, or send legal a quick review request.',
     suggestedDraft:
       'Hi Maya, thanks for following up. I am reviewing the final contract notes now and will confirm the approval status before 4 PM today. If anything needs legal confirmation, I will loop them in immediately.',
     riskChips: [
       { label: 'Reply today', tone: 'red' },
       { label: 'Risk: relationship delay', tone: 'amber' },
     ],
+    memoryUsed: [
+      { id: 'mem-1', type: 'vip', text: 'Cedars Group is a VIP client — always top priority.' },
+      { id: 'mem-2', type: 'tone', text: 'Keep replies short, polite and direct.' },
+    ],
+    activity: [
+      { label: 'Follow-ups', value: '2 from Maya' },
+      { label: 'Last manager reply', value: '4 days ago' },
+      { label: 'Due', value: 'Today · 4:00 PM' },
+      { label: 'Reminder', value: 'Set for 2:00 PM' },
+    ],
   },
   {
     id: 'wi-finance',
     title: 'Finance payment approval',
-    categories: ['waiting', 'critical'],
+    categories: ['waiting', 'critical', 'decision', 'drafts'],
     source: 'teams',
-    summary: 'Teams + Outlook · Rania is blocked until you approve supplier payment.',
+    person: 'Rania Haddad',
+    summary: 'Rania is blocked until you approve the supplier payment.',
+    suggestedAction: 'Approve payment',
     priorityScore: 88,
     chips: [
       { label: 'Blocking team', tone: 'red' },
@@ -72,19 +193,35 @@ export const demoWorkItems: WorkItem[] = [
     dueDetail: '2 days',
     urgencyReason:
       'Finance is waiting for your approval to release the supplier payment. The same approval was mentioned in email and Teams, so the AI marked it as a blocker.',
+    nextBestAction: 'Approve the payment so Rania can proceed, or delegate the sign-off to Rania.',
     suggestedDraft:
       'Hi Rania, approved from my side. Please proceed with the supplier payment and send me the confirmation once completed.',
     riskChips: [
       { label: 'Blocking team', tone: 'red' },
       { label: 'Finance', tone: 'blue' },
     ],
+    memoryUsed: [
+      {
+        id: 'mem-3',
+        type: 'delegation_rule',
+        text: 'Finance approvals can be delegated to Rania.',
+      },
+    ],
+    activity: [
+      { label: 'Blocking', value: '1 person (Rania)' },
+      { label: 'Channels', value: 'Email + Teams' },
+      { label: 'Waiting', value: '2 days' },
+      { label: 'Reminder', value: 'Not set' },
+    ],
   },
   {
     id: 'wi-hiring',
     title: 'Hiring decision follow-up',
-    categories: ['followup', 'waiting', 'promise'],
+    categories: ['followup', 'waiting', 'promise', 'decision', 'drafts'],
     source: 'outlook',
-    summary: 'Outlook · HR followed up after your promised confirmation date passed.',
+    person: 'Lina Saad (HR)',
+    summary: 'HR followed up after your promised confirmation date passed.',
+    suggestedAction: 'Send decision',
     priorityScore: 81,
     chips: [
       { label: 'Promise detected', tone: 'amber' },
@@ -94,19 +231,29 @@ export const demoWorkItems: WorkItem[] = [
     dueDetail: '1 day',
     urgencyReason:
       'HR asked for final decision on a candidate. You replied that you would confirm yesterday, but no final answer was sent.',
+    nextBestAction: 'Send the approval to Lina to keep your promise and unblock the offer.',
     suggestedDraft:
       'Hi Lina, thanks for the reminder. Please proceed with the candidate. I approve moving to the offer stage.',
     riskChips: [
       { label: 'Promise at risk', tone: 'amber' },
       { label: 'Overdue', tone: 'red' },
     ],
+    memoryUsed: [{ id: 'mem-2', type: 'tone', text: 'Keep replies short, polite and direct.' }],
+    activity: [
+      { label: 'Follow-ups', value: '1 from Lina (HR)' },
+      { label: 'Promised by', value: 'Yesterday' },
+      { label: 'Status', value: 'Overdue by 1 day' },
+      { label: 'Reminder', value: 'Set for 11:00 AM' },
+    ],
   },
   {
     id: 'wi-it-laptop',
     title: 'IT laptop purchase request',
-    categories: ['delegate'],
+    categories: ['delegate', 'drafts'],
     source: 'outlook',
-    summary: 'Outlook · Approval needed, but can be delegated for budget check.',
+    person: 'IT team',
+    summary: 'Approval needed, but can be delegated for a budget check.',
+    suggestedAction: 'Delegate to Operations',
     priorityScore: 63,
     chips: [
       { label: 'Can delegate', tone: 'blue' },
@@ -115,16 +262,32 @@ export const demoWorkItems: WorkItem[] = [
     dueLabel: 'This week',
     urgencyReason:
       'IT needs purchase confirmation. AI suggests delegating budget validation to Operations before you approve.',
+    nextBestAction: 'Delegate the budget check to Omar in Operations before approving.',
     suggestedDraft:
       'Hi Omar, please check this laptop purchase request against the approved budget and send me your recommendation today.',
     riskChips: [{ label: 'Can delegate', tone: 'blue' }],
+    memoryUsed: [
+      {
+        id: 'mem-5',
+        type: 'delegation_rule',
+        text: 'Budget checks under €5k can be delegated to Operations.',
+      },
+    ],
+    activity: [
+      { label: 'Requested by', value: 'IT team' },
+      { label: 'Can delegate', value: 'Yes — Operations' },
+      { label: 'Due', value: 'This week' },
+      { label: 'Reminder', value: 'Not set' },
+    ],
   },
   {
     id: 'wi-board',
     title: 'Board meeting preparation',
     categories: ['waiting'],
     source: 'calendar',
-    summary: 'Calendar · Meeting tomorrow. AI prepared context from related emails.',
+    person: 'Board of Directors',
+    summary: 'Meeting tomorrow. AI prepared context from related emails.',
+    suggestedAction: 'Review brief',
     priorityScore: 57,
     chips: [
       { label: 'Meeting prep', tone: 'neutral' },
@@ -134,9 +297,24 @@ export const demoWorkItems: WorkItem[] = [
     dueDetail: '10:00 AM',
     urgencyReason:
       'Calendar meeting tomorrow. AI collected recent emails, open decisions, and questions you may need to prepare.',
+    nextBestAction:
+      'Open the prepared one-page brief and review the open decisions before tomorrow.',
     suggestedDraft:
       'Meeting prep pack is ready: agenda summary, open decisions, recent emails, and suggested questions for the board discussion.',
     riskChips: [{ label: 'Context ready', tone: 'blue' }],
+    memoryUsed: [
+      {
+        id: 'mem-6',
+        type: 'preference',
+        text: 'Prefer a one-page brief before board meetings.',
+      },
+    ],
+    activity: [
+      { label: 'Meeting', value: 'Tomorrow · 10:00 AM' },
+      { label: 'Open decisions', value: '3 collected' },
+      { label: 'Sources', value: '6 related emails' },
+      { label: 'Reminder', value: 'Set for 5:00 PM today' },
+    ],
   },
 ];
 
@@ -183,4 +361,37 @@ export const demoChatSuggestions = [
   'Summarise my day',
   'Draft the Cedars reply',
   "Who's waiting on me?",
+];
+
+/* ------------------------------------------------------------------ *
+ * AI Command Center — demo content for the preview drawers.
+ * Demo only: nothing here is fetched or sent.
+ * ------------------------------------------------------------------ */
+
+/** One-page Meeting Prep brief shown by the "Meeting Prep" command. */
+export const demoMeetingPrep = {
+  title: 'Board meeting',
+  when: 'Tomorrow · 10:00 AM',
+  attendees: 'Board of Directors (6)',
+  agenda: [
+    'Q2 financial summary and supplier spend',
+    'Cedars Group contract status',
+    'Hiring plan sign-off',
+  ],
+  openDecisions: [
+    'Approve revised supplier payment terms',
+    'Confirm the senior hire shortlisted by HR',
+  ],
+  suggestedQuestions: [
+    'What is the downside if the Cedars contract slips a week?',
+    'Do we have budget cover for the new hire this quarter?',
+  ],
+};
+
+/** "Clean Inbox" command — low-priority/FYI items the manager can safely batch. */
+export const demoLowPriority = [
+  { id: 'fyi-1', from: 'Office Facilities', subject: 'Parking maintenance next Tuesday' },
+  { id: 'fyi-2', from: 'Industry Weekly', subject: 'Newsletter: regional market update' },
+  { id: 'fyi-3', from: 'IT Service Desk', subject: 'Scheduled VPN upgrade (no action)' },
+  { id: 'fyi-4', from: 'HR Announcements', subject: 'Reminder: wellbeing survey closes Friday' },
 ];
