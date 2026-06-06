@@ -89,6 +89,8 @@ html[data-theme='dark'] {
   --atmos-2: rgba(103, 232, 216, 0.14);
   --atmos-3: rgba(91, 168, 245, 0.14);
   --atmos-mint: rgba(103, 232, 216, 0.16);
+  /* Far-background login signal grid (dark default): faint blue lines. */
+  --login-grid-line: rgba(120, 170, 230, 0.06);
 }
 
 /* ---------- LIGHT MODE (premium light SaaS — Phase 0.1 v2) ---------- */
@@ -161,6 +163,8 @@ html[data-theme='light'] {
   --atmos-2: rgba(67, 199, 255, 0.07);
   --atmos-3: rgba(47, 125, 235, 0.05);
   --atmos-mint: rgba(67, 199, 255, 0.07);
+  /* Far-background login signal grid (light theme): barely-there slate lines. */
+  --login-grid-line: rgba(35, 55, 85, 0.04);
 }
 
 @layer base {
@@ -433,6 +437,35 @@ html[data-theme='light'] {
   mask-image: radial-gradient(circle at 50% 45%, #000 0%, transparent 72%);
 }
 
+/* ============================================================
+   LOGIN SCREEN (feature/login-ai-polish) — far-background signal grid
+   + premium button shimmer. The login card is opaque and centered, so the
+   grid only shows in the surrounding space (masked out of the center).
+   ============================================================ */
+.vesta-login-grid {
+  background-image: linear-gradient(var(--login-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--login-grid-line) 1px, transparent 1px);
+  background-size: 52px 52px;
+  /* Fade the grid OUT of the center (behind the card) and in toward the edges.
+     The wide transparent core keeps the grid well clear of the form for
+     readability; it only reads in the surrounding space. */
+  -webkit-mask-image: radial-gradient(circle at 50% 42%, transparent 44%, #000 90%);
+  mask-image: radial-gradient(circle at 50% 42%, transparent 44%, #000 90%);
+}
+
+/* Premium sheen that sweeps across the Sign in button on hover/while loading. */
+@keyframes vesta-btn-shimmer {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+.animate-vesta-btn-shimmer {
+  animation: vesta-btn-shimmer 1.5s var(--ease) infinite;
+}
+
 /* Respect users who prefer reduced motion: drop all decorative motion. */
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
@@ -446,6 +479,7 @@ html[data-theme='light'] {
   .animate-vesta-breathe,
   .animate-vesta-sweep,
   .animate-vesta-progress,
+  .animate-vesta-btn-shimmer,
   .animate-vesta-fade-in {
     animation: none;
   }

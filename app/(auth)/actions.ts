@@ -30,6 +30,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get('email') ?? '').trim();
   const password = String(formData.get('password') ?? '');
+  const confirmPassword = String(formData.get('confirmPassword') ?? '');
   const fullName = String(formData.get('fullName') ?? '').trim();
 
   if (!email || !password) {
@@ -37,6 +38,11 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   }
   if (password.length < 8) {
     return { error: 'Password must be at least 8 characters.' };
+  }
+  // Confirm-password is also validated client-side; re-check here so the
+  // server never trusts the client alone.
+  if (confirmPassword && password !== confirmPassword) {
+    return { error: 'Passwords do not match.' };
   }
 
   const origin = headers().get('origin') ?? '';

@@ -147,8 +147,17 @@ lib/supabase/
 app/
 ├── (auth)/
 │   ├── actions.ts                 # signIn / signUp / signOut server actions
-│   ├── AuthForm.tsx               # client sign-in/sign-up form
+│   ├── AuthForm.tsx               # sign-in/sign-up form: Microsoft CTA (demo) +
+│   │                              #   email secondary, AI core, status chip, trust cues
+│   ├── VestaAuthCore.tsx          # small animated AI signal core (login brand)
+│   ├── LoginAtmosphere.tsx        # subtle background blooms + far signal grid
 │   └── login/page.tsx             # /login (public)
+scripts/
+└── create-dev-user.mjs            # dev-only: create/refresh the shared test user
+e2e/
+├── auth.setup.ts                  # Playwright auth fixture → saves storageState
+├── dashboard.spec.ts              # runs authenticated (auth fixture)
+└── login.spec.ts                  # runs logged-out
 ├── auth/callback/route.ts         # email-confirmation / OAuth code exchange
 └── page.tsx                       # protected: requireUser() -> DashboardClient(account)
 supabase/migrations/

@@ -1,4 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import path from 'node:path';
+
+// The dashboard route is auth-protected (Phase 2). These specs run with the
+// session saved by the auth fixture (e2e/auth.setup.ts). If the dev test-user
+// creds are not configured, the whole group is skipped (not failed).
+const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'user.json');
+const hasAuth = Boolean(process.env.E2E_TEST_EMAIL && process.env.E2E_TEST_PASSWORD);
 
 /**
  * The Vesta initialization screen (Phase 0.5) shows briefly on first mount and
@@ -11,6 +18,12 @@ async function waitForDashboard(page: Page) {
 }
 
 test.describe('Dashboard shell', () => {
+  test.skip(
+    !hasAuth,
+    'Requires E2E test-user creds in .env.local (see scripts/create-dev-user.mjs).',
+  );
+  test.use({ storageState: hasAuth ? authFile : undefined });
+
   test('shows the Vesta initialization splash, then the dashboard', async ({ page }) => {
     await page.goto('/');
     // The full-screen branded splash appears (its testid is unique; the tagline
@@ -119,8 +132,9 @@ test.describe('Dashboard shell', () => {
     // The only AI-rail control is the collapse button inside the rail itself —
     // there is no separate AI toggle in the topbar.
     await expect(page.getByRole('button', { name: 'Collapse AI assistant rail' })).toHaveCount(1);
-    // The user name still appears once (sidebar footer).
-    await expect(page.getByText('Ali Sabbagh')).toBeVisible();
+    // The signed-in account appears in the sidebar footer. With the auth
+    // fixture this is the dev test user ("Vesta Dev"), not the demo identity.
+    await expect(page.getByText('Vesta Dev')).toBeVisible();
   });
 
   test('collapses the AI rail from inside the AI Assistant panel header', async ({ page }) => {

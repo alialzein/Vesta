@@ -77,6 +77,18 @@ const PATHS = {
   signout: (
     <path d="M15 12H3m0 0l4-4m-4 4l4 4M10 7V5a2 2 0 012-2h6a2 2 0 012 2v14a2 2 0 01-2 2h-6a2 2 0 01-2-2v-2" />
   ),
+  mail: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </>
+  ),
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;
@@ -98,6 +110,18 @@ export function Icon({ name, ...props }: IconProps) {
       {...props}
     >
       {PATHS[name]}
+    </svg>
+  );
+}
+
+/** The Microsoft four-square mark (brand colors). Decorative; aria-hidden. */
+export function MicrosoftLogo(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+      <rect x="2" y="2" width="9.5" height="9.5" fill="#F25022" />
+      <rect x="12.5" y="2" width="9.5" height="9.5" fill="#7FBA00" />
+      <rect x="2" y="12.5" width="9.5" height="9.5" fill="#00A4EF" />
+      <rect x="12.5" y="12.5" width="9.5" height="9.5" fill="#FFB900" />
     </svg>
   );
 }
