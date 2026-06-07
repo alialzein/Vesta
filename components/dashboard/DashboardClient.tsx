@@ -33,15 +33,8 @@ import type { AccountView } from '@/lib/supabase/account';
  */
 const SHOW_LARGE_COMMAND_CENTER = false;
 
-/**
- * Initial splash visibility. Shown on the very first paint (so no dashboard ever
- * flashes behind it) and plays its full duration on every full page load.
- * DashboardClient mounts once, so internal navigation does not replay it. Never
- * auto-shown under test (so it cannot block component tests).
- */
-function initialSplashVisible(): boolean {
-  return process.env.NODE_ENV !== 'test';
-}
+/** Session cookie that records the splash has played once this browser session. */
+const SPLASH_COOKIE = 'vesta_splash_shown';
 
 /**
  * Owns the dashboard shell state:
@@ -55,12 +48,20 @@ function initialSplashVisible(): boolean {
  * All data is demo data (lib/demo-data.ts). No network/DB/AI calls.
  * Quick actions are local React behavior only — see docs/demo/demo-behavior.md.
  */
-export function DashboardClient({ account }: { account?: AccountView } = {}) {
+export function DashboardClient({
+  account,
+  showSplashInitially = false,
+}: {
+  account?: AccountView;
+  /** Server decides (cookie-gated) so the splash plays once per session, not on
+   * every navigation back to the dashboard. Defaults off (e.g. component tests). */
+  showSplashInitially?: boolean;
+} = {}) {
   const { showToast } = useToast();
 
-  // Branded initialization splash (Phase 0.5). Demo-only timed overlay shown once
-  // per browser session; never auto-shown under test. See VestaSplashScreen.
-  const [showSplash, setShowSplash] = useState(initialSplashVisible);
+  // Branded initialization splash (Phase 0.5). Shown once per browser session via
+  // a session cookie set when it finishes; never blocks tests (default off).
+  const [showSplash, setShowSplash] = useState(showSplashInitially);
 
   const [selected, setSelected] = useState<WorkItem>(demoWorkItems[0]);
   const [view, setView] = useState<NavView>('today');
@@ -79,6 +80,13 @@ export function DashboardClient({ account }: { account?: AccountView } = {}) {
   /** Called when the splash finishes its timed sequence. */
   function handleSplashDone() {
     setShowSplash(false);
+    // Mark it shown for this browser session so it does not replay on internal
+    // navigation (e.g. returning from Settings). Session cookie (clears on close).
+    try {
+      document.cookie = `${SPLASH_COOKIE}=1; path=/; sameSite=lax; max-age=86400`;
+    } catch {
+      /* non-blocking */
+    }
   }
 
   const onToday = view === 'today';

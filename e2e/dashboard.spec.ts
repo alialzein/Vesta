@@ -25,6 +25,9 @@ test.describe('Dashboard shell', () => {
   test.use({ storageState: hasAuth ? authFile : undefined });
 
   test('shows the Vesta initialization splash, then the dashboard', async ({ page }) => {
+    // The splash plays once per session (cookie-gated). Clear that cookie so it
+    // reliably shows here, even though the auth fixture session may have set it.
+    await page.context().clearCookies({ name: 'vesta_splash_shown' });
     await page.goto('/');
     // The full-screen branded splash appears (its testid is unique; the tagline
     // also exists in the sidebar, so we target the splash explicitly).

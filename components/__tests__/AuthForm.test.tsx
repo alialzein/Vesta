@@ -35,28 +35,23 @@ describe('AuthForm', () => {
     signInWithOAuth.mockClear();
   });
 
-  it('renders the sign-in form with the AI core and status chip', () => {
+  it('renders the sign-in form with the AI core, rotating status, and subtitle', () => {
     render(<AuthForm />);
     expect(screen.getByRole('heading', { name: /Welcome back/i })).toBeInTheDocument();
     expect(screen.getByTestId('vesta-auth-core')).toBeInTheDocument();
-    expect(screen.getByText('AI workspace ready')).toBeInTheDocument();
+    // Rotating AI status starts on the first message.
+    expect(screen.getByText('Preparing your command center')).toBeInTheDocument();
+    expect(screen.getByText(/ready to organize your day/i)).toBeInTheDocument();
   });
 
-  it('shows Microsoft + Google SSO, an email divider, and email fields', () => {
+  it('shows email sign-in, an OR divider, and Microsoft + Google SSO', () => {
     render(<AuthForm />);
-    expect(screen.getByRole('button', { name: /Continue with Microsoft/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Continue with Google/i })).toBeInTheDocument();
-    expect(screen.getByText(/or use email/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in with email/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
-  });
-
-  it('clarifies SSO is identity-only and the mailbox connects later in Settings', () => {
-    render(<AuthForm />);
-    expect(
-      screen.getByText(/connect your email mailbox .* for Vesta to read later in Settings/i),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue with Microsoft/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue with Google/i })).toBeInTheDocument();
   });
 
   it('calls Supabase signInWithOAuth with azure when Microsoft is clicked', async () => {
