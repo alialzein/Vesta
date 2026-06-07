@@ -4,8 +4,11 @@ import {
   buildThreadRows,
   buildPeopleRows,
   buildWorkItemDrafts,
+  classifyForSync,
+  buildTriageRules,
 } from '@/lib/sync/outlook';
 import type { GraphMessage } from '@/lib/graph/mail';
+import type { TriageConfig } from '@/lib/engine/triage';
 
 const ctx = { userId: 'u1', integrationId: 'int1', mailboxId: 'mb1' };
 
@@ -148,5 +151,81 @@ describe('buildWorkItemDrafts', () => {
     expect(d.row.category).toBe('waiting');
     expect(d.row.priority_score ?? 0).toBeGreaterThan(0);
     expect(d.row.urgency_reason).toMatch(/waiting on your reply/i);
+  });
+});
+
+describe('classifyForSync', () => {
+  const focused: TriageConfig = { mode: 'focused' };
+
+  it('always keeps outbound (the manager’s own replies), even from a no-reply address', () => {
+    const out = classifyForSync(
+      [
+        {
+          msg: msg({ from: { emailAddress: { address: 'noreply@x.com' } } }),
+          direction: 'outbound',
+        },
+      ],
+      focused,
+    );
+    expect(out[0].include).toBe(true);
+    expect(out[0].reason).toMatch(/sent by you/i);
+  });
+
+  it('hides automated inbound but keeps a real person', () => {
+    const out = classifyForSync(
+      [
+        {
+          msg: msg({
+            id: 'noise',
+            from: { emailAddress: { address: 'noreply@news.com' } },
+            inferenceClassification: 'focused',
+          }),
+          direction: 'inbound',
+        },
+        {
+          msg: msg({
+            id: 'real',
+            from: { emailAddress: { address: 'maya@cedars.com' } },
+            inferenceClassification: 'focused',
+          }),
+          direction: 'inbound',
+        },
+      ],
+      focused,
+    );
+    const byId = (id: string) => out.find((c) => c.tagged.msg.id === id)!;
+    expect(byId('noise').include).toBe(false);
+    expect(byId('real').include).toBe(true);
+  });
+});
+
+describe('buildTriageRules', () => {
+  it('maps enabled suppression/allow rows to triage rules and skips the rest', () => {
+    const rules = buildTriageRules([
+      {
+        rule_type: 'suppression',
+        conditions: { match: 'domain', value: 'microsoft.com' },
+        is_enabled: true,
+      },
+      {
+        rule_type: 'allow',
+        conditions: { match: 'sender', value: 'ceo@corp.com' },
+        is_enabled: true,
+      },
+      { rule_type: 'suppression', conditions: { value: 'spam@x.com' }, is_enabled: true }, // match defaults to sender
+      {
+        rule_type: 'suppression',
+        conditions: { match: 'domain', value: 'x.com' },
+        is_enabled: false,
+      }, // disabled
+      { rule_type: 'allow', conditions: { match: 'subject', value: 'urgent' }, is_enabled: true }, // allow+subject skipped
+      { rule_type: 'tone', conditions: { match: 'sender', value: 'x' }, is_enabled: true }, // not triage
+    ]);
+
+    expect(rules).toEqual([
+      { kind: 'mute', match: 'domain', value: 'microsoft.com' },
+      { kind: 'allow', match: 'sender', value: 'ceo@corp.com' },
+      { kind: 'mute', match: 'sender', value: 'spam@x.com' },
+    ]);
   });
 });

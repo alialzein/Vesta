@@ -27,10 +27,13 @@ export default async function InboxPage() {
   await requireUser();
   const supabase = createClient();
 
+  // Only show mail that passed triage (excluded_at is null). Hidden noise is kept
+  // in the DB for review but doesn't clutter the Inbox (Phase 6.5).
   const { data: messages } = await supabase
     .from('email_messages')
     .select('id, subject, body_preview, sender_name, sender_email, received_at, is_read, web_link')
     .eq('direction', 'inbound')
+    .is('excluded_at', null)
     .order('received_at', { ascending: false })
     .limit(50);
 

@@ -33,8 +33,8 @@ import type { AccountView } from '@/lib/supabase/account';
  */
 const SHOW_LARGE_COMMAND_CENTER = false;
 
-/** Session cookie that records the splash has played once this browser session. */
-const SPLASH_COOKIE = 'vesta_splash_shown';
+/** One-shot cookie set by the auth flow on login; cleared once the splash plays. */
+const SPLASH_COOKIE = 'vesta_show_splash';
 
 /**
  * Owns the dashboard shell state:
@@ -59,8 +59,10 @@ export function DashboardClient({
 } = {}) {
   const { showToast } = useToast();
 
-  // Branded initialization splash (Phase 0.5). Shown once per browser session via
-  // a session cookie set when it finishes; never blocks tests (default off).
+  // Branded initialization splash (Phase 0.5). Plays once per login: the server
+  // gates it on the `vesta_show_splash` cookie (set at sign-in) and we clear that
+  // cookie when it finishes, so it never replays on internal navigation. Default
+  // off so it never blocks tests.
   const [showSplash, setShowSplash] = useState(showSplashInitially);
 
   const [selected, setSelected] = useState<WorkItem>(demoWorkItems[0]);
@@ -80,10 +82,10 @@ export function DashboardClient({
   /** Called when the splash finishes its timed sequence. */
   function handleSplashDone() {
     setShowSplash(false);
-    // Mark it shown for this browser session so it does not replay on internal
-    // navigation (e.g. returning from Settings). Session cookie (clears on close).
+    // Clear the one-shot login flag so the splash does not replay on internal
+    // navigation (e.g. returning from Settings). It is set again on next login.
     try {
-      document.cookie = `${SPLASH_COOKIE}=1; path=/; sameSite=lax; max-age=86400`;
+      document.cookie = `${SPLASH_COOKIE}=; path=/; sameSite=lax; max-age=0`;
     } catch {
       /* non-blocking */
     }

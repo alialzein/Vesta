@@ -93,6 +93,7 @@ export type Database = {
           mailbox_type: string;
           aliases: string[];
           status: string;
+          triage_mode: string;
           connected_at: Timestamptz | null;
           last_sync_at: Timestamptz | null;
           metadata: Json;
@@ -111,6 +112,7 @@ export type Database = {
           mailbox_type?: string;
           aliases?: string[];
           status?: string;
+          triage_mode?: string;
           connected_at?: Timestamptz | null;
           last_sync_at?: Timestamptz | null;
           metadata?: Json;
@@ -287,6 +289,9 @@ export type Database = {
           has_attachments: boolean;
           categories: string[];
           flag: Json | null;
+          excluded_at: Timestamptz | null;
+          excluded_reason: string | null;
+          triage: Json;
           web_link: string | null;
           received_at: Timestamptz | null;
           sent_at: Timestamptz | null;
@@ -323,6 +328,9 @@ export type Database = {
           has_attachments?: boolean;
           categories?: string[];
           flag?: Json | null;
+          excluded_at?: Timestamptz | null;
+          excluded_reason?: string | null;
+          triage?: Json;
           web_link?: string | null;
           received_at?: Timestamptz | null;
           sent_at?: Timestamptz | null;

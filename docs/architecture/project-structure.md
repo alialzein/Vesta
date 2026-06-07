@@ -154,9 +154,10 @@ lib/graph/                         # Phase 3 — Microsoft Graph / Outlook
 lib/sync/                          # Phase 4 — email sync
 └── outlook.ts                     # pure row builders + syncOutlookForUser
                                    #   (upserts; Phase 6 adds thread flags + work_items)
-lib/engine/                        # Phase 6 — pure thread/follow-up engine (no DB)
+lib/engine/                        # Phase 6/6.5 — pure engines (no DB)
 ├── threads.ts                     # computeThreadState / scoreThread / categorizeThread
-└── __tests__/threads.test.ts      # unit tests for the calculator
+├── triage.ts                      # classifyEmail — include/hide noise + reason (6.5)
+└── __tests__/                     # unit tests for the calculators
 app/
 ├── (auth)/
 │   ├── actions.ts                 # signIn / signUp / signOut server actions

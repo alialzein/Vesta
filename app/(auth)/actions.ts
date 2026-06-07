@@ -1,10 +1,19 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 
 export type AuthState = { error?: string; message?: string } | null;
+
+/**
+ * Cookie that asks the dashboard to play the branded splash once. Set on login,
+ * cleared by the dashboard when the splash finishes — so the splash always shows
+ * on login but never when navigating between pages afterwards.
+ */
+function markSplashForLogin(): void {
+  cookies().set('vesta_show_splash', '1', { path: '/', maxAge: 300, sameSite: 'lax' });
+}
 
 /** Sign in with email + password. */
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -23,6 +32,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
     return { error: error.message };
   }
 
+  markSplashForLogin();
   redirect(redirectedFrom && redirectedFrom.startsWith('/') ? redirectedFrom : '/');
 }
 
@@ -67,6 +77,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     };
   }
 
+  markSplashForLogin();
   redirect('/');
 }
 
