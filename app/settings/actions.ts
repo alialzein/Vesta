@@ -6,8 +6,18 @@ import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { getValidAccessToken, deleteTokens } from '@/lib/graph/tokens';
 import { getMe } from '@/lib/graph/client';
-import { syncOutlookForUser, type SyncResult } from '@/lib/sync/outlook';
+import { syncOutlookForUser, reprocessMailForUser, type SyncResult } from '@/lib/sync/outlook';
 import type { TriageMode } from '@/lib/engine/triage';
+
+/** Re-run triage over stored mail and refresh the mail-facing views. */
+async function reprocessAndRevalidate(userId: string): Promise<SyncResult> {
+  const result = await reprocessMailForUser(userId);
+  revalidatePath('/settings');
+  revalidatePath('/inbox');
+  revalidatePath('/priorities');
+  revalidatePath('/hidden');
+  return result;
+}
 
 /** Find the current user's Microsoft integration id, or null. */
 async function getMicrosoftIntegrationId(): Promise<string | null> {
@@ -59,15 +69,93 @@ export async function syncOutlook(): Promise<SyncResult> {
 
 /**
  * Set what Vesta imports as actionable for the user's active mailbox
- * (focused | flagged | everything). Manager-controlled triage (Phase 6.5).
+ * (focused | flagged | everything), then re-run triage over stored mail so the
+ * change takes effect immediately. Manager-controlled triage (Phase 6.5).
  */
-export async function setTriageMode(mode: TriageMode): Promise<void> {
-  await requireUser();
+export async function setTriageMode(mode: TriageMode): Promise<SyncResult> {
+  const user = await requireUser();
   const supabase = createClient();
   await supabase
     .from('mailboxes')
     .update({ triage_mode: mode })
     .eq('provider', 'microsoft')
     .eq('status', 'active');
-  revalidatePath('/settings');
+  return reprocessAndRevalidate(user.id);
+}
+
+/** Always import mail from this sender (creates an allow rule), then re-process. */
+export async function alwaysAllowSender(email: string): Promise<SyncResult> {
+  const user = await requireUser();
+  const value = email.trim().toLowerCase();
+  const supabase = createClient();
+  if (value) {
+    // Drop any conflicting mute for this sender, then add the allow rule.
+    const { data: rules } = await supabase
+      .from('manager_rules')
+      .select('id, rule_type, conditions')
+      .eq('user_id', user.id)
+      .in('rule_type', ['allow', 'suppression']);
+    const dupe = (rules ?? []).find((r) => {
+      const c = (r.conditions ?? {}) as { value?: string };
+      return c.value === value;
+    });
+    if (dupe)
+      await supabase.from('manager_rules').delete().eq('id', dupe.id).eq('user_id', user.id);
+    await supabase.from('manager_rules').insert({
+      user_id: user.id,
+      name: `Always allow ${value}`,
+      rule_type: 'allow',
+      conditions: { match: 'sender', value },
+      created_from: 'manual',
+    });
+  }
+  return reprocessAndRevalidate(user.id);
+}
+
+/** Hide mail from this sender from now on (creates a suppression rule). */
+export async function muteSender(email: string): Promise<SyncResult> {
+  const user = await requireUser();
+  const value = email.trim().toLowerCase();
+  const supabase = createClient();
+  if (value) {
+    await supabase.from('manager_rules').insert({
+      user_id: user.id,
+      name: `Mute ${value}`,
+      rule_type: 'suppression',
+      conditions: { match: 'sender', value },
+      created_from: 'manual',
+    });
+  }
+  return reprocessAndRevalidate(user.id);
+}
+
+/** Mark/unmark a person as VIP (always imported), then re-process. */
+export async function setSenderVip(
+  email: string,
+  isVip: boolean,
+  displayName?: string | null,
+): Promise<SyncResult> {
+  const user = await requireUser();
+  const value = email.trim().toLowerCase();
+  const supabase = createClient();
+  if (value) {
+    await supabase.from('people').upsert(
+      {
+        user_id: user.id,
+        email: value,
+        display_name: displayName ?? null,
+        is_vip: isVip,
+      },
+      { onConflict: 'user_id,email' },
+    );
+  }
+  return reprocessAndRevalidate(user.id);
+}
+
+/** Remove a manager rule (mute/allow), then re-process. */
+export async function removeTriageRule(id: string): Promise<SyncResult> {
+  const user = await requireUser();
+  const supabase = createClient();
+  await supabase.from('manager_rules').delete().eq('id', id).eq('user_id', user.id);
+  return reprocessAndRevalidate(user.id);
 }

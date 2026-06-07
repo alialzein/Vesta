@@ -331,18 +331,24 @@ Inbox/Priorities stay focused, with the manager in control. Migration
   each inbound message; stores **all** mail but marks noise `excluded_at` +
   `excluded_reason` (kept for review); builds threads + `work_items` from
   **visible** mail only. Outbound is always kept.
-- Control: **Settings → "What Vesta watches"** mode selector; "Sync now" reports
-  the hidden count. Inbox hides excluded mail. Mute/allow rules reuse
+- Control: **Settings → "What Vesta watches"** mode selector (re-runs triage over
+  stored mail instantly); **Hidden** review (`/hidden`) with one-click _Always
+  allow_ / _Mark VIP_; **Inbox** per-sender _Mute_ / _Mark VIP_; **Managed
+  senders** in Settings to view/remove rules. Mute/allow rules reuse
   `manager_rules`; VIP reuses `people.is_vip`.
-- **Next:** a "Hidden this sync" review with one-click *Always allow*, and mute/VIP
-  management UI.
+- Classification runs over **stored** mail (not just the fetched batch), so a mode
+  or rule change re-evaluates everything immediately. `sync_cursors` is written via
+  the **service role** (it's service-write under RLS) — fixing incremental sync,
+  which previously failed silently and re-pulled the whole window each time.
+- `scripts/clear-synced-mail.mjs` wipes synced data (keeps tokens) for a clean
+  re-sync after triage changes.
 
 Deliverables:
 
 - Pure triage classifier + unit tests (modes, mute/allow/VIP, automated/bulk). ✅
-- Incremental "only new" sync. ✅
+- Incremental "only new" sync (cursor via service role). ✅
 - Hidden mail stored + excluded from Inbox/Priorities; manager mode control. ✅
-- Hidden-review UI + rule management. ⏳ (next)
+- Hidden-review UI (Always allow / Mark VIP) + Inbox mute/VIP + rule management. ✅
 
 ## Phase 7 — AI Analysis
 

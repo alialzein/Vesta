@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { isGraphConfigured } from '@/lib/graph/oauth';
 import { OutlookCard, type OutlookStatus } from '@/components/settings/OutlookCard';
+import { ManagedSenders, type ManagedRule } from '@/components/settings/ManagedSenders';
 import { Icon } from '@/components/ui/Icon';
 
 export const dynamic = 'force-dynamic';
@@ -24,19 +25,25 @@ export default async function SettingsPage({
   await requireUser();
 
   const supabase = createClient();
-  const [{ data: integration }, { data: mailbox }] = await Promise.all([
-    supabase
-      .from('user_integrations')
-      .select('status, provider_email, connected_at')
-      .eq('provider', 'microsoft')
-      .maybeSingle(),
-    supabase
-      .from('mailboxes')
-      .select('triage_mode')
-      .eq('provider', 'microsoft')
-      .eq('status', 'active')
-      .maybeSingle(),
-  ]);
+  const [{ data: integration }, { data: mailbox }, { data: ruleRows }, { data: vipRows }] =
+    await Promise.all([
+      supabase
+        .from('user_integrations')
+        .select('status, provider_email, connected_at')
+        .eq('provider', 'microsoft')
+        .maybeSingle(),
+      supabase
+        .from('mailboxes')
+        .select('triage_mode')
+        .eq('provider', 'microsoft')
+        .eq('status', 'active')
+        .maybeSingle(),
+      supabase
+        .from('manager_rules')
+        .select('id, rule_type, conditions')
+        .in('rule_type', ['allow', 'suppression']),
+      supabase.from('people').select('email, display_name').eq('is_vip', true),
+    ]);
 
   const status: OutlookStatus = {
     connected: integration?.status === 'connected',
@@ -45,6 +52,17 @@ export default async function SettingsPage({
     configured: isGraphConfigured(),
     triageMode: (mailbox?.triage_mode as OutlookStatus['triageMode']) ?? 'focused',
   };
+
+  const managedRules: ManagedRule[] = (ruleRows ?? [])
+    .map((r) => ({
+      id: r.id,
+      kind: (r.rule_type === 'suppression' ? 'mute' : 'allow') as 'mute' | 'allow',
+      value: String((r.conditions as { value?: string } | null)?.value ?? ''),
+    }))
+    .filter((r) => r.value);
+  const managedVips = (vipRows ?? [])
+    .filter((p): p is { email: string; display_name: string | null } => Boolean(p.email))
+    .map((p) => ({ email: p.email, name: p.display_name }));
 
   const notice = searchParams.outlook ? (NOTICES[searchParams.outlook] ?? null) : null;
 
@@ -71,6 +89,7 @@ export default async function SettingsPage({
           Email connection
         </h2>
         <OutlookCard status={status} notice={notice} />
+        {status.connected && <ManagedSenders rules={managedRules} vips={managedVips} />}
         <p className="text-[12px] leading-relaxed text-muted">
           Gmail and other (IMAP) providers are coming next. Connecting is OAuth-based and stays
           connected automatically — Vesta refreshes access in the background and never sends email

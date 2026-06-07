@@ -99,8 +99,8 @@ Notes:
 
 ## Change log
 
-| Date       | Migration                     | Summary                                                           | Docs updated by    |
-| ---------- | ----------------------------- | ----------------------------------------------------------------- | ------------------ |
-| TBD        | TBD                           | Initial schema planned                                            | Documentation pack |
-| 2026-06-06 | 20260606090001–20260606090008 | Phase 1: created all 24 foundation tables + RLS + indexes + types | Phase 1 build      |
+| Date       | Migration                     | Summary                                                                                                                                                                          | Docs updated by    |
+| ---------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| TBD        | TBD                           | Initial schema planned                                                                                                                                                           | Documentation pack |
+| 2026-06-06 | 20260606090001–20260606090008 | Phase 1: created all 24 foundation tables + RLS + indexes + types                                                                                                                | Phase 1 build      |
 | 2026-06-07 | 20260607090001_email_triage   | Phase 6.5: `mailboxes.triage_mode`; `email_messages.excluded_at`/`excluded_reason`/`triage` + visible index. Mute/allow rules reuse `manager_rules`; VIP reuses `people.is_vip`. | Triage build       |
