@@ -6,9 +6,11 @@ import {
   disconnectOutlook,
   testOutlook,
   syncOutlook,
+  setTriageMode,
   type TestResult,
 } from '@/app/settings/actions';
 import type { SyncResult } from '@/lib/sync/outlook';
+import type { TriageMode } from '@/lib/engine/triage';
 import { Icon, MicrosoftLogo } from '@/components/ui/Icon';
 
 export type OutlookStatus = {
@@ -16,7 +18,15 @@ export type OutlookStatus = {
   email: string | null;
   connectedAt: string | null;
   configured: boolean;
+  triageMode: TriageMode;
 };
+
+/** The triage modes, in display order, with a short manager-facing description. */
+const TRIAGE_MODES: { value: TriageMode; label: string; hint: string }[] = [
+  { value: 'focused', label: 'Focused', hint: 'Real people. Hides automated, bulk & “Other”.' },
+  { value: 'flagged', label: 'Flagged only', hint: 'Only emails you flag in Outlook.' },
+  { value: 'everything', label: 'Everything', hint: 'Import all mail; mute noise yourself.' },
+];
 
 /**
  * Settings → Outlook connection card (Phase 3). Connect kicks off the OAuth flow
@@ -50,6 +60,14 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
   function disconnect() {
     startTransition(() => {
       void disconnectOutlook();
+    });
+  }
+
+  function changeMode(mode: TriageMode) {
+    if (mode === status.triageMode || isPending) return;
+    startTransition(async () => {
+      await setTriageMode(mode);
+      router.refresh();
     });
   }
 
@@ -113,9 +131,44 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
               ].join(' ')}
             >
               {sync.ok
-                ? `Synced ${sync.inbox} inbox + ${sync.sent} sent · ${sync.threads} threads · ${sync.people} people · ${sync.workItems} waiting on you. See Inbox & Priorities.`
+                ? `Synced ${sync.inbox} new inbox + ${sync.sent} sent · ${sync.workItems} waiting on you · ${sync.hidden} hidden as noise. See Inbox & Priorities.`
                 : `Sync failed: ${sync.error}`}
             </p>
+          )}
+
+          {status.connected && (
+            <div className="mt-4">
+              <p className="text-[12px] font-semibold text-ink-soft">What Vesta watches</p>
+              <p className="mt-0.5 text-[12px] text-muted">
+                {TRIAGE_MODES.find((m) => m.value === status.triageMode)?.hint}
+              </p>
+              <div
+                role="group"
+                aria-label="What Vesta watches"
+                className="mt-2 inline-flex rounded-[11px] border border-line-strong bg-panel-2 p-1"
+              >
+                {TRIAGE_MODES.map((m) => {
+                  const active = m.value === status.triageMode;
+                  return (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => changeMode(m.value)}
+                      disabled={isPending}
+                      aria-pressed={active}
+                      className={[
+                        'rounded-[8px] px-3 py-[6px] text-[12.5px] font-semibold transition disabled:opacity-70',
+                        active
+                          ? 'bg-gradient-to-br from-accent to-accent-2 text-white shadow-soft'
+                          : 'text-ink-soft hover:text-ink',
+                      ].join(' ')}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           <div className="mt-4 flex flex-wrap gap-2">

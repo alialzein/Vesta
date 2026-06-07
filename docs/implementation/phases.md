@@ -315,6 +315,35 @@ Deliverables:
 - Work item updates (created/updated from waiting-on-manager threads). ✅
 - Dashboard categories (Priorities view: waiting / followup / fyi). ✅
 
+## Phase 6.5 — Email Triage (manager-controlled inclusion)
+
+Status: **Done (core).** Mailboxes are noisy (alerts, newsletters, automated
+notifications). Triage decides which mail Vesta imports as actionable so the
+Inbox/Priorities stay focused, with the manager in control. Migration
+`20260607090001_email_triage.sql`.
+
+- `lib/engine/triage.ts` — pure, unit-tested `classifyEmail(message, config)`
+  returning `{ include, reason, signals }`. Layered, first-match-wins: allow/VIP →
+  mute → mode. Modes: **focused** (default — Outlook Focused Inbox minus
+  automated/bulk/`Other`), **flagged** (only flagged mail), **everything**.
+- Sync (`lib/sync/outlook.ts`) now: pulls **only mail newer than the last sync**
+  (`sync_cursors.last_success_at` + Graph `receivedDateTime` filter); classifies
+  each inbound message; stores **all** mail but marks noise `excluded_at` +
+  `excluded_reason` (kept for review); builds threads + `work_items` from
+  **visible** mail only. Outbound is always kept.
+- Control: **Settings → "What Vesta watches"** mode selector; "Sync now" reports
+  the hidden count. Inbox hides excluded mail. Mute/allow rules reuse
+  `manager_rules`; VIP reuses `people.is_vip`.
+- **Next:** a "Hidden this sync" review with one-click *Always allow*, and mute/VIP
+  management UI.
+
+Deliverables:
+
+- Pure triage classifier + unit tests (modes, mute/allow/VIP, automated/bulk). ✅
+- Incremental "only new" sync. ✅
+- Hidden mail stored + excluded from Inbox/Priorities; manager mode control. ✅
+- Hidden-review UI + rule management. ⏳ (next)
+
 ## Phase 7 — AI Analysis
 
 Goal:

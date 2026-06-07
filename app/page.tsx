@@ -24,9 +24,10 @@ export default async function DashboardPage() {
 
   const account = await getAccountView();
 
-  // Show the branded splash once per browser session (cookie set when it plays),
-  // so it does not replay when navigating back to the dashboard (e.g. Settings).
-  const splashShown = cookies().get('vesta_splash_shown')?.value === '1';
+  // The splash plays once per login: the auth flow sets `vesta_show_splash` on
+  // sign-in and the dashboard clears it when the splash finishes. So it always
+  // shows on login but never when navigating between pages afterwards.
+  const showSplash = cookies().get('vesta_show_splash')?.value === '1';
 
-  return <DashboardClient account={account ?? undefined} showSplashInitially={!splashShown} />;
+  return <DashboardClient account={account ?? undefined} showSplashInitially={showSplash} />;
 }

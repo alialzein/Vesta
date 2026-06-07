@@ -28,6 +28,10 @@ export type GraphMessage = {
   importance?: string;
   webLink?: string;
   categories?: string[];
+  /** Outlook Focused Inbox classification — drives triage (Phase 6.5). */
+  inferenceClassification?: 'focused' | 'other';
+  /** Follow-up flag the manager set in Outlook ({ flagStatus: 'flagged' | … }). */
+  flag?: { flagStatus?: string };
 };
 
 type GraphList<T> = { value: T[] };
@@ -51,19 +55,30 @@ const SELECT = [
   'importance',
   'webLink',
   'categories',
+  'inferenceClassification',
+  'flag',
 ].join(',');
 
 export type MailFolder = 'inbox' | 'sentitems';
 
-/** Fetch the most recent messages from a folder (newest first). */
+/**
+ * Fetch the most recent messages from a folder (newest first).
+ *
+ * When `since` (ISO timestamp) is given, only messages received at/after it are
+ * returned — incremental "only new since last sync". We filter and order on the
+ * same property (receivedDateTime) so Graph accepts the combined query; it is
+ * present on Sent items too (≈ the send time), so this works for both folders.
+ */
 export async function fetchRecentMessages(
   accessToken: string,
   folder: MailFolder,
   top: number,
+  since?: string | null,
 ): Promise<GraphMessage[]> {
+  const filter = since ? `&$filter=receivedDateTime ge ${encodeURIComponent(since)}` : '';
   const path =
     `/me/mailFolders/${folder}/messages` +
-    `?$select=${SELECT}&$top=${top}&$orderby=receivedDateTime desc`;
+    `?$select=${SELECT}&$top=${top}&$orderby=receivedDateTime desc${filter}`;
   const res = await graphGet<GraphList<GraphMessage>>(accessToken, path);
   return res.value ?? [];
 }

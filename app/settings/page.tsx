@@ -24,17 +24,26 @@ export default async function SettingsPage({
   await requireUser();
 
   const supabase = createClient();
-  const { data: integration } = await supabase
-    .from('user_integrations')
-    .select('status, provider_email, connected_at')
-    .eq('provider', 'microsoft')
-    .maybeSingle();
+  const [{ data: integration }, { data: mailbox }] = await Promise.all([
+    supabase
+      .from('user_integrations')
+      .select('status, provider_email, connected_at')
+      .eq('provider', 'microsoft')
+      .maybeSingle(),
+    supabase
+      .from('mailboxes')
+      .select('triage_mode')
+      .eq('provider', 'microsoft')
+      .eq('status', 'active')
+      .maybeSingle(),
+  ]);
 
   const status: OutlookStatus = {
     connected: integration?.status === 'connected',
     email: integration?.provider_email ?? null,
     connectedAt: integration?.connected_at ?? null,
     configured: isGraphConfigured(),
+    triageMode: (mailbox?.triage_mode as OutlookStatus['triageMode']) ?? 'focused',
   };
 
   const notice = searchParams.outlook ? (NOTICES[searchParams.outlook] ?? null) : null;

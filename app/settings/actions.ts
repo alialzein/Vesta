@@ -1,11 +1,13 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { getValidAccessToken, deleteTokens } from '@/lib/graph/tokens';
 import { getMe } from '@/lib/graph/client';
 import { syncOutlookForUser, type SyncResult } from '@/lib/sync/outlook';
+import type { TriageMode } from '@/lib/engine/triage';
 
 /** Find the current user's Microsoft integration id, or null. */
 async function getMicrosoftIntegrationId(): Promise<string | null> {
@@ -53,4 +55,19 @@ export async function testOutlook(): Promise<TestResult> {
 export async function syncOutlook(): Promise<SyncResult> {
   const user = await requireUser();
   return syncOutlookForUser(user.id);
+}
+
+/**
+ * Set what Vesta imports as actionable for the user's active mailbox
+ * (focused | flagged | everything). Manager-controlled triage (Phase 6.5).
+ */
+export async function setTriageMode(mode: TriageMode): Promise<void> {
+  await requireUser();
+  const supabase = createClient();
+  await supabase
+    .from('mailboxes')
+    .update({ triage_mode: mode })
+    .eq('provider', 'microsoft')
+    .eq('status', 'active');
+  revalidatePath('/settings');
 }

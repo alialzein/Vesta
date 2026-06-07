@@ -64,7 +64,8 @@ All tables below were created in the Phase 1 migrations
 
 - `work_items`: `(user_id, status, priority_score desc, due_at asc nulls last)`,
   `(user_id, category, status)`, `(mailbox_id, source_external_id)`.
-- `email_messages`: unique `(mailbox_id, graph_message_id)`; `(mailbox_id, received_at desc)`.
+- `email_messages`: unique `(mailbox_id, graph_message_id)`; `(mailbox_id, received_at desc)`;
+  `(mailbox_id, excluded_at, received_at desc)` for visible-vs-hidden triage queries.
 - `email_threads`: unique `(mailbox_id, graph_conversation_id)`.
 
 ### Tests
@@ -102,3 +103,4 @@ Notes:
 | ---------- | ----------------------------- | ----------------------------------------------------------------- | ------------------ |
 | TBD        | TBD                           | Initial schema planned                                            | Documentation pack |
 | 2026-06-06 | 20260606090001–20260606090008 | Phase 1: created all 24 foundation tables + RLS + indexes + types | Phase 1 build      |
+| 2026-06-07 | 20260607090001_email_triage   | Phase 6.5: `mailboxes.triage_mode`; `email_messages.excluded_at`/`excluded_reason`/`triage` + visible index. Mute/allow rules reuse `manager_rules`; VIP reuses `people.is_vip`. | Triage build       |

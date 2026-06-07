@@ -15,7 +15,10 @@ export async function GET(request: NextRequest) {
     const supabase = createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next.startsWith('/') ? next : '/'}`);
+      const res = NextResponse.redirect(`${origin}${next.startsWith('/') ? next : '/'}`);
+      // Play the branded splash once on this fresh login (cleared by the dashboard).
+      res.cookies.set('vesta_show_splash', '1', { path: '/', maxAge: 300, sameSite: 'lax' });
+      return res;
     }
   }
 
