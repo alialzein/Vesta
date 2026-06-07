@@ -182,6 +182,7 @@ e2e/
 ├── inbox/page.tsx                 # Phase 4 — real synced messages (sidebar Inbox)
 ├── priorities/page.tsx            # Phase 6 — work_items waiting on the manager
 │                                  #   (sidebar "Waiting on Me"), ranked + reasons
+├── hidden/page.tsx                # Phase 6.5 — triage Hidden review (Always allow)
 ├── onboarding/
 │   ├── page.tsx                   # first-run gate -> OnboardingWizard (or redirect)
 │   ├── OnboardingWizard.tsx       # full-screen wizard (client)

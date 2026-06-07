@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { getValidAccessToken } from '@/lib/graph/tokens';
 import { fetchRecentMessages, type GraphMessage, type GraphRecipient } from '@/lib/graph/mail';
 import {
@@ -298,8 +299,224 @@ export function buildTriageRules(rows: ManagerRuleRow[]): TriageRule[] {
 }
 
 // ---------------------------------------------------------------------------
-// Orchestrator (DB) — writes own rows via the authenticated client (RLS).
+// Orchestrator (DB). Fetch is incremental; classification runs over STORED mail
+// so changing the triage mode re-evaluates everything immediately. Own-row tables
+// use the authenticated client (RLS); sync_cursors is service-write only.
 // ---------------------------------------------------------------------------
+
+type AuthedClient = ReturnType<typeof createClient>;
+type Mailbox = { id: string; integration_id: string; triage_mode: string };
+
+/** Reconstruct the minimal Graph-shaped message the builders/classifier need. */
+function storedToTagged(r: StoredMessage): Tagged {
+  const triage = (r.triage ?? {}) as { inference?: InferenceClassification | null };
+  const flag = (r.flag ?? null) as { flagStatus?: string } | null;
+  return {
+    msg: {
+      id: r.graph_message_id,
+      conversationId: r.graph_conversation_id ?? undefined,
+      subject: r.subject ?? undefined,
+      bodyPreview: r.body_preview ?? undefined,
+      from: {
+        emailAddress: {
+          name: r.sender_name ?? undefined,
+          address: r.sender_email ?? r.from_email ?? undefined,
+        },
+      },
+      receivedDateTime: r.received_at ?? undefined,
+      sentDateTime: r.sent_at ?? undefined,
+      importance: r.importance ?? undefined,
+      flag: flag ?? undefined,
+      inferenceClassification: triage.inference ?? undefined,
+    },
+    direction: r.direction === 'outbound' ? 'outbound' : 'inbound',
+  };
+}
+
+type StoredMessage = {
+  id: string;
+  graph_message_id: string;
+  graph_conversation_id: string | null;
+  subject: string | null;
+  body_preview: string | null;
+  sender_name: string | null;
+  sender_email: string | null;
+  from_email: string | null;
+  received_at: string | null;
+  sent_at: string | null;
+  importance: string | null;
+  flag: unknown;
+  triage: unknown;
+  direction: string | null;
+  excluded_at: string | null;
+};
+
+const STORED_COLS =
+  'id, graph_message_id, graph_conversation_id, subject, body_preview, sender_name, sender_email, from_email, received_at, sent_at, importance, flag, triage, direction, excluded_at';
+
+/** Load triage config (mode + manager rules + VIP people) for a user/mailbox. */
+async function loadTriageConfig(
+  supabase: AuthedClient,
+  userId: string,
+  mode: string,
+): Promise<TriageConfig> {
+  const [{ data: ruleRows }, { data: vipRows }] = await Promise.all([
+    supabase
+      .from('manager_rules')
+      .select('rule_type, conditions, is_enabled')
+      .eq('user_id', userId),
+    supabase.from('people').select('email').eq('user_id', userId).eq('is_vip', true),
+  ]);
+  return {
+    mode: (mode as TriageMode) ?? 'focused',
+    rules: buildTriageRules(ruleRows ?? []),
+    vipEmails: (vipRows ?? [])
+      .map((p) => p.email?.toLowerCase())
+      .filter((e): e is string => Boolean(e)),
+  };
+}
+
+/**
+ * Classify all STORED mail with the current config, update each message's
+ * excluded state, and rebuild threads + work_items from the visible set. This is
+ * the single source of truth, so it runs after a fetch AND on a mode change.
+ */
+async function processStoredMail(
+  supabase: AuthedClient,
+  ctx: SyncContext,
+  config: TriageConfig,
+): Promise<{ threads: number; workItems: number; hidden: number }> {
+  const { data: rows } = await supabase
+    .from('email_messages')
+    .select(STORED_COLS)
+    .eq('mailbox_id', ctx.mailboxId);
+  const stored = (rows ?? []) as StoredMessage[];
+  if (stored.length === 0) return { threads: 0, workItems: 0, hidden: 0 };
+
+  const rowByMsgId = new Map(stored.map((r) => [r.graph_message_id, r]));
+  const classified = classifyForSync(stored.map(storedToTagged), config);
+  const visible = classified.filter((c) => c.include).map((c) => c.tagged);
+  const hidden = classified.filter((c) => !c.include).length;
+
+  // Threads (visible only) -> conversation id => thread id.
+  const threadRows = buildThreadRows(visible, ctx);
+  const convToThreadId = new Map<string, string>();
+  if (threadRows.length > 0) {
+    const { data: threads } = await supabase
+      .from('email_threads')
+      .upsert(threadRows, { onConflict: 'mailbox_id,graph_conversation_id' })
+      .select('id, graph_conversation_id');
+    for (const t of threads ?? []) {
+      if (t.graph_conversation_id) convToThreadId.set(t.graph_conversation_id, t.id);
+    }
+  }
+
+  // Update each message's excluded state + thread link, only when it changed.
+  const nowIso = new Date().toISOString();
+  for (const c of classified) {
+    const r = rowByMsgId.get(c.tagged.msg.id);
+    if (!r) continue;
+    const prev = (r.triage ?? {}) as {
+      reason?: string;
+      inference?: InferenceClassification | null;
+    };
+    const wasExcluded = r.excluded_at != null;
+    const nowExcluded = !c.include;
+    const threadId = c.tagged.msg.conversationId
+      ? (convToThreadId.get(c.tagged.msg.conversationId) ?? null)
+      : null;
+    if (wasExcluded === nowExcluded && prev.reason === c.reason) continue; // no-op
+    await supabase
+      .from('email_messages')
+      .update({
+        excluded_at: nowExcluded ? (r.excluded_at ?? nowIso) : null,
+        excluded_reason: nowExcluded ? c.reason : null,
+        thread_id: threadId,
+        triage: {
+          mode: config.mode,
+          include: c.include,
+          reason: c.reason,
+          signals: c.signals,
+          inference: prev.inference ?? null,
+        },
+      })
+      .eq('id', r.id);
+  }
+
+  // People (from visible mail only).
+  const peopleRows = buildPeopleRows(
+    visible.map((t) => t.msg),
+    ctx.userId,
+  );
+  if (peopleRows.length > 0) {
+    await supabase
+      .from('people')
+      .upsert(peopleRows, { onConflict: 'user_id,email', ignoreDuplicates: true });
+  }
+
+  // Work items for waiting-on-manager threads; delete any that no longer apply.
+  const drafts = buildWorkItemDrafts(visible, ctx);
+  const wantedIds = new Set(drafts.map((d) => d.conversationId));
+  const { data: existing } = await supabase
+    .from('work_items')
+    .select('id, source_external_id')
+    .eq('mailbox_id', ctx.mailboxId)
+    .eq('source', 'outlook');
+  const idByExternal = new Map<string, string>();
+  const staleIds: string[] = [];
+  for (const w of existing ?? []) {
+    if (!w.source_external_id) continue;
+    idByExternal.set(w.source_external_id, w.id);
+    if (!wantedIds.has(w.source_external_id)) staleIds.push(w.id);
+  }
+  if (staleIds.length > 0) {
+    await supabase.from('work_items').delete().in('id', staleIds);
+  }
+
+  const inserts: WorkItemRow[] = [];
+  for (const { conversationId, row } of drafts) {
+    row.thread_id = convToThreadId.get(conversationId) ?? null;
+    const id = idByExternal.get(conversationId);
+    if (id) {
+      await supabase
+        .from('work_items')
+        .update({
+          title: row.title,
+          summary: row.summary,
+          category: row.category,
+          priority_score: row.priority_score,
+          requires_reply: row.requires_reply,
+          urgency_reason: row.urgency_reason,
+          thread_id: row.thread_id,
+          updated_at: nowIso,
+        })
+        .eq('id', id);
+    } else {
+      inserts.push(row);
+    }
+  }
+  if (inserts.length > 0) {
+    await supabase.from('work_items').insert(inserts);
+  }
+
+  return { threads: threadRows.length, workItems: drafts.length, hidden };
+}
+
+/** Find the user's active Microsoft mailbox, or return an error message. */
+async function getActiveMailbox(
+  supabase: AuthedClient,
+): Promise<{ mailbox?: Mailbox; error?: string }> {
+  const { data } = await supabase
+    .from('mailboxes')
+    .select('id, integration_id, triage_mode')
+    .eq('provider', 'microsoft')
+    .eq('status', 'active')
+    .maybeSingle();
+  if (!data?.integration_id) {
+    return { error: 'No connected Outlook mailbox. Connect one in Settings.' };
+  }
+  return { mailbox: data as Mailbox };
+}
 
 export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
   const empty: SyncResult = {
@@ -312,16 +529,10 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
     hidden: 0,
   };
   const supabase = createClient();
+  const service = createServiceClient();
 
-  const { data: mailbox } = await supabase
-    .from('mailboxes')
-    .select('id, integration_id, triage_mode')
-    .eq('provider', 'microsoft')
-    .eq('status', 'active')
-    .maybeSingle();
-  if (!mailbox?.integration_id) {
-    return { ...empty, error: 'No connected Outlook mailbox. Connect one in Settings.' };
-  }
+  const { mailbox, error: mbErr } = await getActiveMailbox(supabase);
+  if (!mailbox) return { ...empty, error: mbErr };
 
   const token = await getValidAccessToken(mailbox.integration_id);
   if (!token) {
@@ -329,34 +540,17 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
   }
 
   const ctx: SyncContext = { userId, integrationId: mailbox.integration_id, mailboxId: mailbox.id };
+  const config = await loadTriageConfig(supabase, userId, mailbox.triage_mode);
 
-  // Triage config: mailbox mode + the manager's rules + VIP people. And the last
-  // sync time, so we only fetch new mail.
-  const [{ data: ruleRows }, { data: vipRows }, { data: cursor }] = await Promise.all([
-    supabase
-      .from('manager_rules')
-      .select('rule_type, conditions, is_enabled')
-      .eq('user_id', userId),
-    supabase.from('people').select('email').eq('user_id', userId).eq('is_vip', true),
-    supabase
-      .from('sync_cursors')
-      .select('last_success_at')
-      .eq('mailbox_id', ctx.mailboxId)
-      .eq('resource_type', 'messages')
-      .eq('resource_id', 'all')
-      .maybeSingle(),
-  ]);
-
-  const triageConfig: TriageConfig = {
-    mode: (mailbox.triage_mode as TriageMode) ?? 'focused',
-    rules: buildTriageRules(ruleRows ?? []),
-    vipEmails: (vipRows ?? [])
-      .map((p) => p.email?.toLowerCase())
-      .filter((e): e is string => Boolean(e)),
-  };
-
-  // Incremental: only fetch messages newer than the last successful sync (minus a
-  // 10-minute overlap so the boundary isn't missed; idempotent upserts dedupe).
+  // Incremental: only fetch mail newer than the last successful sync (minus a
+  // 10-minute overlap; idempotent upserts dedupe). Cursor is service-write only.
+  const { data: cursor } = await service
+    .from('sync_cursors')
+    .select('last_success_at')
+    .eq('mailbox_id', ctx.mailboxId)
+    .eq('resource_type', 'messages')
+    .eq('resource_id', 'all')
+    .maybeSingle();
   const since = cursor?.last_success_at
     ? new Date(new Date(cursor.last_success_at).getTime() - 10 * 60_000).toISOString()
     : null;
@@ -372,107 +566,28 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
     return { ...empty, error: e instanceof Error ? e.message : 'Graph fetch failed.' };
   }
 
+  // Store the raw new messages (triage decided in processStoredMail). Keep the
+  // raw Graph inference signal in `triage.inference` for later re-classification.
   const tagged: Tagged[] = [
     ...inbox.map((msg) => ({ msg, direction: 'inbound' as const })),
     ...sent.map((msg) => ({ msg, direction: 'outbound' as const })),
   ];
-
-  // Triage: classify every message. Only VISIBLE mail feeds threads/work_items;
-  // hidden mail is still stored (marked excluded) so the manager can review it.
-  const classified = classifyForSync(tagged, triageConfig);
-  const visible = classified.filter((c) => c.include).map((c) => c.tagged);
-  const hidden = classified.filter((c) => !c.include).length;
-
-  // 1) Threads (visible only), with follow-up flags. Map conversationId -> id.
-  const threadRows = buildThreadRows(visible, ctx);
-  const convToThreadId = new Map<string, string>();
-  if (threadRows.length > 0) {
-    const { data: threads, error } = await supabase
-      .from('email_threads')
-      .upsert(threadRows, { onConflict: 'mailbox_id,graph_conversation_id' })
-      .select('id, graph_conversation_id');
-    if (error) return { ...empty, error: `Saving threads failed: ${error.message}` };
-    for (const t of threads ?? []) {
-      if (t.graph_conversation_id) convToThreadId.set(t.graph_conversation_id, t.id);
-    }
-  }
-
-  // 2) Messages — store ALL, marking hidden ones excluded (with the reason).
-  const nowIso = new Date().toISOString();
-  const messageRows = classified.map(({ tagged: { msg, direction }, include, reason, signals }) => {
+  const messageRows = tagged.map(({ msg, direction }) => {
     const row = toEmailMessageRow(msg, direction, ctx);
-    row.thread_id = msg.conversationId ? (convToThreadId.get(msg.conversationId) ?? null) : null;
-    row.excluded_at = include ? null : nowIso;
-    row.excluded_reason = include ? null : reason;
-    row.triage = { mode: triageConfig.mode, include, reason, signals };
+    row.triage = { inference: msg.inferenceClassification ?? null };
     return row;
   });
   if (messageRows.length > 0) {
     const { error } = await supabase
       .from('email_messages')
-      .upsert(messageRows, { onConflict: 'mailbox_id,graph_message_id' });
+      .upsert(messageRows, { onConflict: 'mailbox_id,graph_message_id', ignoreDuplicates: true });
     if (error) return { ...empty, error: `Saving messages failed: ${error.message}` };
   }
 
-  // 3) People (from visible mail only — don't add automated/bulk senders).
-  const peopleRows = buildPeopleRows(
-    visible.map((t) => t.msg),
-    userId,
-  );
-  if (peopleRows.length > 0) {
-    const { error } = await supabase
-      .from('people')
-      .upsert(peopleRows, { onConflict: 'user_id,email', ignoreDuplicates: true });
-    if (error) return { ...empty, error: `Saving people failed: ${error.message}` };
-  }
+  const { threads, workItems, hidden } = await processStoredMail(supabase, ctx, config);
 
-  // 4) Work items for "waiting on you" threads (visible only). No unique
-  // constraint exists for upsert, so dedup in code by (source_external_id).
-  const drafts = buildWorkItemDrafts(visible, ctx);
-  let workItems = 0;
-  if (drafts.length > 0) {
-    const { data: existing } = await supabase
-      .from('work_items')
-      .select('id, source_external_id')
-      .eq('mailbox_id', ctx.mailboxId)
-      .eq('source', 'outlook');
-    const idByExternal = new Map<string, string>();
-    for (const w of existing ?? []) {
-      if (w.source_external_id) idByExternal.set(w.source_external_id, w.id);
-    }
-
-    const inserts: WorkItemRow[] = [];
-    for (const { conversationId, row } of drafts) {
-      row.thread_id = convToThreadId.get(conversationId) ?? null;
-      const id = idByExternal.get(conversationId);
-      if (id) {
-        // Update the changing fields; preserve the row id + any later AI fields.
-        await supabase
-          .from('work_items')
-          .update({
-            title: row.title,
-            summary: row.summary,
-            category: row.category,
-            priority_score: row.priority_score,
-            requires_reply: row.requires_reply,
-            urgency_reason: row.urgency_reason,
-            thread_id: row.thread_id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', id);
-      } else {
-        inserts.push(row);
-      }
-    }
-    if (inserts.length > 0) {
-      const { error } = await supabase.from('work_items').insert(inserts);
-      if (error) return { ...empty, error: `Saving work items failed: ${error.message}` };
-    }
-    workItems = drafts.length;
-  }
-
-  // 5) Record the sync cursor (constant resource_id so the unique dedupes).
-  await supabase.from('sync_cursors').upsert(
+  // Record the sync cursor via the service role (sync_cursors is service-write).
+  await service.from('sync_cursors').upsert(
     {
       user_id: userId,
       integration_id: ctx.integrationId,
@@ -488,9 +603,33 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
     ok: true,
     inbox: inbox.length,
     sent: sent.length,
-    threads: threadRows.length,
-    people: peopleRows.length,
+    threads,
+    people: 0,
     workItems,
     hidden,
   };
+}
+
+/**
+ * Re-run triage over stored mail without fetching (e.g. after the manager changes
+ * the mode or a rule). Returns updated counts so the UI can reflect the change.
+ */
+export async function reprocessMailForUser(userId: string): Promise<SyncResult> {
+  const empty: SyncResult = {
+    ok: false,
+    inbox: 0,
+    sent: 0,
+    threads: 0,
+    people: 0,
+    workItems: 0,
+    hidden: 0,
+  };
+  const supabase = createClient();
+  const { mailbox, error } = await getActiveMailbox(supabase);
+  if (!mailbox) return { ...empty, error };
+
+  const ctx: SyncContext = { userId, integrationId: mailbox.integration_id, mailboxId: mailbox.id };
+  const config = await loadTriageConfig(supabase, userId, mailbox.triage_mode);
+  const { threads, workItems, hidden } = await processStoredMail(supabase, ctx, config);
+  return { ok: true, inbox: 0, sent: 0, threads, people: 0, workItems, hidden };
 }

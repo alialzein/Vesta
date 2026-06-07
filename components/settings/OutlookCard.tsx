@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   disconnectOutlook,
   testOutlook,
@@ -38,6 +39,7 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
   const [isPending, startTransition] = useTransition();
   const [test, setTest] = useState<TestResult | null>(null);
   const [sync, setSync] = useState<SyncResult | null>(null);
+  const [modeNote, setModeNote] = useState<string | null>(null);
 
   function runTest() {
     setTest(null);
@@ -65,8 +67,17 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
 
   function changeMode(mode: TriageMode) {
     if (mode === status.triageMode || isPending) return;
+    setSync(null);
+    setTest(null);
+    setModeNote(null);
     startTransition(async () => {
-      await setTriageMode(mode);
+      const result = await setTriageMode(mode);
+      const label = TRIAGE_MODES.find((m) => m.value === mode)?.label ?? mode;
+      setModeNote(
+        result.ok
+          ? `Now watching ${label} — ${result.workItems} waiting on you · ${result.hidden} hidden.`
+          : `Could not switch: ${result.error ?? 'unknown error'}`,
+      );
       router.refresh();
     });
   }
@@ -167,6 +178,15 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
                     </button>
                   );
                 })}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {modeNote && <span className="text-[12px] text-ink-soft">{modeNote}</span>}
+                <Link
+                  href="/hidden"
+                  className="text-[12px] font-semibold text-accent underline-offset-2 hover:underline"
+                >
+                  Review hidden mail →
+                </Link>
               </div>
             </div>
           )}
