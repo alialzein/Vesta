@@ -1,8 +1,7 @@
 'use client';
 
 import { DEMO_USER, demoIntegrationStatus } from '@/lib/demo-data';
-import { signOut } from '@/app/(auth)/actions';
-import { Icon } from '@/components/ui/Icon';
+import { SignOutButton } from './SignOutButton';
 import type { AccountView } from '@/lib/supabase/account';
 
 /**
@@ -69,33 +68,11 @@ export function SidebarFooter({
             </small>
           </div>
         )}
-        {!collapsed && (
-          <form action={signOut} className="flex-none">
-            <button
-              type="submit"
-              aria-label="Sign out"
-              title="Sign out"
-              className="grid h-8 w-8 place-items-center rounded-[9px] border border-transparent text-[color:var(--side-muted)] transition hover:border-[color:var(--side-card-border)] hover:text-red"
-            >
-              <Icon name="signout" className="h-[17px] w-[17px]" />
-            </button>
-          </form>
-        )}
+        {!collapsed && <SignOutButton collapsed={false} />}
       </div>
 
       {/* Collapsed: a standalone sign-out control under the avatar. */}
-      {collapsed && (
-        <form action={signOut}>
-          <button
-            type="submit"
-            aria-label="Sign out"
-            title="Sign out"
-            className="grid h-9 w-9 place-items-center rounded-[11px] border border-[color:var(--side-card-border)] bg-[color:var(--side-card)] text-[color:var(--side-muted)] transition hover:text-red"
-          >
-            <Icon name="signout" className="h-[17px] w-[17px]" />
-          </button>
-        </form>
-      )}
+      {collapsed && <SignOutButton collapsed />}
     </div>
   );
 }
