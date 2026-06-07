@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
-import { exchangeCodeForTokens, getGraphConfig } from '@/lib/graph/oauth';
+import { exchangeCodeForTokens, getGraphConfig, resolveRedirectUri } from '@/lib/graph/oauth';
 import { getMe } from '@/lib/graph/client';
 import { storeTokens } from '@/lib/graph/tokens';
 
@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
   if (!config) return settings('outlook=not_configured');
 
   try {
-    const tokens = await exchangeCodeForTokens(config, code);
+    const redirectUri = resolveRedirectUri(origin);
+    const tokens = await exchangeCodeForTokens(config, redirectUri, code);
     const me = await getMe(tokens.access_token);
     const mailboxEmail = me.mail ?? me.userPrincipalName ?? null;
 

@@ -21,21 +21,34 @@ export type GraphConfig = {
   clientId: string;
   clientSecret: string;
   tenant: string; // 'common' for multi-tenant + personal accounts
-  redirectUri: string;
 };
 
 /** Read the Graph OAuth config from env, or null if not fully configured. */
 export function getGraphConfig(): GraphConfig | null {
   const clientId = process.env.MS_GRAPH_CLIENT_ID;
   const clientSecret = process.env.MS_GRAPH_CLIENT_SECRET;
-  const redirectUri = process.env.MS_GRAPH_REDIRECT_URI;
   const tenant = process.env.MS_GRAPH_TENANT || 'common';
-  if (!clientId || !clientSecret || !redirectUri) return null;
-  return { clientId, clientSecret, tenant, redirectUri };
+  if (!clientId || !clientSecret) return null;
+  return { clientId, clientSecret, tenant };
 }
 
 export function isGraphConfigured(): boolean {
   return getGraphConfig() !== null;
+}
+
+/**
+ * The OAuth callback URL. Auto-derives from the current request origin
+ * (`<origin>/api/outlook/callback`) so it works on localhost, production, and
+ * preview domains with zero per-environment config — you only register those
+ * URLs on the Azure app. `MS_GRAPH_REDIRECT_URI` can override it (e.g. behind a
+ * proxy where the public URL differs from the request origin).
+ *
+ * The SAME value must be used for both the authorize redirect and the token
+ * exchange, so always derive it from the same request.
+ */
+export function resolveRedirectUri(origin: string): string {
+  const override = process.env.MS_GRAPH_REDIRECT_URI;
+  return override && override.length > 0 ? override : `${origin}/api/outlook/callback`;
 }
 
 function authority(tenant: string): string {
@@ -43,11 +56,11 @@ function authority(tenant: string): string {
 }
 
 /** Build the Microsoft authorize URL to redirect the user to. */
-export function buildAuthorizeUrl(config: GraphConfig, state: string): string {
+export function buildAuthorizeUrl(config: GraphConfig, redirectUri: string, state: string): string {
   const params = new URLSearchParams({
     client_id: config.clientId,
     response_type: 'code',
-    redirect_uri: config.redirectUri,
+    redirect_uri: redirectUri,
     response_mode: 'query',
     scope: GRAPH_SCOPES.join(' '),
     state,
@@ -77,8 +90,12 @@ async function tokenRequest(config: GraphConfig, body: URLSearchParams): Promise
   return (await res.json()) as TokenResponse;
 }
 
-/** Exchange an authorization code for tokens. */
-export function exchangeCodeForTokens(config: GraphConfig, code: string): Promise<TokenResponse> {
+/** Exchange an authorization code for tokens. Use the SAME redirectUri as authorize. */
+export function exchangeCodeForTokens(
+  config: GraphConfig,
+  redirectUri: string,
+  code: string,
+): Promise<TokenResponse> {
   return tokenRequest(
     config,
     new URLSearchParams({
@@ -86,7 +103,7 @@ export function exchangeCodeForTokens(config: GraphConfig, code: string): Promis
       client_secret: config.clientSecret,
       grant_type: 'authorization_code',
       code,
-      redirect_uri: config.redirectUri,
+      redirect_uri: redirectUri,
       scope: GRAPH_SCOPES.join(' '),
     }),
   );

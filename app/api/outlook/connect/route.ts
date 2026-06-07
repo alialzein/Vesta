@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { randomBytes } from 'node:crypto';
 import { getCurrentUser } from '@/lib/supabase/auth';
-import { buildAuthorizeUrl, getGraphConfig } from '@/lib/graph/oauth';
+import { buildAuthorizeUrl, getGraphConfig, resolveRedirectUri } from '@/lib/graph/oauth';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
   }
 
   const state = randomBytes(16).toString('hex');
-  const res = NextResponse.redirect(buildAuthorizeUrl(config, state));
+  const redirectUri = resolveRedirectUri(origin);
+  const res = NextResponse.redirect(buildAuthorizeUrl(config, redirectUri, state));
   res.cookies.set(STATE_COOKIE, state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

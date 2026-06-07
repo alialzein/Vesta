@@ -5,6 +5,7 @@ import {
   buildAuthorizeUrl,
   getGraphConfig,
   isGraphConfigured,
+  resolveRedirectUri,
   shouldRefresh,
   expiryFromNow,
   GRAPH_SCOPES,
@@ -37,43 +38,56 @@ describe('token crypto (AES-256-GCM)', () => {
 });
 
 describe('graph oauth config', () => {
-  it('is not configured without env', () => {
+  it('is not configured without client id/secret', () => {
     delete process.env.MS_GRAPH_CLIENT_ID;
     delete process.env.MS_GRAPH_CLIENT_SECRET;
-    delete process.env.MS_GRAPH_REDIRECT_URI;
     expect(getGraphConfig()).toBeNull();
     expect(isGraphConfigured()).toBe(false);
   });
 
-  it('reads config and defaults tenant to common', () => {
+  it('reads config and defaults tenant to common (no redirect env needed)', () => {
     process.env.MS_GRAPH_CLIENT_ID = 'cid';
     process.env.MS_GRAPH_CLIENT_SECRET = 'secret';
-    process.env.MS_GRAPH_REDIRECT_URI = 'http://localhost:3000/api/outlook/callback';
     delete process.env.MS_GRAPH_TENANT;
+    delete process.env.MS_GRAPH_REDIRECT_URI;
     const cfg = getGraphConfig();
     expect(cfg?.tenant).toBe('common');
     expect(isGraphConfigured()).toBe(true);
   });
 });
 
+describe('resolveRedirectUri', () => {
+  it('derives from the request origin by default', () => {
+    delete process.env.MS_GRAPH_REDIRECT_URI;
+    expect(resolveRedirectUri('https://app.example.com')).toBe(
+      'https://app.example.com/api/outlook/callback',
+    );
+    expect(resolveRedirectUri('http://localhost:3000')).toBe(
+      'http://localhost:3000/api/outlook/callback',
+    );
+  });
+
+  it('uses MS_GRAPH_REDIRECT_URI as an override when set', () => {
+    process.env.MS_GRAPH_REDIRECT_URI = 'https://proxy.example.com/api/outlook/callback';
+    expect(resolveRedirectUri('http://localhost:3000')).toBe(
+      'https://proxy.example.com/api/outlook/callback',
+    );
+  });
+});
+
 describe('buildAuthorizeUrl', () => {
-  const cfg: GraphConfig = {
-    clientId: 'cid',
-    clientSecret: 'secret',
-    tenant: 'common',
-    redirectUri: 'http://localhost:3000/api/outlook/callback',
-    // secret unused in URL
-  } as GraphConfig;
+  const cfg: GraphConfig = { clientId: 'cid', clientSecret: 'secret', tenant: 'common' };
+  const redirectUri = 'http://localhost:3000/api/outlook/callback';
 
   it('targets the tenant authorize endpoint with code flow + scopes + state', () => {
-    const url = new URL(buildAuthorizeUrl(cfg, 'state123'));
+    const url = new URL(buildAuthorizeUrl(cfg, redirectUri, 'state123'));
     expect(url.origin + url.pathname).toBe(
       'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
     );
     expect(url.searchParams.get('client_id')).toBe('cid');
     expect(url.searchParams.get('response_type')).toBe('code');
     expect(url.searchParams.get('state')).toBe('state123');
-    expect(url.searchParams.get('redirect_uri')).toBe(cfg.redirectUri);
+    expect(url.searchParams.get('redirect_uri')).toBe(redirectUri);
     // Requests offline_access (refresh token) + Mail.Read.
     const scope = url.searchParams.get('scope') ?? '';
     expect(scope).toContain('offline_access');

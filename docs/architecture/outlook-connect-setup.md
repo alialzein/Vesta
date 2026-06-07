@@ -54,11 +54,28 @@ connect. Send scopes are added later with draft replies (approval-gated).
 MS_GRAPH_CLIENT_ID=<Application (client) ID>
 MS_GRAPH_CLIENT_SECRET=<client secret value>
 MS_GRAPH_TENANT=common            # multi-tenant + personal accounts
-MS_GRAPH_REDIRECT_URI=http://localhost:3000/api/outlook/callback
 TOKEN_ENCRYPTION_KEY=<long random value, e.g. openssl rand -hex 32>
 ```
 
-(`TOKEN_ENCRYPTION_KEY` is already generated in `.env.local`.) Restart `npm run dev`.
+Only **CLIENT_ID** and **CLIENT_SECRET** come from Azure. `MS_GRAPH_TENANT` and
+`TOKEN_ENCRYPTION_KEY` are already set in `.env.local`. Restart `npm run dev`.
+
+### Redirect URI — no env needed
+
+The callback URL **auto-derives from the domain the app runs on**
+(`<origin>/api/outlook/callback`). You do **not** set a redirect env var per
+environment — you just **register the callback URL(s) on the Azure app**
+(Authentication → Redirect URIs). Add each environment you use:
+
+```txt
+http://localhost:3000/api/outlook/callback      (dev)
+https://<your-domain>/api/outlook/callback       (production — HTTPS)
+https://<preview-url>/api/outlook/callback        (optional previews)
+```
+
+Same client ID/secret works across all of them. (Override with
+`MS_GRAPH_REDIRECT_URI` only if you're behind a proxy where the public URL
+differs from the request origin.)
 
 ## 5. Try it
 
