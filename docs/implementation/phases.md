@@ -292,16 +292,28 @@ Deliverables:
 
 ## Phase 6 — Thread and Follow-up Engine
 
-Goal:
+Status: **Done.** A pure thread calculator turns synced messages into real
+`work_items` — **no schema change** (writes into the Phase 1 `work_items` table
+via code-level dedup keyed by `(mailbox_id, source='outlook', source_external_id)`).
 
-- Detect waiting-on-manager, waiting-on-other, repeated follow-ups, and basic urgency.
+- `lib/engine/threads.ts` — pure, unit-tested calculator:
+  `computeThreadState` (latest direction → `is_waiting_on_manager` /
+  `is_waiting_on_other`, inbound-after-last-outbound count, `followup_count`),
+  `scoreThread` (heuristic 0–100: waiting base + recency + follow-up pressure +
+  VIP, clamped), `categorizeThread` (`waiting` | `followup` | `fyi`).
+- `lib/sync/outlook.ts` now writes thread flags onto `email_threads` and creates/
+  updates `work_items` for conversations **waiting on the manager**, each with a
+  human `urgency_reason`. The heuristic priority is refined by AI in Phase 7.
+- Surface: a real **Priorities** view (`/priorities`, sidebar "Waiting on Me")
+  ordered by priority with category/band badges, reason, and an empty state
+  ("Nothing waiting on you"). Settings → "Sync now" reports the count.
 
 Deliverables:
 
-- Pure TypeScript thread calculator.
-- Unit tests.
-- Work item updates.
-- Dashboard categories.
+- Pure TypeScript thread calculator. ✅
+- Unit tests (engine + `buildWorkItemDrafts`). ✅
+- Work item updates (created/updated from waiting-on-manager threads). ✅
+- Dashboard categories (Priorities view: waiting / followup / fyi). ✅
 
 ## Phase 7 — AI Analysis
 

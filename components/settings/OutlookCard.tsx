@@ -113,7 +113,7 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
               ].join(' ')}
             >
               {sync.ok
-                ? `Synced ${sync.inbox} inbox + ${sync.sent} sent · ${sync.threads} threads · ${sync.people} people. Open Inbox to see them.`
+                ? `Synced ${sync.inbox} inbox + ${sync.sent} sent · ${sync.threads} threads · ${sync.people} people · ${sync.workItems} waiting on you. See Inbox & Priorities.`
                 : `Sync failed: ${sync.error}`}
             </p>
           )}

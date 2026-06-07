@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { toEmailMessageRow, buildThreadRows, buildPeopleRows } from '@/lib/sync/outlook';
+import {
+  toEmailMessageRow,
+  buildThreadRows,
+  buildPeopleRows,
+  buildWorkItemDrafts,
+} from '@/lib/sync/outlook';
 import type { GraphMessage } from '@/lib/graph/mail';
 
 const ctx = { userId: 'u1', integrationId: 'int1', mailboxId: 'mb1' };
@@ -105,5 +110,43 @@ describe('buildPeopleRows', () => {
     const emails = rows.map((r) => r.email).sort();
     expect(emails).toEqual(['ali@me.com', 'maya@cedars.com', 'rania@me.com']);
     expect(rows.find((r) => r.email === 'maya@cedars.com')?.domain).toBe('cedars.com');
+  });
+});
+
+describe('buildWorkItemDrafts', () => {
+  it('creates a work item only for conversations waiting on the manager', () => {
+    const drafts = buildWorkItemDrafts(
+      [
+        // C: latest is inbound → waiting on manager → work item.
+        {
+          msg: msg({
+            id: 'a',
+            conversationId: 'C',
+            subject: 'Re: Contract',
+            bodyPreview: 'Any update?',
+            from: { emailAddress: { name: 'Maya', address: 'maya@cedars.com' } },
+            receivedDateTime: '2026-06-05T10:00:00Z',
+          }),
+          direction: 'inbound',
+        },
+        // D: manager replied last → no work item.
+        {
+          msg: msg({ id: 'b', conversationId: 'D', sentDateTime: '2026-06-05T11:00:00Z' }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+    );
+
+    expect(drafts).toHaveLength(1);
+    const d = drafts[0];
+    expect(d.conversationId).toBe('C');
+    expect(d.row.source).toBe('outlook');
+    expect(d.row.source_external_id).toBe('C');
+    expect(d.row.title).toBe('Contract'); // "Re: " stripped
+    expect(d.row.requires_reply).toBe(true);
+    expect(d.row.category).toBe('waiting');
+    expect(d.row.priority_score ?? 0).toBeGreaterThan(0);
+    expect(d.row.urgency_reason).toMatch(/waiting on your reply/i);
   });
 });
