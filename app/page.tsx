@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { requireUser, getProfile } from '@/lib/supabase/auth';
 import { getAccountView } from '@/lib/supabase/account';
@@ -22,5 +23,10 @@ export default async function DashboardPage() {
   }
 
   const account = await getAccountView();
-  return <DashboardClient account={account ?? undefined} />;
+
+  // Show the branded splash once per browser session (cookie set when it plays),
+  // so it does not replay when navigating back to the dashboard (e.g. Settings).
+  const splashShown = cookies().get('vesta_splash_shown')?.value === '1';
+
+  return <DashboardClient account={account ?? undefined} showSplashInitially={!splashShown} />;
 }

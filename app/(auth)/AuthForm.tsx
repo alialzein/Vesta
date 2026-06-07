@@ -10,7 +10,17 @@ import { Icon, MicrosoftLogo, GoogleLogo } from '@/components/ui/Icon';
 type OAuthProvider = 'azure' | 'google';
 const PROVIDER_LABEL: Record<OAuthProvider, string> = { azure: 'Microsoft', google: 'Google' };
 
-/** Rotating phrases shown while the email sign-in action is pending. */
+/** Rotating AI status messages shown under the orb (decorative, ambient). */
+const STATUS_MESSAGES = [
+  'Preparing your command center',
+  'Organizing today’s signal',
+  'Reviewing priorities',
+  'Monitoring commitments',
+  'Checking follow-up risk',
+  'Ready when you are',
+] as const;
+
+/** Rotating phrases shown ON the submit button while signing in. */
 const SIGNIN_PHRASES = ['Signing you in', 'Preparing your workspace', 'Loading Vesta'] as const;
 const SIGNUP_PHRASES = [
   'Creating your account',
@@ -32,10 +42,30 @@ function usePhraseCycle(active: boolean, phrases: readonly string[]) {
   return phrases[i];
 }
 
+/** Ambient AI status pill under the orb — cycles messages with a soft fade. */
+function AiStatusTicker() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setI((p) => (p + 1) % STATUS_MESSAGES.length), 3500);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex items-center gap-[7px] rounded-full border border-line bg-panel-2 px-[12px] py-[5px] text-[11.5px] font-semibold text-ink-soft"
+    >
+      <span className="animate-vesta-pulse h-[7px] w-[7px] flex-none rounded-full bg-green shadow-[0_0_0_3px_var(--green-soft)]" />
+      <span key={i} className="animate-vesta-fade-in">
+        {STATUS_MESSAGES[i]}
+      </span>
+    </span>
+  );
+}
+
 /**
- * Secondary email submit button with a loading morph (spinner + rotating copy)
- * that hands off to the Vesta initialization splash once the server action
- * redirects into the app.
+ * Primary email submit button (accent gradient) with a loading morph: spinner +
+ * rotating copy that hands off to the Vesta initialization splash once the
+ * server action redirects into the app.
  */
 function SubmitButton({ mode, disabled }: { mode: 'signin' | 'signup'; disabled?: boolean }) {
   const { pending } = useFormStatus();
@@ -47,7 +77,7 @@ function SubmitButton({ mode, disabled }: { mode: 'signin' | 'signup'; disabled?
       type="submit"
       disabled={pending || disabled}
       aria-busy={pending}
-      className="mt-1 flex w-full items-center justify-center gap-2 rounded-[12px] border border-line-strong bg-panel-2 px-4 py-[11px] text-[14px] font-semibold text-ink transition hover:border-accent hover:text-accent active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+      className="mt-1 flex w-full items-center justify-center gap-2 rounded-[12px] bg-gradient-to-br from-accent to-accent-2 px-4 py-3 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(47,125,235,0.35)] transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending && (
         <Icon name="refresh" className="animate-spin-slow h-[16px] w-[16px]" aria-hidden="true" />
@@ -67,9 +97,8 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
   const [confirm, setConfirm] = useState('');
   const mismatch = mode === 'signup' && confirm.length > 0 && password !== confirm;
 
-  // OAuth SSO (Phase 2b). signInWithOAuth redirects the browser to the provider;
-  // if the provider is not yet configured in Supabase, it returns an error and
-  // we surface it gracefully (the screen keeps working).
+  // OAuth SSO. signInWithOAuth redirects the browser to the provider; if the
+  // provider is not configured in Supabase, it returns an error we surface.
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
   const [oauthError, setOauthError] = useState<string | null>(null);
 
@@ -82,7 +111,6 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
       provider,
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-    // On success the browser navigates to the provider; on error we recover.
     if (error) {
       setOauthLoading(null);
       setOauthError(`${PROVIDER_LABEL[provider]} sign-in isn’t available yet. ${error.message}`);
@@ -92,27 +120,25 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
   const inputClass =
     'w-full rounded-[11px] border border-line bg-field py-[11px] pl-10 pr-3 text-[14px] text-ink outline-none transition placeholder:text-muted focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)]';
 
+  // Dark-glass SSO button — premium, theme-aware (works in dark + light).
+  const ssoButtonClass =
+    'flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-line-strong bg-panel-2 px-4 py-3 text-[14px] font-semibold text-ink shadow-soft backdrop-blur-[10px] transition hover:border-accent hover:bg-[color:var(--panel)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70';
+
   const ssoBusy = oauthLoading !== null;
 
   return (
     <div className="relative z-[1] w-full max-w-[420px]">
-      {/* Brand: AI signal core + status chip + welcome copy */}
+      {/* Brand: AI signal core + rotating status + welcome copy */}
       <div className="mb-7 flex flex-col items-center gap-3 text-center">
         <VestaAuthCore />
-        <span className="inline-flex items-center gap-[7px] rounded-full border border-line bg-panel-2 px-[11px] py-[5px] text-[11.5px] font-semibold text-ink-soft">
-          <span
-            className="animate-vesta-pulse h-[7px] w-[7px] rounded-full bg-green shadow-[0_0_0_3px_var(--green-soft)]"
-            aria-hidden="true"
-          />
-          AI workspace ready
-        </span>
+        <AiStatusTicker />
         <div>
           <h1 className="m-0 font-display text-[26px] font-semibold tracking-tight">
             {mode === 'signin' ? 'Welcome back' : 'Create your account'}
           </h1>
           <p className="mt-1 text-[13px] text-muted">
             {mode === 'signin'
-              ? 'Sign in to your Vesta command center.'
+              ? 'Vesta is ready to organize your day.'
               : 'Your AI workspace for organized executive work.'}
           </p>
         </div>
@@ -125,77 +151,12 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
           className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--accent)] to-transparent opacity-40"
         />
 
-        {/* Primary CTAs — single sign-on (identity only). */}
-        <div className="flex flex-col gap-[10px]">
-          <button
-            type="button"
-            onClick={() => handleOAuth('azure')}
-            disabled={ssoBusy}
-            aria-busy={oauthLoading === 'azure'}
-            className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-line-strong bg-white px-4 py-3 text-[14px] font-semibold text-[#1b1f24] shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition hover:brightness-[1.03] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-80"
-          >
-            {oauthLoading === 'azure' ? (
-              <Icon
-                name="refresh"
-                className="animate-spin-slow h-[16px] w-[16px] text-[#1b1f24]"
-                aria-hidden="true"
-              />
-            ) : (
-              <MicrosoftLogo className="h-[18px] w-[18px]" />
-            )}
-            <span aria-live="polite">
-              {oauthLoading === 'azure' ? 'Connecting to Microsoft…' : 'Continue with Microsoft'}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOAuth('google')}
-            disabled={ssoBusy}
-            aria-busy={oauthLoading === 'google'}
-            className="flex w-full items-center justify-center gap-[10px] rounded-[12px] border border-line-strong bg-white px-4 py-3 text-[14px] font-semibold text-[#1b1f24] shadow-[0_8px_20px_rgba(0,0,0,0.12)] transition hover:brightness-[1.03] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-80"
-          >
-            {oauthLoading === 'google' ? (
-              <Icon
-                name="refresh"
-                className="animate-spin-slow h-[16px] w-[16px] text-[#1b1f24]"
-                aria-hidden="true"
-              />
-            ) : (
-              <GoogleLogo className="h-[18px] w-[18px]" />
-            )}
-            <span aria-live="polite">
-              {oauthLoading === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
-            </span>
-          </button>
-        </div>
-
-        {/* Clarify intent: SSO is identity only; mailbox connection is separate. */}
-        <p className="mt-2 text-center text-[11px] leading-snug text-muted">
-          Single sign-on confirms who you are. You&apos;ll connect your email mailbox (Outlook,
-          Gmail, or IMAP) for Vesta to read later in Settings.
-        </p>
-
-        {oauthError && (
-          <p
-            role="alert"
-            className="mt-3 rounded-[10px] border border-[color:var(--red)] bg-red-soft px-3 py-2 text-[12px] text-red"
-          >
-            {oauthError}
-          </p>
-        )}
-
-        {/* Divider */}
-        <div className="my-4 flex items-center gap-3" aria-hidden="true">
-          <span className="h-px flex-1 bg-line" />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
-            or use email
-          </span>
-          <span className="h-px flex-1 bg-line" />
-        </div>
-
-        {/* Secondary — email / password */}
+        {/* Email sign-in (primary) */}
         <form action={formAction} className="flex flex-col gap-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+            {mode === 'signin' ? 'Sign in with email' : 'Sign up with email'}
+          </div>
+
           {redirectedFrom && <input type="hidden" name="redirectedFrom" value={redirectedFrom} />}
 
           {mode === 'signup' && (
@@ -306,6 +267,69 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
 
           <SubmitButton mode={mode} disabled={mismatch || ssoBusy} />
         </form>
+
+        {/* OR divider */}
+        <div className="my-5 flex items-center gap-3" aria-hidden="true">
+          <span className="h-px flex-1 bg-line" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            or
+          </span>
+          <span className="h-px flex-1 bg-line" />
+        </div>
+
+        {/* SSO (secondary) — premium dark-glass buttons */}
+        <div className="flex flex-col gap-[10px]">
+          <button
+            type="button"
+            onClick={() => handleOAuth('azure')}
+            disabled={ssoBusy}
+            aria-busy={oauthLoading === 'azure'}
+            className={ssoButtonClass}
+          >
+            {oauthLoading === 'azure' ? (
+              <Icon
+                name="refresh"
+                className="animate-spin-slow h-[16px] w-[16px]"
+                aria-hidden="true"
+              />
+            ) : (
+              <MicrosoftLogo className="h-[18px] w-[18px]" />
+            )}
+            <span aria-live="polite">
+              {oauthLoading === 'azure' ? 'Connecting to Microsoft…' : 'Continue with Microsoft'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOAuth('google')}
+            disabled={ssoBusy}
+            aria-busy={oauthLoading === 'google'}
+            className={ssoButtonClass}
+          >
+            {oauthLoading === 'google' ? (
+              <Icon
+                name="refresh"
+                className="animate-spin-slow h-[16px] w-[16px]"
+                aria-hidden="true"
+              />
+            ) : (
+              <GoogleLogo className="h-[18px] w-[18px]" />
+            )}
+            <span aria-live="polite">
+              {oauthLoading === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
+            </span>
+          </button>
+        </div>
+
+        {oauthError && (
+          <p
+            role="alert"
+            className="mt-3 rounded-[10px] border border-[color:var(--red)] bg-red-soft px-3 py-2 text-[12px] text-red"
+          >
+            {oauthError}
+          </p>
+        )}
       </div>
 
       {/* Mode switch */}
@@ -342,8 +366,9 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
       </div>
 
       <p className="mt-4 text-center text-[11.5px] leading-relaxed text-muted">
-        Vesta keeps your data private to you. It never sends email automatically and asks before
-        saving anything that teaches the assistant.
+        Vesta never sends email automatically.
+        <br />
+        Every action remains under your control.
       </p>
     </div>
   );
