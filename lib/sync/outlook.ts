@@ -412,7 +412,10 @@ async function processStoredMail(
   }
 
   // Update each message's excluded state + thread link, only when it changed.
+  // Writes run in parallel — sequential awaits to the cloud DB are the main
+  // source of latency on a mode/rule change.
   const nowIso = new Date().toISOString();
+  const messageUpdates: PromiseLike<unknown>[] = [];
   for (const c of classified) {
     const r = rowByMsgId.get(c.tagged.msg.id);
     if (!r) continue;
@@ -426,22 +429,25 @@ async function processStoredMail(
       ? (convToThreadId.get(c.tagged.msg.conversationId) ?? null)
       : null;
     if (wasExcluded === nowExcluded && prev.reason === c.reason) continue; // no-op
-    await supabase
-      .from('email_messages')
-      .update({
-        excluded_at: nowExcluded ? (r.excluded_at ?? nowIso) : null,
-        excluded_reason: nowExcluded ? c.reason : null,
-        thread_id: threadId,
-        triage: {
-          mode: config.mode,
-          include: c.include,
-          reason: c.reason,
-          signals: c.signals,
-          inference: prev.inference ?? null,
-        },
-      })
-      .eq('id', r.id);
+    messageUpdates.push(
+      supabase
+        .from('email_messages')
+        .update({
+          excluded_at: nowExcluded ? (r.excluded_at ?? nowIso) : null,
+          excluded_reason: nowExcluded ? c.reason : null,
+          thread_id: threadId,
+          triage: {
+            mode: config.mode,
+            include: c.include,
+            reason: c.reason,
+            signals: c.signals,
+            inference: prev.inference ?? null,
+          },
+        })
+        .eq('id', r.id),
+    );
   }
+  if (messageUpdates.length > 0) await Promise.all(messageUpdates);
 
   // People (from visible mail only).
   const peopleRows = buildPeopleRows(
@@ -474,30 +480,32 @@ async function processStoredMail(
   }
 
   const inserts: WorkItemRow[] = [];
+  const workItemUpdates: PromiseLike<unknown>[] = [];
   for (const { conversationId, row } of drafts) {
     row.thread_id = convToThreadId.get(conversationId) ?? null;
     const id = idByExternal.get(conversationId);
     if (id) {
-      await supabase
-        .from('work_items')
-        .update({
-          title: row.title,
-          summary: row.summary,
-          category: row.category,
-          priority_score: row.priority_score,
-          requires_reply: row.requires_reply,
-          urgency_reason: row.urgency_reason,
-          thread_id: row.thread_id,
-          updated_at: nowIso,
-        })
-        .eq('id', id);
+      workItemUpdates.push(
+        supabase
+          .from('work_items')
+          .update({
+            title: row.title,
+            summary: row.summary,
+            category: row.category,
+            priority_score: row.priority_score,
+            requires_reply: row.requires_reply,
+            urgency_reason: row.urgency_reason,
+            thread_id: row.thread_id,
+            updated_at: nowIso,
+          })
+          .eq('id', id),
+      );
     } else {
       inserts.push(row);
     }
   }
-  if (inserts.length > 0) {
-    await supabase.from('work_items').insert(inserts);
-  }
+  if (inserts.length > 0) workItemUpdates.push(supabase.from('work_items').insert(inserts));
+  if (workItemUpdates.length > 0) await Promise.all(workItemUpdates);
 
   return { threads: threadRows.length, workItems: drafts.length, hidden };
 }
