@@ -250,16 +250,31 @@ Deliverables:
 
 ## Phase 4 — Initial Email Sync
 
-Goal:
+Status: **Done (Outlook).** A bounded initial sync pulls recent **Inbox + Sent**
+via Microsoft Graph and stores real data — **no schema change** (writes into the
+Phase 1 tables via their existing unique constraints).
 
-- Sync recent Inbox and Sent Items.
+- `lib/graph/mail.ts` fetches recent messages; `lib/sync/outlook.ts` has pure
+  builders (message/thread/people rows — unit tested) + an orchestrator that
+  idempotently upserts `email_threads`, `email_messages`, `people` and records a
+  `sync_cursors` row (auth'd client → RLS own-rows; tokens auto-refreshed).
+- Trigger: **Settings → "Sync now"** (server action `syncOutlook`), shows a result
+  summary. (Auto/delta/background sync is Phase 5.)
+- Surface: a real **Inbox** view (`/inbox`, linked from the sidebar) listing recent
+  synced messages, with an empty state. The Today dashboard stays demo until
+  Phase 6/7 enrich work items.
+- **Deviation (documented):** `work_items` creation is **deferred to Phase 6**
+  (the follow-up engine), where items get real categories/priority — creating bare
+  ones now would be unused.
+- E2E now runs against a **production build** (`next build && next start`) for
+  deterministic, non-flaky runs (dev compiled routes on-demand).
 
 Deliverables:
 
 - Email messages stored.
 - Threads created.
 - People extracted.
-- Basic work items created.
+- Basic work items created (deferred to Phase 6 — see above).
 
 ## Phase 5 — Delta Sync, Webhooks, and Queues
 

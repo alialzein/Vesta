@@ -149,7 +149,10 @@ lib/graph/                         # Phase 3 — Microsoft Graph / Outlook
 ├── crypto.ts                      # AES-256-GCM token encryption (server-only)
 ├── oauth.ts                       # config, authorize URL, code exchange, refresh
 ├── client.ts                      # Graph REST helper (/me)
+├── mail.ts                        # Phase 4 — fetch recent Inbox/Sent messages
 └── tokens.ts                      # store + getValidAccessToken (auto-refresh)
+lib/sync/                          # Phase 4 — email sync
+└── outlook.ts                     # pure row builders + syncOutlookForUser (upserts)
 app/
 ├── (auth)/
 │   ├── actions.ts                 # signIn / signUp / signOut server actions
@@ -170,7 +173,8 @@ e2e/
 │   └── callback/route.ts          # exchange code, /me, save integration + tokens
 ├── settings/
 │   ├── page.tsx                   # Settings (Outlook connection card)
-│   └── actions.ts                 # disconnectOutlook / testOutlook
+│   └── actions.ts                 # disconnectOutlook / testOutlook / syncOutlook
+├── inbox/page.tsx                 # Phase 4 — real synced messages (sidebar Inbox)
 ├── onboarding/
 │   ├── page.tsx                   # first-run gate -> OnboardingWizard (or redirect)
 │   ├── OnboardingWizard.tsx       # full-screen wizard (client)

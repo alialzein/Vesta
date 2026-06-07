@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { disconnectOutlook, testOutlook, type TestResult } from '@/app/settings/actions';
+import { useRouter } from 'next/navigation';
+import {
+  disconnectOutlook,
+  testOutlook,
+  syncOutlook,
+  type TestResult,
+} from '@/app/settings/actions';
+import type { SyncResult } from '@/lib/sync/outlook';
 import { Icon, MicrosoftLogo } from '@/components/ui/Icon';
 
 export type OutlookStatus = {
@@ -17,13 +24,26 @@ export type OutlookStatus = {
  * Graph isn't configured yet, the card explains the pending setup. Light/dark safe.
  */
 export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?: string | null }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [test, setTest] = useState<TestResult | null>(null);
+  const [sync, setSync] = useState<SyncResult | null>(null);
 
   function runTest() {
     setTest(null);
+    setSync(null);
     startTransition(async () => {
       setTest(await testOutlook());
+    });
+  }
+
+  function runSync() {
+    setTest(null);
+    setSync(null);
+    startTransition(async () => {
+      const result = await syncOutlook();
+      setSync(result);
+      if (result.ok) router.refresh();
     });
   }
 
@@ -82,6 +102,22 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
             </p>
           )}
 
+          {sync && (
+            <p
+              role="status"
+              className={[
+                'mt-3 rounded-[10px] border px-3 py-2 text-[12.5px]',
+                sync.ok
+                  ? 'border-[color:var(--green)] bg-green-soft text-green'
+                  : 'border-[color:var(--red)] bg-red-soft text-red',
+              ].join(' ')}
+            >
+              {sync.ok
+                ? `Synced ${sync.inbox} inbox + ${sync.sent} sent · ${sync.threads} threads · ${sync.people} people. Open Inbox to see them.`
+                : `Sync failed: ${sync.error}`}
+            </p>
+          )}
+
           <div className="mt-4 flex flex-wrap gap-2">
             {!status.connected ? (
               status.configured ? (
@@ -101,9 +137,9 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
               <>
                 <button
                   type="button"
-                  onClick={runTest}
+                  onClick={runSync}
                   disabled={isPending}
-                  className="inline-flex items-center gap-2 rounded-[11px] border border-line-strong bg-panel-2 px-3 py-[10px] text-[13px] font-semibold text-ink transition hover:border-accent hover:text-accent disabled:opacity-70"
+                  className="inline-flex items-center gap-2 rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-4 py-[10px] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.3)] transition hover:brightness-110 disabled:opacity-70"
                 >
                   {isPending && (
                     <Icon
@@ -112,6 +148,14 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
                       aria-hidden="true"
                     />
                   )}
+                  Sync now
+                </button>
+                <button
+                  type="button"
+                  onClick={runTest}
+                  disabled={isPending}
+                  className="inline-flex items-center gap-2 rounded-[11px] border border-line-strong bg-panel-2 px-3 py-[10px] text-[13px] font-semibold text-ink transition hover:border-accent hover:text-accent disabled:opacity-70"
+                >
                   Test connection
                 </button>
                 <button
