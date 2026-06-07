@@ -23,6 +23,7 @@ import { MeetingPrepDrawer } from './MeetingPrepDrawer';
 import { CleanInboxDrawer } from './CleanInboxDrawer';
 import { VestaSplashScreen } from './VestaSplashScreen';
 import { DashboardAtmosphere } from './DashboardAtmosphere';
+import { AutoSync } from '@/components/sync/AutoSync';
 import { Icon } from '@/components/ui/Icon';
 import type { AccountView } from '@/lib/supabase/account';
 
@@ -125,6 +126,9 @@ export function DashboardClient({
   return (
     <>
       {showSplash && <VestaSplashScreen onDone={handleSplashDone} />}
+
+      {/* Background auto-sync (Phase 5): keeps mail fresh without manual "Sync now". */}
+      <AutoSync />
 
       {/* Subtle Vesta atmosphere behind everything (decorative, z-0). */}
       <DashboardAtmosphere />

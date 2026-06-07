@@ -1,9 +1,13 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { ThemeProvider } from '@/lib/theme';
 import { ToastProvider } from '@/components/ui/Toast';
+
+// AutoSync runs background server actions on mount; stub it out so this shell
+// test stays isolated (its logic is covered by lib/sync/__tests__/auto.test.ts).
+vi.mock('@/components/sync/AutoSync', () => ({ AutoSync: () => null }));
 
 function renderDashboard() {
   return render(

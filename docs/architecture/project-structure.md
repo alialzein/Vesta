@@ -149,11 +149,15 @@ lib/graph/                         # Phase 3 — Microsoft Graph / Outlook
 ├── crypto.ts                      # AES-256-GCM token encryption (server-only)
 ├── oauth.ts                       # config, authorize URL, code exchange, refresh
 ├── client.ts                      # Graph REST helper (/me)
-├── mail.ts                        # Phase 4 — fetch recent Inbox/Sent messages
-└── tokens.ts                      # store + getValidAccessToken (auto-refresh)
+├── mail.ts                        # Phase 4 — fetch recent Inbox/Sent (delta-ready)
+├── tokens.ts                      # store + getValidAccessToken (auto-refresh)
+└── subscriptions.ts               # Phase 5 — Graph webhook subs (scaffold, dormant)
 lib/sync/                          # Phase 4 — email sync
 └── outlook.ts                     # pure row builders + syncOutlookForUser
                                    #   (upserts; Phase 6 adds thread flags + work_items)
+lib/sync/auto.ts                   # Phase 5 — shouldAutoSync (pure, tested)
+components/sync/AutoSync.tsx        # Phase 5 — invisible background auto-sync
+app/api/outlook/webhook/route.ts   # Phase 5 — Graph notification endpoint (scaffold)
 lib/engine/                        # Phase 6/6.5 — pure engines (no DB)
 ├── threads.ts                     # computeThreadState / scoreThread / categorizeThread
 ├── triage.ts                      # classifyEmail — include/hide noise + reason (6.5)

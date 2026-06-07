@@ -278,17 +278,28 @@ Deliverables:
 
 ## Phase 5 — Delta Sync, Webhooks, and Queues
 
-Goal:
+Status: **In progress (auto-sync done; webhooks scaffolded).** Keeps Outlook data
+current without the manager clicking "Sync now".
 
-- Keep Outlook data current.
+- **Background auto-sync (live):** `components/sync/AutoSync.tsx` runs on the
+  dashboard, Inbox, and Priorities — on mount (if the last sync is stale) and on a
+  5-minute interval — calling `syncOutlook` and refreshing. Staleness is the pure,
+  tested `lib/sync/auto.ts` (`shouldAutoSync`); `getSyncStatus` reports connection
+  + `last_success_at`. Incremental "only new" works now that the cursor persists
+  (Phase 6.5 fix).
+- **Webhooks (scaffolded, dormant):** `app/api/outlook/webhook/route.ts` handles
+  the Graph validation handshake and stores notifications in `webhook_events`;
+  `lib/graph/subscriptions.ts` creates/renews/deletes subscriptions. Inactive until
+  Vesta runs on a public HTTPS URL (`MS_GRAPH_WEBHOOK_URL`) — Microsoft can't reach
+  `localhost`, so the interval covers local dev.
 
 Deliverables:
 
-- Graph webhook endpoint.
-- Delta sync cursors.
-- Scheduled fallback sync.
-- Queue processing.
-- Subscription renewal.
+- Graph webhook endpoint. ✅ (scaffold; activate on deploy)
+- Subscription create/renew/delete helpers. ✅ (scaffold)
+- Background/scheduled auto-sync. ✅ (interval; webhook-driven on deploy)
+- True Graph delta tokens (`deltaLink`) + queue processing. ⏳ (next; timestamp
+  incremental works in the meantime)
 
 ## Phase 6 — Thread and Follow-up Engine
 

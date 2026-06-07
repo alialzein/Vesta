@@ -67,6 +67,27 @@ export async function syncOutlook(): Promise<SyncResult> {
   return syncOutlookForUser(user.id);
 }
 
+/** Connection + last-sync status, for the background auto-sync (Phase 5). */
+export async function getSyncStatus(): Promise<{ connected: boolean; lastSyncAt: string | null }> {
+  await requireUser();
+  const supabase = createClient();
+  const [{ data: mailbox }, { data: cursor }] = await Promise.all([
+    supabase
+      .from('mailboxes')
+      .select('id')
+      .eq('provider', 'microsoft')
+      .eq('status', 'active')
+      .maybeSingle(),
+    supabase
+      .from('sync_cursors')
+      .select('last_success_at')
+      .eq('resource_type', 'messages')
+      .eq('resource_id', 'all')
+      .maybeSingle(),
+  ]);
+  return { connected: Boolean(mailbox?.id), lastSyncAt: cursor?.last_success_at ?? null };
+}
+
 /**
  * Set what Vesta imports as actionable for the user's active mailbox
  * (focused | flagged | everything), then re-run triage over stored mail so the
