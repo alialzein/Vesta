@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { DEMO_USER, demoNotificationCount } from '@/lib/demo-data';
 import { useTheme } from '@/lib/theme';
 import { Icon } from '@/components/ui/Icon';
@@ -80,15 +81,15 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
           )}
         </button>
 
-        {/* Settings (placeholder) */}
-        <button
-          type="button"
+        {/* Settings → connect mailbox, preferences */}
+        <Link
+          href="/settings"
           aria-label="Open settings"
           title="Settings"
           className="hidden h-11 w-11 flex-none place-items-center rounded-sm border border-line bg-panel text-ink-soft shadow-soft transition hover:border-accent hover:text-accent sm:grid"
         >
           <Icon name="settings" className="h-[19px] w-[19px]" />
-        </button>
+        </Link>
 
         {/* Theme toggle */}
         <button

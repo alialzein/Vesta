@@ -221,6 +221,22 @@ Deliverables:
 
 ## Phase 3 — Microsoft Outlook Connection
 
+Status: **Code done; pending Azure app config.** Microsoft Graph OAuth
+(authorization-code flow) to connect an Outlook mailbox — **separate from login**.
+ONE Azure app serves all users; each gets their own encrypted, auto-refreshed
+token pair. Setup guide: `docs/architecture/outlook-connect-setup.md`.
+
+- `GET /api/outlook/connect` (CSRF state) → Microsoft; `GET /api/outlook/callback`
+  exchanges the code, reads `/me`, upserts `user_integrations` + `mailboxes`, and
+  stores encrypted tokens in `private.graph_tokens` via service-role SECURITY
+  DEFINER RPCs (migration `20260606170001_graph_token_rpcs.sql`).
+- `lib/graph/*`: AES-256-GCM token crypto, OAuth (authorize/exchange/refresh),
+  `/me` client, and `getValidAccessToken` (auto-refresh → "stays connected").
+- Settings page (`/settings`, linked from the topbar gear) with an Outlook card:
+  Connect / Test connection / Disconnect + status. Degrades gracefully until the
+  Microsoft app keys are set. Unit tests cover crypto, the authorize URL, and
+  token-expiry logic.
+
 Goal:
 
 - Manager can connect Outlook through Microsoft Graph OAuth.
