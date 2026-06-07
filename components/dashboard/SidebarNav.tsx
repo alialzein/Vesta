@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import type { NavView } from './Sidebar';
 
@@ -7,7 +8,10 @@ export type NavItem = {
   label: string;
   icon: IconName;
   badge?: number;
+  /** Switches the in-page dashboard view. */
   view?: NavView;
+  /** Navigates to a route (e.g. /inbox). Mutually exclusive with `view`. */
+  href?: string;
 };
 
 export type NavGroup = {
@@ -38,21 +42,17 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
           {group.items.map((item) => {
             const isActive = item.view !== undefined && item.view === activeView;
             const hasBadge = item.badge !== undefined;
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => item.view && onSelectView(item.view)}
-                aria-current={isActive ? 'page' : undefined}
-                aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
-                className={[
-                  'group/nav relative flex cursor-pointer items-center rounded-xl text-sm font-medium transition',
-                  collapsed ? 'h-11 w-11 justify-center self-center' : 'gap-[11px] px-3 py-[10px]',
-                  isActive
-                    ? 'bg-[image:var(--side-active-bg)] text-[color:var(--side-ink)] shadow-[inset_0_0_0_1px_var(--side-card-border)]'
-                    : 'text-[color:var(--side-link)] hover:bg-[color:var(--side-hover)] hover:text-[color:var(--side-ink)]',
-                ].join(' ')}
-              >
+
+            const className = [
+              'group/nav relative flex cursor-pointer items-center rounded-xl text-sm font-medium transition',
+              collapsed ? 'h-11 w-11 justify-center self-center' : 'gap-[11px] px-3 py-[10px]',
+              isActive
+                ? 'bg-[image:var(--side-active-bg)] text-[color:var(--side-ink)] shadow-[inset_0_0_0_1px_var(--side-card-border)]'
+                : 'text-[color:var(--side-link)] hover:bg-[color:var(--side-hover)] hover:text-[color:var(--side-ink)]',
+            ].join(' ');
+
+            const inner = (
+              <>
                 {/* Active accent bar (expanded only) */}
                 {isActive && !collapsed && (
                   <span
@@ -66,7 +66,6 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
                     name={item.icon}
                     className={`h-[19px] w-[19px] ${isActive ? 'text-accent' : 'opacity-85'}`}
                   />
-                  {/* Collapsed: consistent mini count badge on the icon corner */}
                   {collapsed && hasBadge && (
                     <span className="absolute -right-[7px] -top-[7px] grid h-[15px] min-w-[15px] place-items-center rounded-full bg-accent px-[3px] font-mono text-[9px] font-bold leading-none text-white shadow-[0_2px_5px_rgba(47,125,235,0.5)]">
                       {item.badge}
@@ -76,7 +75,6 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
 
                 {!collapsed && <span className="truncate">{item.label}</span>}
 
-                {/* Expanded: count pill */}
                 {!collapsed && hasBadge && (
                   <span
                     className={[
@@ -90,7 +88,6 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
                   </span>
                 )}
 
-                {/* Collapsed: hover/focus tooltip */}
                 {collapsed && (
                   <span
                     role="tooltip"
@@ -100,6 +97,33 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
                     {hasBadge ? ` · ${item.badge}` : ''}
                   </span>
                 )}
+              </>
+            );
+
+            // Route link (e.g. Inbox) vs in-page view switch.
+            if (item.href) {
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
+                  className={className}
+                >
+                  {inner}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => item.view && onSelectView(item.view)}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
+                className={className}
+              >
+                {inner}
               </button>
             );
           })}

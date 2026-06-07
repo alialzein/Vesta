@@ -11,6 +11,11 @@ Follow `AGENTS.md` first. This file only adds Claude-specific working style pref
 5. Update docs in the same task when behavior, schema, routes, AI prompts, or security rules change.
 6. Do not silently change architecture decisions.
 7. Ask before destructive changes.
+8. **Always get explicit confirmation before any database/schema change (a
+   migration): propose the SQL first and apply it only after the user approves.**
+   Writing application data into existing tables is normal; creating/altering
+   tables, columns, indexes, policies, functions, or running a migration is not —
+   confirm first.
 
 ## UI rules (non-negotiable)
 

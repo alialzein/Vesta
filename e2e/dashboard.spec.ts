@@ -13,8 +13,11 @@ const hasAuth = Boolean(process.env.E2E_TEST_EMAIL && process.env.E2E_TEST_PASSW
  */
 async function waitForDashboard(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('status', { name: /Loading Vesta/i })).toBeHidden({ timeout: 7000 });
-  await expect(page.getByRole('heading', { name: /Good morning/i })).toBeVisible();
+  await expect(page.getByRole('status', { name: /Loading Vesta/i })).toBeHidden({ timeout: 12000 });
+  // Generous timeout: the Next dev server compiles routes on first hit.
+  await expect(page.getByRole('heading', { name: /Good morning/i })).toBeVisible({
+    timeout: 15000,
+  });
 }
 
 test.describe('Dashboard shell', () => {
@@ -30,8 +33,9 @@ test.describe('Dashboard shell', () => {
     await page.context().clearCookies({ name: 'vesta_splash_shown' });
     await page.goto('/');
     // The full-screen branded splash appears (its testid is unique; the tagline
-    // also exists in the sidebar, so we target the splash explicitly).
-    await expect(page.getByTestId('vesta-splash-screen')).toBeVisible();
+    // also exists in the sidebar, so we target the splash explicitly). Generous
+    // timeout for the dev server's first on-demand route compile.
+    await expect(page.getByTestId('vesta-splash-screen')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('vesta-splash-message')).toBeVisible();
     // ...then disappears, revealing the dashboard.
     await expect(page.getByTestId('vesta-splash-screen')).toBeHidden({ timeout: 7000 });

@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { getValidAccessToken, deleteTokens } from '@/lib/graph/tokens';
 import { getMe } from '@/lib/graph/client';
+import { syncOutlookForUser, type SyncResult } from '@/lib/sync/outlook';
 
 /** Find the current user's Microsoft integration id, or null. */
 async function getMicrosoftIntegrationId(): Promise<string | null> {
@@ -46,4 +47,10 @@ export async function testOutlook(): Promise<TestResult> {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Connection test failed.' };
   }
+}
+
+/** Run an initial email sync (recent Inbox + Sent) for the current user. */
+export async function syncOutlook(): Promise<SyncResult> {
+  const user = await requireUser();
+  return syncOutlookForUser(user.id);
 }
