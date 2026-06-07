@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Icon } from '@/components/ui/Icon';
 import { SenderActions } from '@/components/triage/SenderActions';
+import { AutoSync } from '@/components/sync/AutoSync';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,7 @@ export default async function InboxPage() {
 
   return (
     <main className="v-scroll mx-auto h-screen w-full max-w-[820px] overflow-y-auto px-5 py-8">
+      <AutoSync />
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/"
