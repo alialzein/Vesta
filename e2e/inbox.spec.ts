@@ -10,12 +10,16 @@ test.describe('Inbox', () => {
   test.skip(!hasAuth, 'Requires E2E test-user creds in .env.local.');
   test.use({ storageState: hasAuth ? authFile : undefined });
 
-  test('renders the Inbox with an empty state when nothing is synced', async ({ page }) => {
+  test('renders the Inbox (empty state or synced messages)', async ({ page }) => {
     await page.goto('/inbox');
     await expect(page.getByRole('heading', { name: 'Inbox', exact: true })).toBeVisible();
-    // The dev user has no synced messages, so the empty state shows.
-    await expect(page.getByText(/No synced messages yet/i)).toBeVisible();
-    // And a path to connect/sync.
-    await expect(page.getByRole('link', { name: /Go to Settings/i })).toBeVisible();
+    // Header always links to sync settings, regardless of data state.
+    await expect(page.getByRole('link', { name: /Sync settings/i })).toBeVisible();
+    // The shared dev account may or may not have synced Outlook mail (it doubles
+    // as the real-data test account), so accept either the empty state or a
+    // populated message list rather than assuming an empty mailbox.
+    const emptyState = page.getByRole('heading', { name: /No synced messages yet/i });
+    const messageRow = page.getByRole('listitem');
+    await expect(emptyState.or(messageRow).first()).toBeVisible();
   });
 });
