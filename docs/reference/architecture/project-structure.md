@@ -72,7 +72,7 @@ HTML mockup while staying idiomatic.
 │   └── __tests__/                # Component tests (Vitest)
 │
 ├── lib/
-│   ├── types.ts                  # UI types mirroring docs/database/schema-v1.md
+│   ├── types.ts                  # UI types mirroring docs/reference/database/schema-v1.md
 │   ├── demo-data.ts              # *** ONLY home for placeholder data ***
 │   ├── priority.ts               # Pure helpers (priorityBand, filterWorkItems)
 │   ├── theme.tsx                 # ThemeProvider + useTheme (dark/light)
@@ -94,7 +94,7 @@ HTML mockup while staying idiomatic.
 - **Sidebar** collapses between a full panel (~280px) and an icon-only rail
   (~88px). Below `lg` it is hidden and opens as a mobile overlay drawer from the
   topbar hamburger. The collapse toggle never overlaps the logo (see
-  `docs/design/visual-direction-v2.md`).
+  `docs/archive/design/visual-direction-v2.md`).
 - **Main area** swaps between the **Today** view (compact brief, metrics strip,
   Today's Radar, how-it-works) and the **Memory & Rules** view, driven by the left
   nav. (Phase 0.3 removed the large AI Command Center cards and the six KPI cards
@@ -129,9 +129,9 @@ HTML mockup while staying idiomatic.
 > graph paper behind the work list) — leaving only soft radial blooms in the
 > shell background; a grid now lives only on the splash. The splash also gained a
 > soft radial field, more nodes, an equalizer, and a branded progress bar.
-> Full details: `docs/design/visual-direction-v2.md`,
-> `docs/design/final-ui-fixes-phase-0-4.md`, `docs/design/loading-experience-v1.md`,
-> `docs/design/ai-motion-principles.md`, and `docs/demo/demo-behavior.md`.
+> Full details: `docs/archive/design/visual-direction-v2.md`,
+> `docs/archive/design/final-ui-fixes-phase-0-4.md`, `docs/archive/design/loading-experience-v1.md`,
+> `docs/archive/design/ai-motion-principles.md`, and `docs/archive/demo/demo-behavior.md`.
 > Still demo-only (no backend/AI).
 
 ## Auth layer (Phase 2)

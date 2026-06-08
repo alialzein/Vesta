@@ -5,7 +5,7 @@ import { Icon } from './Icon';
 
 /**
  * Minimal demo-only toast system. Used to give local React feedback for
- * placeholder actions (no backend). See docs/demo/demo-behavior.md.
+ * placeholder actions (no backend). See docs/archive/demo/demo-behavior.md.
  */
 
 export type ToastTone = 'info' | 'success';

@@ -45,7 +45,7 @@ const SHOW_LARGE_COMMAND_CENTER = false;
  * - quick-action preview drawers + chat drawer
  *
  * All data is demo data (lib/demo-data.ts). No network/DB/AI calls.
- * Quick actions are local React behavior only — see docs/demo/demo-behavior.md.
+ * Quick actions are local React behavior only — see docs/archive/demo/demo-behavior.md.
  */
 export function DashboardClient({
   account,

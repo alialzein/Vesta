@@ -2,7 +2,7 @@
  * Dashboard view types for Phase 0.
  *
  * These intentionally mirror a subset of the planned V1 schema
- * (see docs/database/schema-v1.md) so that Phase 0 demo data can be
+ * (see docs/reference/database/schema-v1.md) so that Phase 0 demo data can be
  * replaced by real Supabase rows later with minimal reshaping.
  *
  * No data is fetched here. These are UI-facing shapes only.

@@ -29,7 +29,7 @@ type AiCommandCenterProps = {
 /**
  * AI Command Center — quick AI-assisted flows (Clear My Day, Meeting Prep,
  * Delegate Work, Clean Inbox). Demo only: CTAs trigger local React behavior
- * (drawers, radar filter, toast). See docs/demo/demo-behavior.md.
+ * (drawers, radar filter, toast). See docs/archive/demo/demo-behavior.md.
  *
  * The last card (Clean Inbox) is treated as secondary and is hidden on very
  * small screens to reduce vertical pressure above Today's Radar.

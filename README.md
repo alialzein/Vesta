@@ -51,8 +51,8 @@ npm run format     # Prettier write
 All hardcoded demo data lives in a single clearly-named file,
 [`lib/demo-data.ts`](lib/demo-data.ts). Later phases replace it with Supabase
 queries that return the same shapes (defined in [`lib/types.ts`](lib/types.ts),
-which mirrors `docs/database/schema-v1.md`). See
-[`docs/architecture/project-structure.md`](docs/architecture/project-structure.md)
+which mirrors `docs/reference/database/schema-v1.md`). See
+[`docs/reference/architecture/project-structure.md`](docs/reference/architecture/project-structure.md)
 for the full folder layout.
 
 Environment variables are documented in [`.env.example`](.env.example). Phase 0
@@ -64,58 +64,26 @@ secrets — copy to `.env.local` (gitignored) for real values.
 Start here:
 
 ```txt
-docs/START_HERE.md
+docs/README.md     ← the docs map: status, plans, and every folder explained
 AGENTS.md
 CLAUDE.md
 ```
 
-Product documents:
+**[docs/README.md](docs/README.md)** is the front-door for all documentation. It
+groups everything into five buckets and tells you where to look:
 
-```txt
-docs/product/top-3-dashboard-features.md
-docs/product/dashboard-ux-spec.md
-docs/product/feature-roadmap.md
-docs/product/workflows.md
-```
+| Folder | What's in it |
+|--------|--------------|
+| [docs/guides/](docs/guides/) | 👤 User manual (how features work for the manager) |
+| [docs/plans/](docs/plans/) | 📋 Status & plans — `phases.md` is the master plan |
+| [docs/product/](docs/product/) | 🎯 Vision, workflows, UX specs |
+| [docs/reference/](docs/reference/) | 📖 How it works — architecture + database |
+| [docs/standards/](docs/standards/) | 📐 Rules to follow — ai, security, testing, templates |
+| [docs/archive/](docs/archive/) | 🗂️ Historical — design history, demo notes, original plan |
 
-Implementation documents:
-
-```txt
-docs/implementation/phases.md
-docs/implementation/codex-task-backlog.md
-docs/implementation/prompts-to-use.md
-docs/implementation/handoff-checklist.md
-```
-
-Database documents:
-
-```txt
-docs/database/README.md
-docs/database/schema-v1.md
-docs/database/data-dictionary.md
-docs/database/db-documentation-rules.md
-docs/database/portability-and-email-migration.md
-```
-
-AI behavior documents:
-
-```txt
-docs/ai/ai-agent-rules.md
-docs/ai/behavior-and-memory-rules.md
-docs/ai/prompt-contracts.md
-docs/ai/output-schemas.md
-docs/ai/safety-rules.md
-```
-
-Testing documents:
-
-```txt
-docs/testing/testing-strategy.md
-docs/testing/unit-tests.md
-docs/testing/integration-tests.md
-docs/testing/e2e-tests.md
-docs/testing/qa-scenarios.md
-```
+For "what are we building next / what's planned," see
+[docs/plans/phases.md](docs/plans/phases.md) and the plans table in
+[docs/README.md](docs/README.md).
 
 ## Non-negotiable rules
 

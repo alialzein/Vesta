@@ -45,7 +45,7 @@ create table public.work_items (
 
 comment on table public.work_items is 'Unified actionable items; the main table the dashboard reads. May link to a mailbox or be mailbox-independent.';
 
--- Indexes mandated by docs/database/schema-v1.md for dashboard/sort queries.
+-- Indexes mandated by docs/reference/database/schema-v1.md for dashboard/sort queries.
 create index work_items_dashboard_idx
   on public.work_items (user_id, status, priority_score desc, due_at asc nulls last);
 create index work_items_category_idx

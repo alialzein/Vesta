@@ -5,7 +5,7 @@ Use these tasks one at a time. Do not paste all tasks at once.
 ## Task 0 — Read and Plan Only
 
 ```md
-Read `AGENTS.md`, `CLAUDE.md`, and `docs/START_HERE.md`.
+Read `AGENTS.md`, `CLAUDE.md`, and `docs/archive/START_HERE.md`.
 Inspect the project structure and the current dashboard HTML.
 Do not code.
 Return a Phase 0 plan with files to edit, tests to add, and risks.
@@ -27,7 +27,7 @@ Add a `demo-data.ts` file that can be removed later.
 ```md
 Implement Phase 1 database foundation.
 Create Supabase migrations and update database docs.
-Follow `docs/database/schema-v1.md` and `docs/database/db-documentation-rules.md`.
+Follow `docs/reference/database/schema-v1.md` and `docs/reference/database/db-documentation-rules.md`.
 Make sure schema supports future mailbox/email migration using `mailboxes` and `account_transfer_events`.
 ```
 

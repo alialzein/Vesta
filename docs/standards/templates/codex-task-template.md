@@ -12,7 +12,7 @@ Context:
 Read first:
 
 - `AGENTS.md`
-- `docs/START_HERE.md`
+- `docs/archive/START_HERE.md`
 - `<specific docs>`
 
 Scope:

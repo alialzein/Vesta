@@ -84,7 +84,7 @@ The button's rotating copy is the deliberate hand-off cue into the splash.
 
 ## Login motion principles
 
-Follows `docs/design/ai-motion-principles.md`. On this screen:
+Follows `docs/archive/design/ai-motion-principles.md`. On this screen:
 
 - **Allowed:** slow orbit + breathing core, soft halo, button sheen/shimmer,
   input focus glow, loading spinner + rotating copy, opacity/transform only.

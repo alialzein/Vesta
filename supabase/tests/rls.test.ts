@@ -2,7 +2,7 @@
  * RLS / security integration tests — run against the LIVE Supabase project.
  *
  * These verify the security boundaries required by
- * docs/database/rls-security-rules.md:
+ * docs/reference/database/rls-security-rules.md:
  *   - An anonymous (browser-equivalent) client cannot read user-owned tables.
  *   - The private graph_tokens table is not reachable from a browser client.
  *   - The service role can write service-owned tables (sync_cursors).

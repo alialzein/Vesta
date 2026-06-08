@@ -9,7 +9,7 @@ still works.
 
 > Login SSO is **identity only** — it does not read email. Connecting a mailbox
 > (Outlook/Gmail/IMAP) is a separate step in Settings (Phase 3+). See
-> `docs/product/auth-onboarding-and-mailbox-plan.md`.
+> `docs/plans/auth-onboarding-and-mailbox-plan.md`.
 
 ## Redirect / callback URL
 

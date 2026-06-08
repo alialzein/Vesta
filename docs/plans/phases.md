@@ -6,7 +6,7 @@ Build one phase at a time. Do not skip ahead.
 
 Status: **Done.** Next.js + Tailwind app scaffolded; Arctic Frost mockup ported
 into reusable components fed by `lib/demo-data.ts`; unit/component/E2E tests
-added; runs locally. See `docs/architecture/project-structure.md`.
+added; runs locally. See `docs/reference/architecture/project-structure.md`.
 
 Goal:
 
@@ -43,7 +43,7 @@ demo-only — no Supabase, Graph, AI, auth, migrations, or secrets):
   to a 64px icon strip; stacks on small screens.
 - Polished Today's Radar (more filters), Morning Brief, and responsive behavior.
 
-See `docs/design/visual-direction-v2.md`.
+See `docs/archive/design/visual-direction-v2.md`.
 
 ### Phase 0.2 — Demo Interactions (interim)
 
@@ -61,7 +61,7 @@ behavior on top of 0.1, still demo-only:
 ### Phase 0.3 — Dashboard Focus & Simplicity Polish
 
 Status: **Done.** Simplified the Today page so the work queue is the focus
-(plan: `docs/design/phase-0-3-dashboard-focus-polish-plan.md`). Still demo-only:
+(plan: `docs/archive/design/phase-0-3-dashboard-focus-polish-plan.md`). Still demo-only:
 
 - Compact Morning Brief: badge + headline + one summary line + a small
   "Top risk" chip + four quick actions (Clear My Day, Draft Replies, Delegate,
@@ -72,12 +72,12 @@ Status: **Done.** Simplified the Today page so the work queue is the focus
 - Today's Radar promoted; reachable earlier on a laptop screen.
 - "Ask Vesta" FAB becomes compact (icon-only) while the AI rail is expanded.
 
-See `docs/demo/demo-behavior.md` for what is real vs. placeholder.
+See `docs/archive/demo/demo-behavior.md` for what is real vs. placeholder.
 
 ### Phase 0.4 — Final UI/UX Fixes
 
 Status: **Done.** A focused fix pass (no redesign), still demo-only. Plan/details:
-`docs/design/final-ui-fixes-phase-0-4.md`.
+`docs/archive/design/final-ui-fixes-phase-0-4.md`.
 
 - Topbar: removed the standalone "AI" button (rail toggle is now icon-only),
   profile chip shows avatar + name, Outlook status simplified to "Connected".
@@ -91,8 +91,8 @@ Status: **Done.** A focused fix pass (no redesign), still demo-only. Plan/detail
 ### Phase 0.5 — AI Brand Polish, Motion & Loading
 
 Status: **Done.** A polish pass (no redesign), still demo-only. Plan/details:
-`docs/design/phase-0-5-ai-brand-polish-plan.md`,
-`docs/design/loading-experience-v1.md`, `docs/design/ai-motion-principles.md`.
+`docs/archive/design/phase-0-5-ai-brand-polish-plan.md`,
+`docs/archive/design/loading-experience-v1.md`, `docs/archive/design/ai-motion-principles.md`.
 
 - Today's Radar rows reduced "boxes-in-boxes": softer single-surface rows, quieter
   source/category/action chips, slightly more compact, cleaner selected glow.
@@ -166,7 +166,7 @@ on sign-up, and trust cues — reduced-motion safe. A second polish pass added
 **"Continue with Microsoft"** as the primary CTA (demo-only; real OAuth is Phase 3),
 an "or use email" divider with email/password as the secondary option, an
 "AI workspace ready" status chip, and a slightly larger orb. See
-`docs/design/login-experience-v1.md`.
+`docs/archive/design/login-experience-v1.md`.
 
 **Decision:** the login Microsoft button is **sign-in / SSO only**. Connecting the
 Outlook **mailbox** for email is a separate **"Connect Outlook"** step in
@@ -178,14 +178,14 @@ Microsoft SSO via Supabase Auth), a first-run **onboarding tour** collects
 personality/preferences into `manager_memories` (+ briefing preferences), and the
 mailbox layer supports **both OAuth (Outlook, then Gmail; auto-refreshed) and
 IMAP**, kept separate from login. Full plan:
-`docs/product/auth-onboarding-and-mailbox-plan.md`.
+`docs/plans/auth-onboarding-and-mailbox-plan.md`.
 
 ### Phase 2b — SSO login providers (in progress)
 
 Status: **Code done; pending provider config.** "Continue with Microsoft" and
 "Continue with Google" call `supabase.auth.signInWithOAuth` and redirect to
 `/auth/callback`; they degrade gracefully until each provider is enabled in
-Supabase. Setup steps: `docs/architecture/auth-providers-setup.md`. SSO is
+Supabase. Setup steps: `docs/reference/architecture/auth-providers-setup.md`. SSO is
 identity-only — mailbox connection is separate (Phase 3).
 
 ### Phase 2c — First-run onboarding wizard
@@ -224,7 +224,7 @@ Deliverables:
 Status: **Code done; pending Azure app config.** Microsoft Graph OAuth
 (authorization-code flow) to connect an Outlook mailbox — **separate from login**.
 ONE Azure app serves all users; each gets their own encrypted, auto-refreshed
-token pair. Setup guide: `docs/architecture/outlook-connect-setup.md`.
+token pair. Setup guide: `docs/reference/architecture/outlook-connect-setup.md`.
 
 - `GET /api/outlook/connect` (CSRF state) → Microsoft; `GET /api/outlook/callback`
   exchanges the code, reads `/me`, upserts `user_integrations` + `mailboxes`, and
@@ -392,10 +392,10 @@ Deliverables:
 - AI analysis queue.
 - Work item AI fields.
 - Cost/token tracking. (An `ai_usage` ledger — also feeds admin budgets; see
-  `docs/product/admin-panel-plan.md`.)
+  `docs/plans/admin-panel-plan.md`.)
 - **AI triage safety-net** — cost-aware AI second opinion on the ambiguous "gray
   zone" so real human mail isn't wrongly hidden, without running AI over every
-  email. Design: `docs/ai/triage-ai-safety-net.md`.
+  email. Design: `docs/plans/triage-ai-safety-net.md`.
 
 ## Phase 8 — Manual Tasks and Reminders
 
@@ -467,7 +467,7 @@ Deliverables:
 - Strong Focus Mode.
 - Relationship Risk Heatmap later.
 - Personal Intelligence Brief ("Briefing" page) — a separate, future track with its
-  own phases A–F. See `docs/product/personal-intelligence-brief-plan.md`. Build only
+  own phases A–F. See `docs/plans/personal-intelligence-brief-plan.md`. Build only
   after the core Outlook + AI dashboard pilot is stable; news/intelligence must never
   appear above Today's Radar.
 

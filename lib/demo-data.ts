@@ -5,7 +5,7 @@
  * It exists so the UI can render without any database, Microsoft Graph, or AI.
  *
  * In later phases, each export here is replaced by a Supabase query returning
- * the same shapes (see lib/types.ts, which mirrors docs/database/schema-v1.md).
+ * the same shapes (see lib/types.ts, which mirrors docs/reference/database/schema-v1.md).
  * Nothing in this file should ever ship real user data or secrets.
  */
 

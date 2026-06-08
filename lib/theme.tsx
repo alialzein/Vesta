@@ -19,7 +19,7 @@ const STORAGE_KEY = 'vesta-theme';
  *
  * Defaults to the dark executive theme (Phase 0.5 revision — the dark,
  * futuristic look is Vesta's stronger brand impression; see
- * docs/design/visual-direction-v2.md). A stored choice still wins, so users who
+ * docs/archive/design/visual-direction-v2.md). A stored choice still wins, so users who
  * switch to light keep it across reloads.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {

@@ -7,7 +7,7 @@ import type { User } from '@supabase/supabase-js';
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 /**
- * Server-only auth utilities (see docs/architecture/nextjs-supabase-edge-functions.md).
+ * Server-only auth utilities (see docs/reference/architecture/nextjs-supabase-edge-functions.md).
  * Use these in server components, route handlers, and server actions.
  */
 

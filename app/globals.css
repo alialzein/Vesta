@@ -12,7 +12,7 @@
    The light palette was redesigned in Phase 0.1 to feel intentionally
    designed (soft blue-tinted background, clean white cards, softer
    borders/shadows) rather than an inverted dark theme. See
-   docs/design/visual-direction-v2.md.
+   docs/archive/design/visual-direction-v2.md.
    ============================================================ */
 :root {
   --radius: 18px;
@@ -284,7 +284,7 @@ html[data-theme='light'] {
 
 /* ============================================================
    AI MOTION (Phase 0.5) — calm, low-frequency, never near reading
-   areas. See docs/design/ai-motion-principles.md. All effects are
+   areas. See docs/archive/design/ai-motion-principles.md. All effects are
    disabled under prefers-reduced-motion below.
    ============================================================ */
 

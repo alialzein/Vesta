@@ -6,7 +6,7 @@ import { Icon, type IconName } from './Icon';
  *
  * Phase 0.2 ships these as ready-to-use placeholders so Phase 1/2 can drop them
  * into real data flows (empty radar, loading work items, Outlook not connected,
- * AI unavailable, no memories, no drafts). See docs/demo/demo-behavior.md.
+ * AI unavailable, no memories, no drafts). See docs/archive/demo/demo-behavior.md.
  */
 
 type StateViewProps = {

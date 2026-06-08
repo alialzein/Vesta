@@ -7,12 +7,12 @@ Do not ask the AI to “build everything.” Give it one phase or one task.
 ## Prompt 1 — Planning only
 
 ```md
-Read `AGENTS.md`, `CLAUDE.md`, and `docs/START_HERE.md`.
+Read `AGENTS.md`, `CLAUDE.md`, and `docs/archive/START_HERE.md`.
 Also read:
 
 - `docs/product/top-3-dashboard-features.md`
 - `docs/product/dashboard-ux-spec.md`
-- `docs/implementation/phases.md`
+- `docs/plans/phases.md`
 
 Inspect the current project and dashboard HTML.
 Do not write code yet.
@@ -58,10 +58,10 @@ Implement Phase 1 database foundation.
 
 Read:
 
-- `docs/database/README.md`
-- `docs/database/schema-v1.md`
-- `docs/database/db-documentation-rules.md`
-- `docs/database/portability-and-email-migration.md`
+- `docs/reference/database/README.md`
+- `docs/reference/database/schema-v1.md`
+- `docs/reference/database/db-documentation-rules.md`
+- `docs/reference/database/portability-and-email-migration.md`
 
 Scope:
 
@@ -100,7 +100,7 @@ Check:
 ```md
 Add tests for the code implemented in the last task.
 Do not add new features.
-Follow `docs/testing/testing-strategy.md`.
+Follow `docs/standards/testing/testing-strategy.md`.
 Focus on pure logic and critical flows.
 Report which test cases were added and which command to run.
 ```
@@ -112,8 +112,8 @@ Update the database documentation to match the current migrations.
 Do not change code.
 Update:
 
-- `docs/database/data-dictionary.md`
-- `docs/database/schema-v1.md` if schema changed
-- `docs/database/erd.mmd` if relationships changed
+- `docs/reference/database/data-dictionary.md`
+- `docs/reference/database/schema-v1.md` if schema changed
+- `docs/reference/database/erd.mmd` if relationships changed
 - portability notes if ownership/integration/mailbox behavior changed
 ```
