@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Icon } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
 import { MessageBody } from '@/components/thread/MessageBody';
+import { BackButton } from '@/components/thread/BackButton';
 import { decodeThreadId } from '@/lib/thread';
 
 export const dynamic = 'force-dynamic';
@@ -73,14 +73,7 @@ export default async function ThreadPage({ params }: { params: { id: string } })
   return (
     <main className="v-scroll mx-auto h-screen w-full max-w-[860px] overflow-y-auto px-5 py-8">
       <div className="mb-6 flex items-center gap-3">
-        <Link
-          href="/inbox"
-          prefetch
-          aria-label="Back to inbox"
-          className="grid h-9 w-9 flex-none place-items-center rounded-[11px] border border-line bg-panel text-ink-soft transition hover:border-accent hover:text-accent"
-        >
-          <Icon name="chevronLeft" className="h-[18px] w-[18px]" />
-        </Link>
+        <BackButton />
         <div className="min-w-0 flex-1">
           <h1 className="m-0 truncate font-display text-[24px] font-semibold tracking-tight">
             {subject}

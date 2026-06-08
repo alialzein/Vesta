@@ -41,6 +41,28 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 }
 
+/**
+ * Trim the quoted reply chain out of a body preview so the row shows just the new
+ * message, not "…On Mon, Jun 8 … wrote: <the whole previous email>". Cuts at common
+ * reply markers (only when they appear mid-text, never at the very start), then
+ * collapses whitespace.
+ */
+function cleanPreview(s: string | null): string {
+  if (!s) return '';
+  let t = s.replace(/\r/g, ' ');
+  const markers = [
+    /\bOn\s.+?\bwrote:/s,
+    /\bFrom:\s.+?\bSent:/s,
+    /-{3,}\s*Original Message\s*-{3,}/i,
+    /_{5,}/,
+  ];
+  for (const m of markers) {
+    const idx = t.search(m);
+    if (idx > 0) t = t.slice(0, idx);
+  }
+  return t.replace(/\s+/g, ' ').trim();
+}
+
 /** Pull the counterpart's name out of an urgency reason ("Maya is waiting…"). */
 function personFrom(reason: string | null): string | undefined {
   const m = reason?.match(/^(.+?)\s+is waiting/i);
@@ -68,12 +90,12 @@ function chipsFor(category: WorkItemCategory, score: number): Chip[] {
   return chips;
 }
 
-function toWorkItem(w: WorkItemRow): WorkItem {
+function toWorkItem(w: WorkItemRow, lastActivityAt?: string): WorkItem {
   const category = (w.category ?? 'fyi') as WorkItemCategory;
   const score = w.priority_score ?? 0;
   const person = personFrom(w.urgency_reason);
   const due = dueOf(w.due_at, category);
-  const summary = w.summary?.trim() || w.urgency_reason?.trim() || 'Open item from your mailbox.';
+  const summary = cleanPreview(w.summary) || w.urgency_reason?.trim() || 'Open item from your mailbox.';
 
   return {
     id: w.id,
@@ -84,6 +106,7 @@ function toWorkItem(w: WorkItemRow): WorkItem {
       w.source === 'outlook' && w.source_external_id
         ? encodeThreadId(w.source_external_id)
         : undefined,
+    lastActivityAt,
     person,
     summary,
     suggestedAction: w.suggested_action ?? undefined,
@@ -97,7 +120,7 @@ function toWorkItem(w: WorkItemRow): WorkItem {
       w.suggested_action ??
       (category === 'waiting'
         ? `Reply to ${person ?? 'them'} to unblock this.`
-        : 'Open the thread to review and respond.'),
+        : 'Review the latest message and reply.'),
     suggestedDraft: 'AI draft replies arrive in a later phase — open this thread in Outlook to reply.',
     riskChips: chipsFor(category, score),
     memoryUsed: [],
@@ -148,16 +171,7 @@ function buildBrief(items: WorkItem[]): MorningBrief {
   };
 }
 
-export type DashboardData = {
-  workItems: WorkItem[];
-  kpis: KpiMetric[];
-  brief: MorningBrief;
-  /** Inbound mail triage hid in the last 7 days (drives the "review hidden" nudge). */
-  hiddenCount: number;
-};
-
-/** Window for the "X filtered this week" nudge. */
-const HIDDEN_NUDGE_DAYS = 7;
+export type DashboardData = { workItems: WorkItem[]; kpis: KpiMetric[]; brief: MorningBrief };
 
 /**
  * The signed-in manager's real Today dashboard data (RLS-scoped via the
@@ -166,30 +180,35 @@ const HIDDEN_NUDGE_DAYS = 7;
  */
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = createClient();
-  const since = new Date(Date.now() - HIDDEN_NUDGE_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const [{ data }, { count }] = await Promise.all([
-    supabase
-      .from('work_items')
-      .select(WORK_ITEM_COLS)
-      .eq('status', 'open')
-      .order('priority_score', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .limit(50),
-    // Recently filtered mail, so the manager can self-correct without digging into
-    // Settings. Triage keeps hidden mail (excluded_at set), so this is cheap.
-    supabase
-      .from('email_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('direction', 'inbound')
-      .not('excluded_at', 'is', null)
-      .is('deleted_at', null)
-      .gte('received_at', since),
-  ]);
-  const workItems = ((data ?? []) as WorkItemRow[]).map(toWorkItem);
-  return {
-    workItems,
-    kpis: buildKpis(workItems),
-    brief: buildBrief(workItems),
-    hiddenCount: count ?? 0,
-  };
+  const { data } = await supabase
+    .from('work_items')
+    .select(WORK_ITEM_COLS)
+    .eq('status', 'open')
+    .order('priority_score', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(50);
+  const rows = (data ?? []) as WorkItemRow[];
+
+  // Pull each thread's latest message time so rows/rail can show "last email" in
+  // the manager's local time (work_items.updated_at is a sync timestamp, not the
+  // email's time). Keyed by conversation id (source_external_id).
+  const convIds = rows
+    .filter((r) => r.source === 'outlook' && r.source_external_id)
+    .map((r) => r.source_external_id as string);
+  const lastByConv = new Map<string, string>();
+  if (convIds.length > 0) {
+    const { data: threads } = await supabase
+      .from('email_threads')
+      .select('graph_conversation_id, latest_inbound_at, latest_message_at')
+      .in('graph_conversation_id', convIds);
+    for (const t of threads ?? []) {
+      const at = t.latest_inbound_at ?? t.latest_message_at;
+      if (t.graph_conversation_id && at) lastByConv.set(t.graph_conversation_id, at);
+    }
+  }
+
+  const workItems = rows.map((w) =>
+    toWorkItem(w, w.source_external_id ? lastByConv.get(w.source_external_id) : undefined),
+  );
+  return { workItems, kpis: buildKpis(workItems), brief: buildBrief(workItems) };
 }

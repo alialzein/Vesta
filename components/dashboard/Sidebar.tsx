@@ -12,11 +12,11 @@ const NAV: NavGroup[] = [
   {
     heading: 'Workspace',
     items: [
-      { label: 'Today', icon: 'home', badge: 16, view: 'today' },
+      { label: 'Today', icon: 'home', view: 'today' },
       { label: 'Inbox', icon: 'mail', href: '/inbox' },
       { label: 'Waiting on Me', icon: 'clock', href: '/priorities' },
-      { label: 'Follow-ups', icon: 'reply', badge: 3 },
-      { label: 'Draft Replies', icon: 'drafts', badge: 4 },
+      { label: 'Follow-ups', icon: 'reply' },
+      { label: 'Draft Replies', icon: 'drafts' },
       { label: 'Hidden', icon: 'eyeOff', href: '/hidden' },
     ],
   },
