@@ -8,8 +8,16 @@ import { Icon, type IconName } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
 import { useToast } from '@/components/ui/Toast';
 
-/** Standard demo-feedback line for placeholder Outlook actions. */
-const DEMO_ACTION_MSG = 'Demo action recorded. Real Outlook actions will be added in Phase 2.';
+/** Honest "coming soon" feedback for actions that aren't built yet — tells the
+ *  manager what the button will do and which phase it arrives in. */
+const SOON = {
+  draft:
+    'AI draft replies arrive in Phase 9 — Vesta writes a reply for you to review, edit, and approve. Nothing sends without you.',
+  escalate: 'Looping in Legal or a teammate arrives with delegation (Phase 10).',
+  delegate: 'One-click delegation arrives in Phase 8.',
+  snooze: 'Snooze & reminders arrive in Phase 8.',
+  memory: 'Teaching Vesta memories & rules arrives in Phase 10.',
+};
 
 const SOURCE_LABEL: Record<WorkItemSource, string> = {
   outlook: 'Outlook',
@@ -255,7 +263,7 @@ function ActionTab({ item }: { item: WorkItem }) {
         ) : (
           <button
             type="button"
-            onClick={() => showToast(DEMO_ACTION_MSG)}
+            onClick={() => showToast('One-click actions arrive as Vesta gains AI in the next phases.')}
             className="relative mt-[12px] inline-flex items-center gap-[7px] rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[8px] text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110"
           >
             <Icon name="check" className="h-[14px] w-[14px]" />
@@ -282,16 +290,16 @@ function ActionTab({ item }: { item: WorkItem }) {
 
       {/* Action buttons — demo feedback only. */}
       <div className="flex flex-wrap gap-[9px]">
-        <RailButton primary icon="check" onClick={() => showToast(DEMO_ACTION_MSG, 'success')}>
+        <RailButton primary icon="check" onClick={() => showToast(SOON.draft)}>
           Approve Draft
         </RailButton>
-        <RailButton icon="shield" onClick={() => showToast(DEMO_ACTION_MSG)}>
+        <RailButton icon="shield" onClick={() => showToast(SOON.escalate)}>
           Ask Legal
         </RailButton>
-        <RailButton icon="delegate" onClick={() => showToast(DEMO_ACTION_MSG)}>
+        <RailButton icon="delegate" onClick={() => showToast(SOON.delegate)}>
           Delegate
         </RailButton>
-        <RailButton icon="snooze" onClick={() => showToast(DEMO_ACTION_MSG)}>
+        <RailButton icon="snooze" onClick={() => showToast(SOON.snooze)}>
           Snooze
         </RailButton>
       </div>
@@ -331,10 +339,10 @@ function DraftTab({ item }: { item: WorkItem }) {
       </p>
 
       <div className="flex flex-wrap gap-[9px]">
-        <RailButton primary icon="check" onClick={() => showToast(DEMO_ACTION_MSG, 'success')}>
+        <RailButton primary icon="check" onClick={() => showToast(SOON.draft)}>
           Approve Draft
         </RailButton>
-        <RailButton icon="edit" onClick={() => showToast(DEMO_ACTION_MSG)}>
+        <RailButton icon="edit" onClick={() => showToast(SOON.draft)}>
           Edit
         </RailButton>
       </div>
@@ -376,9 +384,7 @@ function MemoryTab({ item }: { item: WorkItem }) {
       {/* Add memory placeholder */}
       <button
         type="button"
-        onClick={() =>
-          showToast('Demo only. Saving manager memory needs your approval and arrives in Phase 2.')
-        }
+        onClick={() => showToast(SOON.memory)}
         className="flex items-center justify-center gap-[7px] rounded-[11px] border border-dashed border-line-strong bg-panel-solid px-3 py-[10px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
       >
         <Icon name="plus" className="h-[15px] w-[15px]" />

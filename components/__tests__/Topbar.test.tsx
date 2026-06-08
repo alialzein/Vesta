@@ -2,13 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Topbar } from '@/components/dashboard/Topbar';
 import { ThemeProvider } from '@/lib/theme';
+import { ToastProvider } from '@/components/ui/Toast';
 import { DEMO_USER } from '@/lib/demo-data';
 
 function renderTopbar() {
   const onOpenSidebar = vi.fn();
   render(
     <ThemeProvider>
-      <Topbar onOpenSidebar={onOpenSidebar} />
+      <ToastProvider>
+        <Topbar onOpenSidebar={onOpenSidebar} />
+      </ToastProvider>
     </ThemeProvider>,
   );
   return { onOpenSidebar };

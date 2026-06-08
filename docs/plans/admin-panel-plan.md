@@ -69,8 +69,11 @@ This is critical because AI cost scales with usage and can surprise us.
 - **Cost estimates** rolled up daily / monthly, per user and total.
 - **Budgets & caps** — per-user and global token/cost ceilings; when exceeded, fall
   back to non-AI heuristics rather than overspending.
-- **Model selection** — choose the model per task (cheap model for classification,
-  stronger model for drafting) and change it without a code deploy.
+- **Model / provider selection** — choose the model per task (cheap model for
+  classification, stronger model for drafting) and change it **without a code
+  deploy**. Phase 7 reads the model + provider from config/env behind a small
+  provider abstraction (Anthropic/Claude first; the owner may want an OpenAI option
+  later), so the admin panel can later flip provider + model + API key per task.
 - **Rate limits** to protect against runaway loops.
 
 > Needs an `ai_usage` ledger table written on every AI call. Design this **before**
