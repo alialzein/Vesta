@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import type { NavView } from './Sidebar';
@@ -144,16 +145,20 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
         </div>
       ))}
 
-      {/* Fixed tooltip for the collapsed rail — escapes overflow + stacking. */}
-      {tip && (
-        <span
-          role="tooltip"
-          className="pointer-events-none fixed z-[100] -translate-y-1/2 whitespace-nowrap rounded-lg border border-line bg-panel-solid px-[10px] py-[6px] text-[12px] font-semibold text-ink shadow-panel"
-          style={{ top: tip.top, left: tip.left }}
-        >
-          {tip.text}
-        </span>
-      )}
+      {/* Collapsed-rail tooltip — portaled to <body> so it escapes the sidebar's
+          stacking context (z-[1]); otherwise the dashboard column paints over it. */}
+      {tip &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <span
+            role="tooltip"
+            className="pointer-events-none fixed z-[100] -translate-y-1/2 whitespace-nowrap rounded-lg border border-line bg-panel-solid px-[10px] py-[6px] text-[12px] font-semibold text-ink shadow-panel"
+            style={{ top: tip.top, left: tip.left }}
+          >
+            {tip.text}
+          </span>,
+          document.body,
+        )}
     </nav>
   );
 }
