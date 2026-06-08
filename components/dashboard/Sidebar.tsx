@@ -8,27 +8,34 @@ import type { AccountView } from '@/lib/supabase/account';
 
 export type NavView = 'today' | 'memory';
 
-const NAV: NavGroup[] = [
-  {
-    heading: 'Workspace',
-    items: [
-      { label: 'Today', icon: 'home', view: 'today' },
-      { label: 'Inbox', icon: 'mail', href: '/inbox' },
-      { label: 'Waiting on Me', icon: 'clock', href: '/priorities' },
-      { label: 'Follow-ups', icon: 'reply' },
-      { label: 'Draft Replies', icon: 'drafts' },
-      { label: 'Hidden', icon: 'eyeOff', href: '/hidden' },
-    ],
-  },
-  {
-    heading: 'Intelligence',
-    items: [
-      { label: 'Delegation', icon: 'delegate' },
-      { label: 'Memory & Rules', icon: 'brain', view: 'memory' },
-      { label: 'Weekly Review', icon: 'trend' },
-    ],
-  },
-];
+/** Real counts shown as nav badges (omitted/zero → no badge, never a fake number). */
+export type NavCounts = { today?: number; waiting?: number; followup?: number };
+
+function buildNav(counts: NavCounts): NavGroup[] {
+  // Only badge what we have real data for; 0 shows no badge (honest, not "empty").
+  const badge = (n?: number) => (n && n > 0 ? n : undefined);
+  return [
+    {
+      heading: 'Workspace',
+      items: [
+        { label: 'Today', icon: 'home', view: 'today', badge: badge(counts.today) },
+        { label: 'Inbox', icon: 'mail', href: '/inbox' },
+        { label: 'Waiting on Me', icon: 'clock', href: '/priorities', badge: badge(counts.waiting) },
+        { label: 'Follow-ups', icon: 'reply', badge: badge(counts.followup) },
+        { label: 'Draft Replies', icon: 'drafts' },
+        { label: 'Hidden', icon: 'eyeOff', href: '/hidden' },
+      ],
+    },
+    {
+      heading: 'Intelligence',
+      items: [
+        { label: 'Delegation', icon: 'delegate' },
+        { label: 'Memory & Rules', icon: 'brain', view: 'memory' },
+        { label: 'Weekly Review', icon: 'trend' },
+      ],
+    },
+  ];
+}
 
 type SidebarProps = {
   collapsed: boolean;
@@ -40,6 +47,8 @@ type SidebarProps = {
   onCloseMobile: () => void;
   /** Signed-in account; falls back to demo identity when absent. */
   account?: AccountView;
+  /** Real nav badge counts derived from the dashboard's work items. */
+  counts?: NavCounts;
 };
 
 export function Sidebar({
@@ -50,7 +59,9 @@ export function Sidebar({
   mobileOpen,
   onCloseMobile,
   account,
+  counts = {},
 }: SidebarProps) {
+  const nav = buildNav(counts);
   // Close the mobile drawer on Escape.
   useEffect(() => {
     if (!mobileOpen) return;
@@ -80,7 +91,7 @@ export function Sidebar({
         onToggleCollapsed={mobile ? onCloseMobile : onToggleCollapsed}
       />
       <SidebarNav
-        groups={NAV}
+        groups={nav}
         collapsed={mobile ? false : collapsed}
         activeView={activeView}
         onSelectView={(v) => {

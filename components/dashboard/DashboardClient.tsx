@@ -101,6 +101,12 @@ export function DashboardClient({
   }
 
   const onToday = view === 'today';
+  // Real sidebar badge counts from the open work items (no fake numbers).
+  const navCounts = {
+    today: workItems.length,
+    waiting: workItems.filter((i) => i.categories.includes('waiting')).length,
+    followup: workItems.filter((i) => i.categories.includes('followup')).length,
+  };
   const highPriority = selected ? priorityBand(selected.priorityScore) === 'red' : false;
   // When the expanded rail is showing on desktop, keep the chat FAB subtle.
   const railExpanded = onToday && !railCollapsed;
@@ -160,6 +166,7 @@ export function DashboardClient({
           mobileOpen={sidebarMobileOpen}
           onCloseMobile={() => setSidebarMobileOpen(false)}
           account={account}
+          counts={navCounts}
         />
 
         {/* Content area: main + optional right rail */}
