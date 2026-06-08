@@ -47,6 +47,9 @@ export type WorkItem = {
   /** Which filter tabs this item belongs to. Maps onto work_items.category. */
   categories: WorkItemCategory[];
   source: WorkItemSource;
+  /** Encoded conversation id for the /thread/[id] view, when this item maps to an
+   * Outlook conversation (work_items.source_external_id). */
+  threadId?: string;
   /** Person this item is from / about (sender or counterpart), when known. */
   person?: string;
   /** Short, user-facing line shown under the title. */

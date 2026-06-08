@@ -2,20 +2,10 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { Icon } from '@/components/ui/Icon';
+import { LocalTime } from '@/components/ui/LocalTime';
 import { SenderActions } from '@/components/triage/SenderActions';
 
 export const dynamic = 'force-dynamic';
-
-/** Format an ISO timestamp as a short date+time. */
-function when(iso: string | null): string {
-  if (!iso) return '';
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 /**
  * Hidden review (Phase 6.5) — inbound mail triage filtered out as noise, kept so
@@ -45,8 +35,9 @@ export default async function HiddenPage() {
     <main className="v-scroll mx-auto h-screen w-full max-w-[820px] overflow-y-auto px-5 py-8">
       <div className="mb-6 flex items-center gap-3">
         <Link
-          href="/settings"
-          aria-label="Back to settings"
+          href="/"
+          prefetch
+          aria-label="Back to dashboard"
           className="grid h-9 w-9 place-items-center rounded-[11px] border border-line bg-panel text-ink-soft transition hover:border-accent hover:text-accent"
         >
           <Icon name="chevronLeft" className="h-[18px] w-[18px]" />
@@ -60,6 +51,7 @@ export default async function HiddenPage() {
         </div>
         <Link
           href="/inbox"
+          prefetch
           className="inline-flex items-center gap-2 rounded-[11px] border border-line bg-panel px-3 py-[9px] text-[13px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
         >
           <Icon name="mail" className="h-[15px] w-[15px]" />
@@ -89,7 +81,7 @@ export default async function HiddenPage() {
                   {m.sender_name || m.sender_email || 'Unknown sender'}
                 </span>
                 <span className="flex-none font-mono text-[11px] text-muted">
-                  {when(m.received_at)}
+                  <LocalTime iso={m.received_at} />
                 </span>
               </div>
               <p className="mt-[2px] truncate text-[13.5px] font-medium text-ink-soft">

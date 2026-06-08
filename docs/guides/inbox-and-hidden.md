@@ -7,13 +7,32 @@ covers what you'll see and do in each.
 
 ## The Inbox
 
-Open **Inbox** from the sidebar. It shows the recent real messages Vesta synced —
-the mail that passed filtering. For each message you'll see the sender, subject, a
-short preview, and when it arrived. Unread messages are marked with an accent line.
+Open **Inbox** from the sidebar. It shows the real correspondence Vesta synced —
+the mail that passed filtering — **grouped by conversation**. A reply to an email
+doesn't create a new row; it stays on the same thread, with a small count showing
+how many messages it holds. For each thread you'll see the latest sender, subject, a
+short preview, and the time **in your own timezone**. Unread threads are marked with
+an accent line.
+
+**Click any thread to open the full conversation** — the [thread view](#opening-a-full-email--thread)
+shows every message, oldest to newest, with the complete email body.
 
 > The Inbox is broader than your dashboard. It includes everything that's genuine
 > correspondence, whether or not it's waiting on your reply. The dashboard shows only
 > the items that need *you* — see [Your dashboard & Priorities](priorities-and-dashboard.md).
+
+### Opening a full email / thread
+
+Clicking a thread (from the Inbox, the dashboard's "Open full thread", or a
+Priorities row) opens a **full-screen conversation view**: each message with its
+sender, recipients, local time, and the **complete email body** rendered exactly as
+it was sent (formatting, signatures, images). Your own replies are marked **You**.
+This is where you read the whole history — useful when you want to confirm what was
+said before acting (and later, before approving an AI-drafted reply). There's an
+**Open in Outlook** button if you want the native client.
+
+> Full bodies are saved going forward. Emails synced before this feature show their
+> body once your mailbox re-syncs them.
 
 ### Tuning filtering from the Inbox
 
@@ -28,11 +47,12 @@ This is where Vesta collects mail it filtered out as noise — newsletters, aler
 automated senders, and anything Outlook sorted into *Other*.
 
 **Where to find it:**
+- From the **sidebar** — a **Hidden** item in the Workspace section opens it directly.
 - From your **dashboard** — when Vesta has filtered mail recently, a quiet
   *"N messages filtered this week — Review"* nudge appears under the Morning Brief.
-  Click it to jump straight to the Hidden list. (It stays hidden when nothing was
-  filtered, so it never adds clutter.)
 - From **Settings → Outlook card → "Review hidden mail →"**.
+
+The Hidden list's back button returns you to the **dashboard**.
 
 Each hidden message shows a short **reason** it was filtered (e.g. *"Automated
 sender (no-reply / notifications)"* or *"Outlook sorted this to Other"*), so you're
