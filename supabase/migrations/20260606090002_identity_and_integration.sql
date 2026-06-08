@@ -3,7 +3,7 @@
 --
 -- profiles, user_integrations, mailboxes, private.graph_tokens, sync_cursors.
 --
--- Identity rule (docs/database/portability-and-email-migration.md):
+-- Identity rule (docs/reference/database/portability-and-email-migration.md):
 --   profiles.id          = app user identity (references auth.users)
 --   user_integrations.id = a connected provider account (e.g. Microsoft Graph)
 --   mailboxes.id         = a specific Microsoft mailbox

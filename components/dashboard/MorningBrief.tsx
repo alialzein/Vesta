@@ -33,7 +33,7 @@ export function MorningBrief({
           wrapper — NOT via `overflow-hidden` on the card itself. Putting
           `overflow-hidden` + layered background-image gradients on the
           content/flex element triggers a Chromium paint bug that collapses the
-          card to a sliver (see docs/design/visual-direction-v2.md). This wrapper
+          card to a sliver (see docs/archive/design/visual-direction-v2.md). This wrapper
           clips every effect (incl. the left signal bar) to the rounded corner
           while the content box stays untouched. */}
       <span

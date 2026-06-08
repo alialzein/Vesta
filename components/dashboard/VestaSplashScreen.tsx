@@ -18,7 +18,7 @@ import { VestaMark } from '@/components/ui/Icon';
  * session (sessionStorage, handled by the parent). Respects reduced motion and
  * is easy to fast-forward in tests via SPLASH_DURATION_MS.
  *
- * See docs/design/loading-experience-v1.md.
+ * See docs/archive/design/loading-experience-v1.md.
  */
 
 /** How long the splash is shown before it begins fading out (demo feel). */

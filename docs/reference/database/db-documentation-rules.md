@@ -7,10 +7,10 @@ The AI coding agent must keep database documentation accurate. This is mandatory
 Update:
 
 ```txt
-docs/database/data-dictionary.md
-docs/database/schema-v1.md if structure or meaning changes
-docs/database/erd.mmd if relationships change
-docs/database/portability-and-email-migration.md if ownership, email, mailbox, or transfer logic changes
+docs/reference/database/data-dictionary.md
+docs/reference/database/schema-v1.md if structure or meaning changes
+docs/reference/database/erd.mmd if relationships change
+docs/reference/database/portability-and-email-migration.md if ownership, email, mailbox, or transfer logic changes
 ```
 
 ## Every table must document

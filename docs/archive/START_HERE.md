@@ -43,8 +43,8 @@ The AI can then convert the mockup into real Next.js components without guessing
 Use this before asking it to code:
 
 ```md
-Read `AGENTS.md`, `CLAUDE.md`, and `docs/START_HERE.md`.
-Then read `docs/product/top-3-dashboard-features.md`, `docs/product/dashboard-ux-spec.md`, and `docs/implementation/phases.md`.
+Read `AGENTS.md`, `CLAUDE.md`, and `docs/archive/START_HERE.md`.
+Then read `docs/product/top-3-dashboard-features.md`, `docs/product/dashboard-ux-spec.md`, and `docs/plans/phases.md`.
 
 Do not write code yet.
 First inspect the current project structure and the current dashboard HTML file.
@@ -90,10 +90,10 @@ Implement Phase 1 database foundation.
 
 Read:
 
-- `docs/database/README.md`
-- `docs/database/schema-v1.md`
-- `docs/database/db-documentation-rules.md`
-- `docs/database/portability-and-email-migration.md`
+- `docs/reference/database/README.md`
+- `docs/reference/database/schema-v1.md`
+- `docs/reference/database/db-documentation-rules.md`
+- `docs/reference/database/portability-and-email-migration.md`
 
 Scope:
 
@@ -101,7 +101,7 @@ Scope:
 - Enable RLS on all public user-owned tables.
 - Keep graph_tokens in private schema or equivalent protected storage.
 - Add indexes needed for dashboard queries and sync.
-- Update `docs/database/data-dictionary.md` with every table and important column.
+- Update `docs/reference/database/data-dictionary.md` with every table and important column.
 - Add SQL or TypeScript tests where practical.
 
 Acceptance criteria:

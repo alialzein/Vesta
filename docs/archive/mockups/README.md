@@ -10,4 +10,4 @@ from. They are kept as **reference only** — the live app is the Next.js code i
 | `sunset-boulevard-dashboard.html` | Sunset Boulevard            | Deferred. Will be added as a second selectable palette in a later phase. |
 
 To map a mockup region to the implemented components, see
-`docs/architecture/project-structure.md`.
+`docs/reference/architecture/project-structure.md`.

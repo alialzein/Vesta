@@ -5,7 +5,7 @@
 **Status:** Planned  
 **Scope type:** Frontend/demo-only UI refinement  
 **Recommended branch:** `feature/phase-0-3-dashboard-focus`  
-**Target file path:** `docs/design/phase-0-3-dashboard-focus-polish-plan.md`
+**Target file path:** `docs/archive/design/phase-0-3-dashboard-focus-polish-plan.md`
 
 ---
 
@@ -581,20 +581,20 @@ Update these files:
 
 ```txt
 docs/product/dashboard-ux-spec.md
-docs/design/visual-direction-v2.md
-docs/implementation/phases.md
+docs/archive/design/visual-direction-v2.md
+docs/plans/phases.md
 ```
 
 Add this file to the repository:
 
 ```txt
-docs/design/phase-0-3-dashboard-focus-polish-plan.md
+docs/archive/design/phase-0-3-dashboard-focus-polish-plan.md
 ```
 
 If `AiCommandCenter.tsx` remains in the code but is not used on the Today page, mention this in:
 
 ```txt
-docs/architecture/project-structure.md
+docs/reference/architecture/project-structure.md
 ```
 
 ---
@@ -662,7 +662,7 @@ Next recommended task:
 Use this short instruction after adding this file:
 
 ```txt
-Read docs/design/phase-0-3-dashboard-focus-polish-plan.md and implement Phase 0.3 exactly as described.
+Read docs/archive/design/phase-0-3-dashboard-focus-polish-plan.md and implement Phase 0.3 exactly as described.
 Do not start backend, Supabase, Graph, AI API, auth, or database work.
 After implementation, run the required checks and report in AGENTS.md format.
 Do not commit or push until I review the result.

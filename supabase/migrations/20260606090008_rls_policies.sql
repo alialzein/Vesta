@@ -2,7 +2,7 @@
 -- Phase 1 — Database Foundation
 --
 -- Enables RLS on every public table and applies policies per
--- docs/database/rls-security-rules.md:
+-- docs/reference/database/rls-security-rules.md:
 --   * User-owned tables  -> own-rows pattern (select/insert/update/delete).
 --   * Service-write tables -> users may SELECT own rows (where sensible),
 --     but inserts/updates/deletes happen via the service role (which bypasses

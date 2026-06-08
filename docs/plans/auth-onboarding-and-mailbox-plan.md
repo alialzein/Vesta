@@ -4,7 +4,7 @@
 **Status:** Planning (future) — captures a deliberate expansion of the auth/mailbox
 direction. **No code in this document.**
 **Relationship to current docs:** This extends the MVP stance in `AGENTS.md` and
-`docs/architecture/microsoft-graph-outlook.md` (which scope the MVP to **Microsoft
+`docs/reference/architecture/microsoft-graph-outlook.md` (which scope the MVP to **Microsoft
 Graph / Outlook only**). Those remain authoritative for the MVP; the rules here
 apply only when the corresponding phase is explicitly started. Do not silently
 change the MVP — update `AGENTS.md`/architecture docs when a phase below is built.
@@ -46,7 +46,7 @@ Google                   SSO  — "Continue with Google"
 
 - Login providers are an identity choice only. They request **no mailbox scopes**.
 - The login-page "Continue with Microsoft" button is **SSO only** (already worded
-  this way in the polished login; see `docs/design/login-experience-v1.md`).
+  this way in the polished login; see `docs/archive/design/login-experience-v1.md`).
 - Email confirmation: currently OFF for dev — **re-enable before launch**.
 - All providers resolve to one `profiles` row (the signup trigger already handles
   profile creation). Account linking (same person, multiple providers) is a
@@ -80,7 +80,7 @@ Topics / interests / company / competitors -> briefing_preferences (future table
 ```
 
 The onboarding questions are already drafted in
-`docs/product/personal-intelligence-brief-plan.md` §5 — reuse them.
+`docs/plans/personal-intelligence-brief-plan.md` §5 — reuse them.
 
 ### Behavior
 
@@ -168,7 +168,7 @@ This keeps the documented build order intact and only inserts login providers
 
 - Login providers request identity scopes only — never mailbox scopes.
 - Mailbox tokens/credentials live in the private schema, encrypted; never in the
-  browser or in git. (See `docs/security/security-rules.md`.)
+  browser or in git. (See `docs/standards/security/security-rules.md`.)
 - Onboarding data is user-owned (RLS), editable/deletable, and approval-first.
 - Re-enable Supabase email confirmation before launch; remove the dev test user.
 
@@ -199,7 +199,7 @@ This keeps the documented build order intact and only inserts login providers
 ## 8. Note to coding agent (later)
 
 When a phase above is started: update `AGENTS.md` (MVP mailbox stance),
-`docs/architecture/microsoft-graph-outlook.md`, `docs/database/schema-v1.md`
+`docs/reference/architecture/microsoft-graph-outlook.md`, `docs/reference/database/schema-v1.md`
 (briefing_preferences, profiles.onboarded_at, mailbox_credentials), the data
 dictionary, and add tests — per the database/documentation rules. Implement one
 phase at a time; do not add IMAP and Gmail at once.

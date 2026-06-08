@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/Icon';
  * automated senders) into the Hidden list, which otherwise lives only in Settings.
  * Surfacing a quiet count here lets the manager self-correct without digging —
  * the safety net for the rule-based filter (see docs/guides/email-filtering.md and
- * docs/ai/triage-ai-safety-net.md). Renders nothing when nothing was hidden, so it
+ * docs/plans/triage-ai-safety-net.md). Renders nothing when nothing was hidden, so it
  * never adds noise of its own. Light/dark via theme tokens.
  */
 export function HiddenNudge({ count }: { count: number }) {

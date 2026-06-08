@@ -7,7 +7,7 @@
 **Backend scope:** None  
 **Database scope:** None  
 **Target branch:** `feature/phase-0-5-ai-brand-polish`  
-**Recommended file location:** `docs/design/phase-0-5-ai-brand-polish-plan.md`
+**Recommended file location:** `docs/archive/design/phase-0-5-ai-brand-polish-plan.md`
 
 ---
 
@@ -32,8 +32,8 @@
 > splash was refined (soft field, more nodes, equalizer, branded progress).
 > Rule: never put a grid/pattern behind readable content.
 >
-> See `docs/design/loading-experience-v1.md` and
-> `docs/design/ai-motion-principles.md`.
+> See `docs/archive/design/loading-experience-v1.md` and
+> `docs/archive/design/ai-motion-principles.md`.
 
 ---
 
@@ -1108,8 +1108,8 @@ New files likely:
 ```txt
 components/loading/VestaLoadingScreen.tsx
 components/loading/OrbitalSignal.tsx
-docs/design/loading-experience-v1.md
-docs/design/ai-motion-principles.md
+docs/archive/design/loading-experience-v1.md
+docs/archive/design/ai-motion-principles.md
 ```
 
 Optional:
@@ -1202,16 +1202,16 @@ Update:
 
 ```txt
 docs/product/dashboard-ux-spec.md
-docs/design/visual-direction-v2.md
-docs/implementation/phases.md
-docs/architecture/project-structure.md
+docs/archive/design/visual-direction-v2.md
+docs/plans/phases.md
+docs/reference/architecture/project-structure.md
 ```
 
 Create:
 
 ```txt
-docs/design/loading-experience-v1.md
-docs/design/ai-motion-principles.md
+docs/archive/design/loading-experience-v1.md
+docs/archive/design/ai-motion-principles.md
 ```
 
 ## J.1 loading-experience-v1.md should include
@@ -1268,7 +1268,7 @@ Build succeeds.
 Use this instruction after saving this file:
 
 ```txt
-Read docs/design/phase-0-5-ai-brand-polish-plan.md.
+Read docs/archive/design/phase-0-5-ai-brand-polish-plan.md.
 
 Implement Phase 0.5 exactly as described.
 

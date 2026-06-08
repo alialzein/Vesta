@@ -4,7 +4,7 @@
 **Feature:** Personal Intelligence Brief  
 **Status:** Future feature / product plan  
 **Recommended phase:** After core Outlook + AI dashboard pilot is stable  
-**Target file path:** `docs/product/personal-intelligence-brief-plan.md`
+**Target file path:** `docs/plans/personal-intelligence-brief-plan.md`
 
 ---
 
@@ -702,24 +702,24 @@ Rules:
 Store this file at:
 
 ```txt
-docs/product/personal-intelligence-brief-plan.md
+docs/plans/personal-intelligence-brief-plan.md
 ```
 
 When implementation starts later, update:
 
 ```txt
 docs/product/dashboard-ux-spec.md
-docs/architecture/project-structure.md
-docs/database/schema-v1.md
-docs/testing/testing-strategy.md
+docs/reference/architecture/project-structure.md
+docs/reference/database/schema-v1.md
+docs/standards/testing/testing-strategy.md
 ```
 
 If the feature becomes real, add:
 
 ```txt
 docs/product/briefing-onboarding-questions.md
-docs/security/news-and-external-sources.md
-docs/ai/briefing-ai-behavior.md
+docs/standards/security/news-and-external-sources.md
+docs/standards/ai/briefing-ai-behavior.md
 ```
 
 ---
@@ -746,7 +746,7 @@ No implementation is expected from this file yet.
 When ready to implement only a demo placeholder, use:
 
 ```txt
-Read docs/product/personal-intelligence-brief-plan.md.
+Read docs/plans/personal-intelligence-brief-plan.md.
 Implement only Phase B: Demo Placeholder.
 Add a static Briefing page with demo data only.
 Do not add real news APIs, backend jobs, Supabase tables, or AI calls.

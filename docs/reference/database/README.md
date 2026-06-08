@@ -41,8 +41,8 @@ This makes it safer to reconnect another mailbox or support more than one mailbo
 Every database migration must update:
 
 ```txt
-docs/database/data-dictionary.md
-docs/database/schema-v1.md when schema meaning changes
-docs/database/erd.mmd when relationships change
-docs/database/portability-and-email-migration.md when ownership/migration logic changes
+docs/reference/database/data-dictionary.md
+docs/reference/database/schema-v1.md when schema meaning changes
+docs/reference/database/erd.mmd when relationships change
+docs/reference/database/portability-and-email-migration.md when ownership/migration logic changes
 ```

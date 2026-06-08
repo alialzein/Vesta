@@ -4,7 +4,7 @@
  * Low-opacity blue/cyan radial blooms (shared `--atmos-*` tokens) plus a very
  * faint, vignette-masked signal grid in the far background. It only shows in the
  * space around the centered, opaque login card — never behind readable content —
- * consistent with the motion/readability rules in docs/design/ai-motion-principles.md.
+ * consistent with the motion/readability rules in docs/archive/design/ai-motion-principles.md.
  *
  * Fully decorative: fixed, pointer-events-none, aria-hidden, z-0. The login card
  * renders above it. No animation here (calm), so nothing to disable for

@@ -89,7 +89,7 @@ clipped (0.4).
 > large AI Command Center cards are no longer rendered on the Today page, the
 > Morning Brief is compact (no large ring), and the six KPI cards became a compact
 > metrics strip. The sections below are kept for history; the current state is
-> noted inline. Plan: `docs/design/phase-0-3-dashboard-focus-polish-plan.md`.
+> noted inline. Plan: `docs/archive/design/phase-0-3-dashboard-focus-polish-plan.md`.
 
 ## AI Command Center cards (reserved — not on Today page since 0.3)
 
@@ -239,8 +239,8 @@ feedback, Radar filters, and selecting a Radar item updates the rail. E2E
 ## AI brand polish, motion & loading (0.5)
 
 Phase 0.5 made Vesta feel like a calm, AI-native command center without
-redesigning the structure. See `docs/design/loading-experience-v1.md` and
-`docs/design/ai-motion-principles.md`.
+redesigning the structure. See `docs/archive/design/loading-experience-v1.md` and
+`docs/archive/design/ai-motion-principles.md`.
 
 - **Radar rows** are one cleaner surface (softer `--panel-soft` background,
   low-contrast border, lighter chips, smaller priority badge, inline action pill,

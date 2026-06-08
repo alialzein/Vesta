@@ -79,5 +79,5 @@ AI is one layer. Pair it with cheaper safeguards so nothing relies on AI alone:
 ## Related
 
 - `docs/guides/email-filtering.md` — the shipped rule-based filtering
-- `docs/product/admin-panel-plan.md` — AI usage ledger + budgets that gate this
-- `docs/implementation/phases.md` — Phase 7 (AI Analysis)
+- `docs/plans/admin-panel-plan.md` — AI usage ledger + budgets that gate this
+- `docs/plans/phases.md` — Phase 7 (AI Analysis)

@@ -3,7 +3,7 @@
 --
 -- people, projects, email_threads, email_messages.
 -- Email data is keyed by mailbox_id (+ Graph IDs), never by email string,
--- for portability (docs/database/portability-and-email-migration.md).
+-- for portability (docs/reference/database/portability-and-email-migration.md).
 
 -- ---------------------------------------------------------------------------
 -- people — known senders/contacts (user-owned, survives mailbox change)

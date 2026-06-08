@@ -103,6 +103,6 @@ Phase 14):**
 ## Related
 
 - `docs/guides/email-sync.md` — the user-facing note that old mail isn't auto-purged yet
-- `docs/product/feature-roadmap.md` — Phase F (company-wide expansion)
-- `docs/implementation/phases.md` — Phase 14 (multi-user)
-- `docs/ai/triage-ai-safety-net.md` — cost-aware AI use (feeds the usage/budget design)
+- `docs/plans/feature-roadmap.md` — Phase F (company-wide expansion)
+- `docs/plans/phases.md` — Phase 14 (multi-user)
+- `docs/plans/triage-ai-safety-net.md` — cost-aware AI use (feeds the usage/budget design)
