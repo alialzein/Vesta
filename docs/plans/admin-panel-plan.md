@@ -74,10 +74,20 @@ This is critical because AI cost scales with usage and can surprise us.
   deploy**. Phase 7 reads the model + provider from config/env behind a small
   provider abstraction (Anthropic/Claude first; the owner may want an OpenAI option
   later), so the admin panel can later flip provider + model + API key per task.
+- **Re-analysis controls** — AI analysis is deduped (analyzed once per change), so a
+  prompt or model change doesn't retro-apply to already-analyzed items. The panel
+  should let an operator **force a re-analysis** over selected items / a user / all
+  (and optionally clear stored analyses), plus see each item's `last_analyzed_at`,
+  model, and prompt version. *(Today this is the `scripts/reanalyze-work-items.mjs`
+  dev tool, which clears `last_analyzed_at` so the next sync re-runs AI.)*
+- **Prompt versioning** — track which `prompt_version` produced each analysis so we
+  can compare/roll back prompt changes (already stored on `ai_analyses`).
 - **Rate limits** to protect against runaway loops.
 
 > Needs an `ai_usage` ledger table written on every AI call. Design this **before**
 > Phase 7 ships so we capture usage from day one. Migration approval required.
+> (Phase 7 shipped with token/cost tracking on `ai_analyses` and `AI_MAX_PER_RUN` /
+> `AI_MAX_PER_DAY` env caps — the admin panel turns these into per-user UI + budgets.)
 
 ## 5. Security & audit
 
