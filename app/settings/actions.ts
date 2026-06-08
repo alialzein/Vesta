@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getValidAccessToken, deleteTokens } from '@/lib/graph/tokens';
 import { getMe } from '@/lib/graph/client';
 import { syncOutlookForUser, reprocessMailForUser, type SyncResult } from '@/lib/sync/outlook';
+import { removeSubscriptionForMailbox } from '@/lib/sync/subscriptions';
 import type { TriageMode } from '@/lib/engine/triage';
 
 /** Re-run triage over stored mail and refresh the mail-facing views. */
@@ -36,6 +37,13 @@ export async function disconnectOutlook(): Promise<void> {
   const supabase = createClient();
   const integrationId = await getMicrosoftIntegrationId();
   if (integrationId) {
+    // Drop the Graph subscription before the tokens are gone (best-effort).
+    const { data: mb } = await supabase
+      .from('mailboxes')
+      .select('id, user_id, integration_id, metadata')
+      .eq('integration_id', integrationId)
+      .maybeSingle();
+    if (mb) await removeSubscriptionForMailbox(mb);
     await deleteTokens(integrationId); // private tokens (service role)
     await supabase.from('mailboxes').delete().eq('integration_id', integrationId);
     await supabase.from('user_integrations').delete().eq('id', integrationId);

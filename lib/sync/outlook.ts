@@ -19,6 +19,7 @@ import {
   type InferenceClassification,
 } from '@/lib/engine/triage';
 import type { Database } from '@/lib/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Outlook email sync (Phase 4) + thread/follow-up engine (Phase 6) + triage
@@ -304,7 +305,10 @@ export function buildTriageRules(rows: ManagerRuleRow[]): TriageRule[] {
 // use the authenticated client (RLS); sync_cursors is service-write only.
 // ---------------------------------------------------------------------------
 
-type AuthedClient = ReturnType<typeof createClient>;
+// Either the authenticated client (own-rows via RLS) or the service client
+// (cron/webhooks — no user session). Queries are scoped by mailbox_id/user_id,
+// so the service client is safe here even though it bypasses RLS.
+type DbClient = SupabaseClient<Database>;
 type Mailbox = { id: string; integration_id: string; triage_mode: string };
 
 /** Reconstruct the minimal Graph-shaped message the builders/classifier need. */
@@ -356,7 +360,7 @@ const STORED_COLS =
 
 /** Load triage config (mode + manager rules + VIP people) for a user/mailbox. */
 async function loadTriageConfig(
-  supabase: AuthedClient,
+  supabase: DbClient,
   userId: string,
   mode: string,
 ): Promise<TriageConfig> {
@@ -382,7 +386,7 @@ async function loadTriageConfig(
  * the single source of truth, so it runs after a fetch AND on a mode change.
  */
 async function processStoredMail(
-  supabase: AuthedClient,
+  supabase: DbClient,
   ctx: SyncContext,
   config: TriageConfig,
 ): Promise<{ threads: number; workItems: number; hidden: number }> {
@@ -512,7 +516,7 @@ async function processStoredMail(
 
 /** Find the user's active Microsoft mailbox, or return an error message. */
 async function getActiveMailbox(
-  supabase: AuthedClient,
+  supabase: DbClient,
 ): Promise<{ mailbox?: Mailbox; error?: string }> {
   const { data } = await supabase
     .from('mailboxes')
@@ -526,29 +530,32 @@ async function getActiveMailbox(
   return { mailbox: data as Mailbox };
 }
 
-export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
-  const empty: SyncResult = {
-    ok: false,
-    inbox: 0,
-    sent: 0,
-    threads: 0,
-    people: 0,
-    workItems: 0,
-    hidden: 0,
-  };
-  const supabase = createClient();
-  const service = createServiceClient();
+const EMPTY_RESULT: SyncResult = {
+  ok: false,
+  inbox: 0,
+  sent: 0,
+  threads: 0,
+  people: 0,
+  workItems: 0,
+  hidden: 0,
+};
 
-  const { mailbox, error: mbErr } = await getActiveMailbox(supabase);
-  if (!mailbox) return { ...empty, error: mbErr };
-
-  const token = await getValidAccessToken(mailbox.integration_id);
+/**
+ * Sync one mailbox given its context. Works with either the authenticated client
+ * (own-rows via RLS) or the service client (cron/webhooks — no user session); the
+ * caller chooses. The cursor + last_sync_at stamps are always service-written.
+ */
+async function runMailboxSync(
+  db: DbClient,
+  service: DbClient,
+  ctx: SyncContext,
+  triageMode: string,
+): Promise<SyncResult> {
+  const token = await getValidAccessToken(ctx.integrationId);
   if (!token) {
-    return { ...empty, error: 'Outlook token unavailable — try reconnecting in Settings.' };
+    return { ...EMPTY_RESULT, error: 'Outlook token unavailable — try reconnecting in Settings.' };
   }
-
-  const ctx: SyncContext = { userId, integrationId: mailbox.integration_id, mailboxId: mailbox.id };
-  const config = await loadTriageConfig(supabase, userId, mailbox.triage_mode);
+  const config = await loadTriageConfig(db, ctx.userId, triageMode);
 
   // Incremental: only fetch mail newer than the last successful sync (minus a
   // 10-minute overlap; idempotent upserts dedupe). Cursor is service-write only.
@@ -571,7 +578,7 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
       fetchRecentMessages(token, 'sentitems', SENT_COUNT, since),
     ]);
   } catch (e) {
-    return { ...empty, error: e instanceof Error ? e.message : 'Graph fetch failed.' };
+    return { ...EMPTY_RESULT, error: e instanceof Error ? e.message : 'Graph fetch failed.' };
   }
 
   // Store the raw new messages (triage decided in processStoredMail). Keep the
@@ -586,13 +593,13 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
     return row;
   });
   if (messageRows.length > 0) {
-    const { error } = await supabase
+    const { error } = await db
       .from('email_messages')
       .upsert(messageRows, { onConflict: 'mailbox_id,graph_message_id', ignoreDuplicates: true });
-    if (error) return { ...empty, error: `Saving messages failed: ${error.message}` };
+    if (error) return { ...EMPTY_RESULT, error: `Saving messages failed: ${error.message}` };
   }
 
-  const { threads, workItems, hidden } = await processStoredMail(supabase, ctx, config);
+  const { threads, workItems, hidden } = await processStoredMail(db, ctx, config);
 
   // Record the sync cursor + stamp last_sync_at on the integration/mailbox via the
   // service role (sync_cursors is service-write; the stamps keep those rows honest
@@ -601,7 +608,7 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
   await Promise.all([
     service.from('sync_cursors').upsert(
       {
-        user_id: userId,
+        user_id: ctx.userId,
         integration_id: ctx.integrationId,
         mailbox_id: ctx.mailboxId,
         resource_type: 'messages',
@@ -623,6 +630,73 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
     workItems,
     hidden,
   };
+}
+
+/** Sync the signed-in user's active mailbox (authenticated path — Settings "Sync now"). */
+export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
+  const supabase = createClient();
+  const service = createServiceClient();
+  const { mailbox, error } = await getActiveMailbox(supabase);
+  if (!mailbox) return { ...EMPTY_RESULT, error };
+  const ctx: SyncContext = { userId, integrationId: mailbox.integration_id, mailboxId: mailbox.id };
+  return runMailboxSync(supabase, service, ctx, mailbox.triage_mode);
+}
+
+export type MailboxSyncResult = { mailboxId: string; userId: string; result: SyncResult };
+
+/**
+ * Sync ALL connected Microsoft mailboxes with the service role (no user session).
+ * Used by the scheduled cron + webhook-triggered sync so mail stays fresh without
+ * a browser open. Each mailbox is scoped explicitly by id/user; service-role
+ * bypasses RLS but the queries are mailbox/user-scoped.
+ */
+export async function syncAllConnectedMailboxes(): Promise<{
+  mailboxes: number;
+  synced: number;
+  results: MailboxSyncResult[];
+}> {
+  const service = createServiceClient();
+  const { data: rows } = await service
+    .from('mailboxes')
+    .select('id, user_id, integration_id, triage_mode')
+    .eq('provider', 'microsoft')
+    .eq('status', 'active');
+  const mailboxes = (rows ?? []) as Array<{
+    id: string;
+    user_id: string;
+    integration_id: string;
+    triage_mode: string;
+  }>;
+  const results: MailboxSyncResult[] = [];
+  for (const mb of mailboxes) {
+    const ctx: SyncContext = {
+      userId: mb.user_id,
+      integrationId: mb.integration_id,
+      mailboxId: mb.id,
+    };
+    const result = await runMailboxSync(service, service, ctx, mb.triage_mode);
+    results.push({ mailboxId: mb.id, userId: mb.user_id, result });
+  }
+  return { mailboxes: mailboxes.length, synced: results.filter((r) => r.result.ok).length, results };
+}
+
+/** Sync a single mailbox by id with the service role (webhook-triggered). */
+export async function syncMailboxById(mailboxId: string): Promise<SyncResult> {
+  const service = createServiceClient();
+  const { data: mb } = await service
+    .from('mailboxes')
+    .select('id, user_id, integration_id, triage_mode, status, provider')
+    .eq('id', mailboxId)
+    .maybeSingle();
+  if (!mb || mb.provider !== 'microsoft' || mb.status !== 'active') {
+    return { ...EMPTY_RESULT, error: 'Mailbox not found or not active.' };
+  }
+  const ctx: SyncContext = {
+    userId: mb.user_id,
+    integrationId: mb.integration_id,
+    mailboxId: mb.id,
+  };
+  return runMailboxSync(service, service, ctx, mb.triage_mode);
 }
 
 /**

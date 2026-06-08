@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { exchangeCodeForTokens, getGraphConfig, resolveRedirectUri } from '@/lib/graph/oauth';
 import { getMe } from '@/lib/graph/client';
 import { storeTokens } from '@/lib/graph/tokens';
+import { ensureSubscription } from '@/lib/sync/subscriptions';
 
 export const runtime = 'nodejs';
 
@@ -85,6 +86,20 @@ export async function GET(request: NextRequest) {
 
     // Store encrypted tokens (service-role RPC → private schema).
     await storeTokens(integration.id, tokens);
+
+    // Activate real-time webhooks for this mailbox (no-op until
+    // MS_GRAPH_WEBHOOK_URL is set). Best-effort — never block connecting on it.
+    try {
+      const { data: mb } = await supabase
+        .from('mailboxes')
+        .select('id, user_id, integration_id, metadata')
+        .eq('integration_id', integration.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (mb) await ensureSubscription(mb);
+    } catch {
+      /* webhooks are best-effort; the cron/interval sync covers the gap */
+    }
 
     const res = settings('outlook=connected');
     res.cookies.delete(STATE_COOKIE);

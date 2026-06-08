@@ -278,8 +278,9 @@ Deliverables:
 
 ## Phase 5 — Delta Sync, Webhooks, and Queues
 
-Status: **In progress (auto-sync done; webhooks scaffolded).** Keeps Outlook data
-current without the manager clicking "Sync now".
+Status: **Done (background + real-time sync + queue); delta tokens pending.** Keeps
+Outlook data current without the manager clicking "Sync now" — and without a
+browser open.
 
 - **Background auto-sync (live):** `components/sync/AutoSync.tsx` runs on the
   dashboard, Inbox, and Priorities — on mount (if the last sync is stale) and on a
@@ -287,19 +288,28 @@ current without the manager clicking "Sync now".
   tested `lib/sync/auto.ts` (`shouldAutoSync`); `getSyncStatus` reports connection
   + `last_success_at`. Incremental "only new" works now that the cursor persists
   (Phase 6.5 fix).
-- **Webhooks (scaffolded, dormant):** `app/api/outlook/webhook/route.ts` handles
-  the Graph validation handshake and stores notifications in `webhook_events`;
-  `lib/graph/subscriptions.ts` creates/renews/deletes subscriptions. Inactive until
-  Vesta runs on a public HTTPS URL (`MS_GRAPH_WEBHOOK_URL`) — Microsoft can't reach
-  `localhost`, so the interval covers local dev.
+- **Server-side scheduled sync (live):** `lib/sync/outlook.ts` gained a
+  service-role path — `runMailboxSync` (works with either the authed or service
+  client), `syncAllConnectedMailboxes`, `syncMailboxById` — so a sync runs with no
+  user session. Exposed as secured `GET/POST /api/cron/sync` (also drains the
+  `webhook_events` queue) and `/api/cron/renew-subscriptions`, gated by
+  `CRON_SECRET` (`lib/cron/auth.ts`). The scheduler is **Supabase pg_cron + pg_net**
+  hitting those host-agnostic endpoints (free, any frequency, portable; no Vercel
+  Pro needed). The browser `AutoSync` interval is now only a local-dev fallback.
+- **Webhooks (live on deploy):** the OAuth callback creates a Graph subscription
+  (`lib/sync/subscriptions.ts`; id/clientState/expiry stored in
+  `mailboxes.metadata`, no migration). `app/api/outlook/webhook/route.ts` validates
+  `clientState` (anti-forgery), attributes each notification to its mailbox, and
+  queues it in `webhook_events`; the sync cron drains it. Needs
+  `MS_GRAPH_WEBHOOK_URL` set + the subscription renewed before its ~3-day expiry.
 
 Deliverables:
 
-- Graph webhook endpoint. ✅ (scaffold; activate on deploy)
-- Subscription create/renew/delete helpers. ✅ (scaffold)
-- Background/scheduled auto-sync. ✅ (interval; webhook-driven on deploy)
-- True Graph delta tokens (`deltaLink`) + queue processing. ⏳ (next; timestamp
-  incremental works in the meantime)
+- Graph webhook endpoint. ✅ (validates clientState + queues attributed events)
+- Subscription create/renew/delete + lifecycle. ✅ (created on connect, renewed by cron)
+- Background/scheduled auto-sync. ✅ (server-side, service-role, all mailboxes — no browser)
+- Queue processing. ✅ (`webhook_events` drained by the sync cron)
+- True Graph delta tokens (`deltaLink`). ⏳ (next; timestamp-incremental works meanwhile)
 
 ## Phase 6 — Thread and Follow-up Engine
 
