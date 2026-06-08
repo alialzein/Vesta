@@ -41,11 +41,12 @@ describe('buildPrompt', () => {
       latestAt: '2026-06-08T10:00:00Z',
     });
     expect(system).toMatch(/ONLY a JSON object/);
-    // The manager-owes-the-reply rule that maps to the "Waiting on you" KPI.
-    expect(system).toMatch(/prefer "waiting" over "followup"/);
+    // The category rules that drive the "Waiting on you" KPI.
+    expect(system).toMatch(/never "followup"/);
+    expect(system).toMatch(/decide by WHO is waiting/);
     expect(user).toContain('Subject: Q3 budget');
     expect(user).toContain('From: Maya');
-    expect(user).toContain('followed up: 2');
+    expect(user).toContain('Reminders the sender has sent: 2');
     expect(user).toContain('Please approve by Friday.');
   });
 });
