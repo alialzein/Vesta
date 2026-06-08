@@ -23,6 +23,18 @@ export async function graphGet<T>(accessToken: string, path: string): Promise<T>
   return (await res.json()) as T;
 }
 
+/** GET an absolute Graph URL (e.g. an @odata.nextLink / @odata.deltaLink). */
+export async function graphGetUrl<T>(accessToken: string, url: string): Promise<T> {
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Graph GET ${url} failed (${res.status}): ${text}`);
+  }
+  return (await res.json()) as T;
+}
+
 /** Fetch the signed-in user's identity (used as the connection test + mailbox id). */
 export function getMe(accessToken: string): Promise<GraphMe> {
   return graphGet<GraphMe>(accessToken, '/me');

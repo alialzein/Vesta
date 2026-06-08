@@ -32,6 +32,7 @@ export default async function HiddenPage() {
       .select('id, subject, body_preview, sender_name, sender_email, received_at, excluded_reason')
       .eq('direction', 'inbound')
       .not('excluded_at', 'is', null)
+      .is('deleted_at', null)
       .order('received_at', { ascending: false })
       .limit(100),
     supabase.from('people').select('email').eq('is_vip', true),
