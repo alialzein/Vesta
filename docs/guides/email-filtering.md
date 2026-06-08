@@ -119,12 +119,10 @@ where a genuinely important email could be hidden** — worth knowing:
    permanently.
 
 **Practical advice for now:** glance at the **Hidden** list every few days until
-you trust the filtering, and **Always allow / Mark VIP** the people who matter. To
-make that easy, your **dashboard** shows a quiet *"N messages filtered this week —
-Review"* nudge whenever Vesta has hidden mail, so you don't have to dig into Settings
-to check. Over time your rules make the filtering personal and accurate. Smarter,
-AI-assisted filtering (so borderline mail is double-checked before being hidden) is
-planned for a later phase.
+you trust the filtering, and **Always allow / Mark VIP** the people who matter. It's
+always one click away from the **Hidden** item in the sidebar. Over time your rules
+make the filtering personal and accurate. Smarter, AI-assisted filtering (so
+borderline mail is double-checked before being hidden) is planned for a later phase.
 
 ---
 

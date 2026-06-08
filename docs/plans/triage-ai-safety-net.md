@@ -63,8 +63,8 @@ Even within the gray zone, keep spend bounded:
 
 AI is one layer. Pair it with cheaper safeguards so nothing relies on AI alone:
 
-- **Make Hidden visible** — surface a "N filtered recently → review" nudge on the
-  dashboard so the manager can self-correct (see the dashboard nudge work).
+- **Make Hidden visible** — the Hidden list is one click from the sidebar (and
+  Settings), so the manager can self-correct what was filtered.
 - **Learn from overrides** — every *Always allow* / *Mark VIP* / *Mute* teaches the
   rules, so the gray zone shrinks over time per user.
 

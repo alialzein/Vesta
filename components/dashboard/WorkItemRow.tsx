@@ -2,6 +2,7 @@ import type { WorkItem, WorkItemSource } from '@/lib/types';
 import { priorityBand } from '@/lib/priority';
 import { Chip } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
+import { LocalTime } from '@/components/ui/LocalTime';
 
 // Soft, borderless priority tint — reads as an integrated anchor, not a box.
 const bandClasses: Record<ReturnType<typeof priorityBand>, string> = {
@@ -62,7 +63,7 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
 
       {/* Body */}
       <span className="min-w-0">
-        {/* Source + person — quiet, low-contrast, no heavy box. */}
+        {/* Source + person + last-email time — quiet, low-contrast, no heavy box. */}
         <span className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[11px] text-muted">
           <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
             {SOURCE_LABEL[item.source]}
@@ -75,12 +76,18 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
               <span className="font-medium text-ink-soft">{item.person}</span>
             </>
           )}
+          {item.lastActivityAt && (
+            <LocalTime
+              iso={item.lastActivityAt}
+              className="ml-auto flex-none font-mono text-[10.5px] text-muted"
+            />
+          )}
         </span>
 
         <h3 className="m-0 mt-[3px] text-[14px] font-semibold leading-tight tracking-tight">
           {item.title}
         </h3>
-        <p className="mt-[2px] line-clamp-1 text-[12px] leading-snug text-muted">{item.summary}</p>
+        <p className="mt-[2px] line-clamp-2 text-[12px] leading-snug text-muted">{item.summary}</p>
 
         <span className="mt-[7px] flex flex-wrap items-center gap-[6px]">
           {item.chips.map((chip) => (

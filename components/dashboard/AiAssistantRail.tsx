@@ -5,6 +5,7 @@ import type { MemoryType, RailTab, WorkItem, WorkItemSource } from '@/lib/types'
 import { priorityBand } from '@/lib/priority';
 import { Chip } from '@/components/ui/Chip';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { LocalTime } from '@/components/ui/LocalTime';
 import { useToast } from '@/components/ui/Toast';
 
 /** Standard demo-feedback line for placeholder Outlook actions. */
@@ -158,7 +159,19 @@ export function AiAssistantRail({
         <dl className="mt-[14px] grid grid-cols-2 gap-x-3 gap-y-[10px]">
           <ContextCell label="Source" value={SOURCE_LABEL[item.source]} icon="inbox" />
           {item.person && <ContextCell label="From" value={item.person} icon="people" />}
-          <ContextCell label="Due" value={item.dueDetail ?? item.dueLabel} icon="clock" />
+          {item.lastActivityAt ? (
+            <div className="min-w-0">
+              <dt className="flex items-center gap-[5px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <Icon name="clock" className="h-[12px] w-[12px]" />
+                Last email
+              </dt>
+              <dd className="m-0 mt-[3px] truncate text-[12.5px] font-semibold text-ink-soft">
+                <LocalTime iso={item.lastActivityAt} />
+              </dd>
+            </div>
+          ) : (
+            <ContextCell label="Due" value={item.dueDetail ?? item.dueLabel} icon="clock" />
+          )}
           <ContextCell label="Category" value={primaryCategory(item)} icon="list" />
         </dl>
       </div>
@@ -228,14 +241,27 @@ function ActionTab({ item }: { item: WorkItem }) {
         <p className="relative mt-[8px] font-display text-[16px] font-semibold leading-snug text-ink">
           {item.nextBestAction}
         </p>
-        <button
-          type="button"
-          onClick={() => showToast(DEMO_ACTION_MSG)}
-          className="relative mt-[12px] inline-flex items-center gap-[7px] rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[8px] text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110"
-        >
-          <Icon name="check" className="h-[14px] w-[14px]" />
-          Do this now
-        </button>
+        {/* Pre-AI, the next best action is to read & reply, so this opens the full
+            conversation. Phase 7 turns it into the real one-click action. */}
+        {item.threadId ? (
+          <Link
+            href={`/thread/${item.threadId}`}
+            prefetch
+            className="relative mt-[12px] inline-flex items-center gap-[7px] rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[8px] text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110"
+          >
+            <Icon name="mail" className="h-[14px] w-[14px]" />
+            Open thread to act
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => showToast(DEMO_ACTION_MSG)}
+            className="relative mt-[12px] inline-flex items-center gap-[7px] rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[8px] text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110"
+          >
+            <Icon name="check" className="h-[14px] w-[14px]" />
+            Do this now
+          </button>
+        )}
       </div>
 
       {/* Why this matters */}
@@ -253,18 +279,6 @@ function ActionTab({ item }: { item: WorkItem }) {
           ))}
         </div>
       </div>
-
-      {/* Read the whole conversation (full bodies + all messages) in one screen. */}
-      {item.threadId && (
-        <Link
-          href={`/thread/${item.threadId}`}
-          prefetch
-          className="inline-flex items-center justify-center gap-[7px] rounded-[11px] border border-line bg-panel-solid px-3 py-[10px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-        >
-          <Icon name="mail" className="h-[14px] w-[14px]" />
-          Open full thread
-        </Link>
-      )}
 
       {/* Action buttons — demo feedback only. */}
       <div className="flex flex-wrap gap-[9px]">

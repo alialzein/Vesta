@@ -48,8 +48,6 @@ automated senders, and anything Outlook sorted into *Other*.
 
 **Where to find it:**
 - From the **sidebar** — a **Hidden** item in the Workspace section opens it directly.
-- From your **dashboard** — when Vesta has filtered mail recently, a quiet
-  *"N messages filtered this week — Review"* nudge appears under the Morning Brief.
 - From **Settings → Outlook card → "Review hidden mail →"**.
 
 The Hidden list's back button returns you to the **dashboard**.

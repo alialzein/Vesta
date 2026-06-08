@@ -24,7 +24,11 @@ export function MessageBody({ html, text }: { html: string | null; text: string 
     );
   }
 
-  const srcDoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><base target="_blank"><style>html{color-scheme:light}body{margin:0;padding:14px;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.5;color:#1a1a1a;background:#fff;word-break:break-word}img{max-width:100%;height:auto}a{color:#2f7deb}table{max-width:100%}</style></head><body>${html}</body></html>`;
+  // Inline images embedded as cid: attachments aren't fetched yet, so they render
+  // as broken-image icons — hide them rather than show a broken box. Remote (http)
+  // images still load. The body sits on a white "paper" surface (emails are authored
+  // for a light background; this matches how Outlook/Gmail render them).
+  const srcDoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><base target="_blank"><style>html{color-scheme:light}body{margin:0;padding:14px;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.5;color:#1a1a1a;background:#fff;word-break:break-word}img{max-width:100%;height:auto}img[src^="cid:"],img:not([src]),img[src=""]{display:none}a{color:#2f7deb}table{max-width:100%}</style></head><body>${html}</body></html>`;
 
   return (
     <iframe
