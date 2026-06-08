@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Sidebar, type NavView } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MorningBrief } from './MorningBrief';
+import { HiddenNudge } from './HiddenNudge';
 // AiCommandCenter is reserved for a future expanded-actions page; it is no
 // longer rendered on the main Today dashboard (Phase 0.3). Kept + flag-gated.
 import { AiCommandCenter } from './AiCommandCenter';
@@ -52,6 +53,7 @@ export function DashboardClient({
   workItems = demoWorkItems,
   kpis = demoKpis,
   brief = demoMorningBrief,
+  hiddenCount = 0,
 }: {
   account?: AccountView;
   /** Server decides (cookie-gated) so the splash plays once per session, not on
@@ -62,6 +64,8 @@ export function DashboardClient({
   workItems?: WorkItem[];
   kpis?: KpiMetric[];
   brief?: MorningBriefData;
+  /** Inbound mail triage hid this week — drives the "review hidden" nudge. */
+  hiddenCount?: number;
 } = {}) {
   const { showToast } = useToast();
 
@@ -190,6 +194,8 @@ export function DashboardClient({
                       showToast('Demo: Vesta would prepare reply drafts for your approval here.');
                   }}
                 />
+
+                <HiddenNudge count={hiddenCount} />
 
                 {SHOW_LARGE_COMMAND_CENTER && (
                   <AiCommandCenter cards={demoCommandCards} onCardAction={handleCommand} />

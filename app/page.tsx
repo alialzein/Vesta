@@ -45,6 +45,7 @@ export default async function DashboardPage({
       workItems={dashboard.workItems}
       kpis={dashboard.kpis}
       brief={dashboard.brief}
+      hiddenCount={dashboard.hiddenCount}
     />
   );
 }

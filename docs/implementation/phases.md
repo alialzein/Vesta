@@ -391,7 +391,11 @@ Deliverables:
 - Output schemas.
 - AI analysis queue.
 - Work item AI fields.
-- Cost/token tracking.
+- Cost/token tracking. (An `ai_usage` ledger — also feeds admin budgets; see
+  `docs/product/admin-panel-plan.md`.)
+- **AI triage safety-net** — cost-aware AI second opinion on the ambiguous "gray
+  zone" so real human mail isn't wrongly hidden, without running AI over every
+  email. Design: `docs/ai/triage-ai-safety-net.md`.
 
 ## Phase 8 — Manual Tasks and Reminders
 
