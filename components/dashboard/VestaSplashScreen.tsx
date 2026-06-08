@@ -148,17 +148,17 @@ export function VestaSplashScreen({ onDone }: { onDone: () => void }) {
             ))}
           </span>
 
-          <span className="font-display text-[34px] font-semibold leading-none tracking-tight text-white [text-shadow:0_0_26px_rgba(91,168,245,0.45)]">
+          <span className="font-display text-[34px] font-semibold leading-none tracking-tight text-[color:var(--splash-ink)] [text-shadow:0_0_26px_rgba(91,168,245,0.45)]">
             Vesta
           </span>
-          <span className="font-mono text-[11px] uppercase tracking-[0.34em] text-[#a9c5e8]">
+          <span className="font-mono text-[11px] uppercase tracking-[0.34em] text-[color:var(--splash-tagline)]">
             Your work, in order
           </span>
 
           <p
             data-testid="vesta-splash-message"
             key={phrase}
-            className="animate-vesta-fade-in m-0 mt-[4px] min-h-[18px] text-[14px] font-medium tracking-tight text-[#d7e6fa]"
+            className="animate-vesta-fade-in m-0 mt-[4px] min-h-[18px] text-[14px] font-medium tracking-tight text-[color:var(--splash-msg)]"
             aria-live="polite"
           >
             {PHRASES[phrase]}
