@@ -125,6 +125,35 @@ function looksAutomatedSender(email: string): boolean {
   return /^(no.?reply|donotreply|mailer.?daemon)/.test(local);
 }
 
+/**
+ * Dedicated campaign/ESP sending subdomains. Marketing platforms blast from a
+ * subdomain like mail.brand.com, email.brand.com or news.brand.com, while a real
+ * person at the same company writes from the apex (someone@brand.com). We treat
+ * the leading label of a 3+ label domain as a bulk marker — but NOT the apex
+ * itself (mail.com / email.com are human webmail providers, not subdomains).
+ */
+const BULK_SUBDOMAIN_LABELS = new Set([
+  'mail',
+  'email',
+  'mailer',
+  'mailing',
+  'newsletter',
+  'newsletters',
+  'news',
+  'marketing',
+  'mktg',
+  'campaign',
+  'campaigns',
+]);
+
+function looksBulkSender(email: string): boolean {
+  const labels = domainOf(email).split('.').filter(Boolean);
+  // Require a real base domain beneath the subdomain (sub.domain.tld); a 2-label
+  // domain is the apex (e.g. mail.com), which must not be treated as bulk.
+  if (labels.length < 3) return false;
+  return BULK_SUBDOMAIN_LABELS.has(labels[0]);
+}
+
 /** Bulk/automated header signals → returns a human reason if any fired. */
 function bulkHeaderReason(headers?: Record<string, string> | null): string | null {
   if (!headers) return null;
@@ -229,6 +258,11 @@ export function classifyEmail(input: TriageInput, config: TriageConfig): TriageD
   if (email && looksAutomatedSender(email)) {
     signals.push('automated:no-reply');
     return { include: false, reason: 'Automated sender (no-reply / notifications)', signals };
+  }
+  // A campaign/ESP sending subdomain (mail.brand.com, news.brand.com) → bulk.
+  if (email && looksBulkSender(email)) {
+    signals.push('automated:bulk-domain');
+    return { include: false, reason: 'Newsletter / bulk sender', signals };
   }
 
   // 5b. Outlook sorted it to "Other" → hide, unless the manager marked it high importance.

@@ -129,6 +129,56 @@ describe('classifyEmail — focused mode: automated senders', () => {
   });
 });
 
+describe('classifyEmail — focused mode: bulk/marketing subdomains', () => {
+  it.each([
+    'hello@mail.blinkist.com',
+    'promo@email.brand.com',
+    'digest@news.site.com',
+    'offers@marketing.shop.co.uk',
+  ])('hides a campaign subdomain sender %s', (fromEmail) => {
+    const d = classifyEmail(human({ fromEmail, inferenceClassification: 'focused' }), focused());
+    expect(d.include).toBe(false);
+    expect(d.signals).toContain('automated:bulk-domain');
+    expect(d.reason).toMatch(/newsletter|bulk/i);
+  });
+
+  it('does NOT hide a human on an apex webmail domain (mail.com)', () => {
+    const d = classifyEmail(human({ fromEmail: 'john@mail.com' }), focused());
+    expect(d.include).toBe(true);
+  });
+
+  it('does NOT treat a normal corporate domain as bulk', () => {
+    const d = classifyEmail(human({ fromEmail: 'maya@cedars.com' }), focused());
+    expect(d.include).toBe(true);
+  });
+
+  it('does NOT hide a support subdomain (left for AI reply-intent, not the bulk rule)', () => {
+    const d = classifyEmail(human({ fromEmail: 'case@support.facebook.com' }), focused());
+    expect(d.include).toBe(true);
+  });
+
+  it('keeps a flagged campaign-subdomain message (manager override wins)', () => {
+    const d = classifyEmail(
+      human({ fromEmail: 'hello@mail.blinkist.com', flagStatus: 'flagged' }),
+      focused(),
+    );
+    expect(d.include).toBe(true);
+  });
+
+  it('keeps a VIP even on a campaign subdomain', () => {
+    const d = classifyEmail(
+      human({ fromEmail: 'hello@mail.blinkist.com' }),
+      focused({ vipEmails: ['hello@mail.blinkist.com'] }),
+    );
+    expect(d.include).toBe(true);
+  });
+
+  it('imports a campaign subdomain in everything mode', () => {
+    const d = classifyEmail(human({ fromEmail: 'hello@mail.blinkist.com' }), { mode: 'everything' });
+    expect(d.include).toBe(true);
+  });
+});
+
 describe('classifyEmail — focused mode: bulk headers', () => {
   it('hides mail with a List-Unsubscribe header', () => {
     const d = classifyEmail(

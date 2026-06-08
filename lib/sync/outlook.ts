@@ -549,6 +549,18 @@ async function processStoredMail(
     await supabase.from('work_items').delete().in('id', staleIds);
   }
 
+  // Sweep legacy orphans: older syncs created some outlook work_items without a
+  // mailbox_id, so the per-mailbox stale check above can never see them and a
+  // deleted source email strands them on the dashboard forever. Every current
+  // draft sets mailbox_id, so any null-mailbox outlook work_item for this user is
+  // such an orphan — safe to remove.
+  await supabase
+    .from('work_items')
+    .delete()
+    .eq('user_id', ctx.userId)
+    .eq('source', 'outlook')
+    .is('mailbox_id', null);
+
   const inserts: WorkItemRow[] = [];
   const workItemUpdates: PromiseLike<unknown>[] = [];
   for (const { conversationId, row } of drafts) {
