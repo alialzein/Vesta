@@ -191,10 +191,13 @@ export function DashboardClient({
                 <MorningBrief
                   brief={brief}
                   onAction={(action) => {
-                    if (action === 'focus') handleCommand('cmd-clear-day');
-                    else if (action === 'meeting') handleCommand('cmd-meeting-prep');
-                    else
-                      showToast('Demo: Vesta would prepare reply drafts for your approval here.');
+                    if (action === 'focus')
+                      showToast('Clear My Day / Focus Mode arrives in Phase 11.');
+                    else if (action === 'drafts')
+                      showToast(
+                        'AI draft replies arrive in Phase 9 — review & approve before anything sends.',
+                      );
+                    else showToast('Meeting Prep arrives after calendar integration (Phase 12).');
                   }}
                 />
 

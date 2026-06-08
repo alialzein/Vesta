@@ -136,22 +136,21 @@ describe('DashboardClient shell', () => {
     expect(screen.queryByText('Board meeting preparation')).not.toBeInTheDocument();
   });
 
-  it('opens the Focus Mode preview from the "Clear My Day" quick action', async () => {
+  it('shows an honest "coming soon" message from the "Clear My Day" quick action', async () => {
     const user = userEvent.setup();
     renderDashboard();
 
     await user.click(screen.getByRole('button', { name: 'Clear My Day' }));
-    const dialog = screen.getByRole('dialog', { name: /Focus Mode/i });
-    expect(within(dialog).getByText(/a focused plan/i)).toBeInTheDocument();
+    expect(screen.getByText(/Focus Mode arrives in Phase 11/i)).toBeInTheDocument();
   });
 
-  it('shows demo feedback when a rail action button is used', async () => {
+  it('shows an honest "coming soon" message when a rail action button is used', async () => {
     const user = userEvent.setup();
     renderDashboard();
 
     // Use the first visible "Approve Draft" action button in the rail.
     await user.click(screen.getAllByRole('button', { name: /^Approve Draft$/i })[0]);
-    expect(screen.getByText(/Demo action recorded/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI draft replies arrive in Phase 9/i)).toBeInTheDocument();
   });
 
   it('renders the full-page Memory & Rules workspace with category tabs and add form', async () => {

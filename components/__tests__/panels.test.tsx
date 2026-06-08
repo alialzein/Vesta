@@ -86,13 +86,13 @@ describe('AiAssistantRail', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows demo feedback when an action button is clicked', async () => {
+  it('shows an honest "coming soon" message when an action button is clicked', async () => {
     const user = userEvent.setup();
     const item = demoWorkItems[0];
     renderWithToast(<AiAssistantRail item={item} activeTab="action" onTabChange={() => {}} />);
 
     await user.click(screen.getByRole('button', { name: /^Approve Draft$/i }));
-    expect(screen.getByText(/Demo action recorded/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI draft replies arrive in Phase 9/i)).toBeInTheDocument();
   });
 
   it('lists the memory/rules used on the Memory tab', () => {

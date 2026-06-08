@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { DEMO_USER } from '@/lib/demo-data';
 import { useTheme } from '@/lib/theme';
 import { Icon } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 import type { AccountView } from '@/lib/supabase/account';
 
 type TopbarProps = {
@@ -20,10 +21,12 @@ type TopbarProps = {
  * lives inside the AI Assistant panel itself, and the Outlook sync status was
  * moved out of the topbar (it now sits subtly in the sidebar footer).
  *
- * Demo-only: search, notifications and settings are placeholders.
+ * Settings + theme work today; search and notifications show an honest
+ * "coming soon" message until their phases land.
  */
 export function Topbar({ onOpenSidebar, account }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
+  const { showToast } = useToast();
   const firstName = account?.firstName ?? DEMO_USER.firstName;
 
   // Today's date — computed on the client to avoid an SSR/timezone hydration
@@ -68,6 +71,12 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
             type="search"
             placeholder="Search…"
             aria-label="Search people, threads and tasks"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                showToast('Search across people, threads and tasks arrives in a later phase.');
+              }
+            }}
             className="min-w-0 flex-1 border-none bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
           />
           <kbd className="rounded-md border border-line px-[6px] py-px font-mono text-[11px] text-muted">
@@ -81,6 +90,9 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
           type="button"
           aria-label="Notifications"
           title="Notifications"
+          onClick={() =>
+            showToast('Notifications (reminders, follow-up nudges) arrive in a later phase.')
+          }
           className="relative grid h-11 w-11 flex-none place-items-center rounded-sm border border-line bg-panel text-ink-soft shadow-soft transition hover:border-accent hover:text-accent"
         >
           <Icon name="bell" className="h-[19px] w-[19px]" />
