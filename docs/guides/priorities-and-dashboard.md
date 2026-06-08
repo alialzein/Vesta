@@ -55,11 +55,14 @@ Each item gets a **priority score (0–100)** from a transparent set of signals:
 Items are then grouped into categories like **Waiting on you**, **Follow-up**, and
 **FYI**, and high scorers (80+) are tagged **High priority**.
 
-> **No AI yet.** Today's ranking and reasons are honest, rule-based heuristics. In a
-> later phase, AI will refine priorities, write summaries, detect deadlines, and
-> suggest next actions — always with reasons you can see.
+> **AI then refines it.** After a sync, Vesta's AI reads each waiting thread and
+> rewrites the summary, refines the priority, detects a deadline, and produces the
+> **Next Best Action** and **Why this matters** you see in the AI rail — with reasons
+> you can read (never hidden reasoning). The rule-based score above is the starting
+> point AI improves on. See [How Vesta's AI reads your email](ai-analysis.md).
 
 ## Related
 
+- [How Vesta's AI reads your email](ai-analysis.md)
 - [How Vesta filters your email](email-filtering.md)
 - [Inbox & Hidden mail](inbox-and-hidden.md)
