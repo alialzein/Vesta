@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { requireUser, getProfile } from '@/lib/supabase/auth';
 import { getAccountView } from '@/lib/supabase/account';
@@ -14,7 +13,11 @@ import { getAccountView } from '@/lib/supabase/account';
  * for the greeting + profile; the rest of the dashboard still renders demo data
  * until later phases wire real Supabase queries.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { splash?: string };
+}) {
   await requireUser();
 
   const profile = await getProfile();
@@ -24,10 +27,11 @@ export default async function DashboardPage() {
 
   const account = await getAccountView();
 
-  // The splash plays once per login: the auth flow sets `vesta_show_splash` on
-  // sign-in and the dashboard clears it when the splash finishes. So it always
-  // shows on login but never when navigating between pages afterwards.
-  const showSplash = cookies().get('vesta_show_splash')?.value === '1';
+  // The branded splash plays once on login: the sign-in redirect lands here with
+  // ?splash=1, which the dashboard consumes and strips from the URL on mount — so
+  // it shows on login but never on internal navigation (`/`, used by the sidebar
+  // links, is a different client-cache key with no splash).
+  const showSplash = searchParams?.splash === '1';
 
   return <DashboardClient account={account ?? undefined} showSplashInitially={showSplash} />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { RailTab, WorkItem } from '@/lib/types';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
@@ -34,9 +34,6 @@ import type { AccountView } from '@/lib/supabase/account';
  */
 const SHOW_LARGE_COMMAND_CENTER = false;
 
-/** One-shot cookie set by the auth flow on login; cleared once the splash plays. */
-const SPLASH_COOKIE = 'vesta_show_splash';
-
 /**
  * Owns the dashboard shell state:
  * - selected work item (Radar -> AI Assistant Rail)
@@ -60,11 +57,21 @@ export function DashboardClient({
 } = {}) {
   const { showToast } = useToast();
 
-  // Branded initialization splash (Phase 0.5). Plays once per login: the server
-  // gates it on the `vesta_show_splash` cookie (set at sign-in) and we clear that
-  // cookie when it finishes, so it never replays on internal navigation. Default
-  // off so it never blocks tests.
+  // Branded initialization splash (Phase 0.5). Plays once on login: the sign-in
+  // redirect lands on the dashboard with ?splash=1, which we strip from the URL
+  // on mount so it never replays on internal navigation. Default off (tests).
   const [showSplash, setShowSplash] = useState(showSplashInitially);
+
+  // Strip the one-shot ?splash=1 from the URL as soon as we mount, so a refresh
+  // or back-navigation to the dashboard never replays the splash.
+  useEffect(() => {
+    if (!showSplashInitially) return;
+    try {
+      window.history.replaceState(null, '', window.location.pathname);
+    } catch {
+      /* non-blocking */
+    }
+  }, [showSplashInitially]);
 
   const [selected, setSelected] = useState<WorkItem>(demoWorkItems[0]);
   const [view, setView] = useState<NavView>('today');
@@ -83,13 +90,6 @@ export function DashboardClient({
   /** Called when the splash finishes its timed sequence. */
   function handleSplashDone() {
     setShowSplash(false);
-    // Clear the one-shot login flag so the splash does not replay on internal
-    // navigation (e.g. returning from Settings). It is set again on next login.
-    try {
-      document.cookie = `${SPLASH_COOKIE}=; path=/; sameSite=lax; max-age=0`;
-    } catch {
-      /* non-blocking */
-    }
   }
 
   const onToday = view === 'today';
