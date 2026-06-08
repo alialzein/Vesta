@@ -52,6 +52,30 @@ Every plan, with its status. These all live in [plans/](plans/):
 > gets a row in this table. When it ships, its status moves to ✅ in
 > [plans/phases.md](plans/phases.md) and it gains a 👤 user guide in [guides/](guides/).
 
+### Lifecycle: what to do when a plan is done
+
+**Plan docs are NOT moved when finished — they're marked done in place.** A finished
+plan usually still describes how the shipped feature works, and moving files just
+re-breaks cross-links. When a plan ships:
+
+1. Add a status banner at the top of the plan file, e.g.
+   `> ✅ Done — shipped in Phase X (YYYY-MM-DD). Living doc: guides/<feature>.md`.
+2. Flip its row in the table above to ✅ Done.
+3. Confirm [plans/phases.md](plans/phases.md) shows it done and a 👤 user guide exists.
+
+The source of truth for "what's done" is **status (phases.md + this table), not folder
+location.** Keeping done and upcoming plans side-by-side is intentional — you see the
+whole arc. Only move a plan to [archive/](archive/) if it is genuinely *superseded /
+no longer accurate* (it would mislead someone reading it as current).
+
+### Database migrations are immutable
+
+SQL migrations in `supabase/migrations/` are an **append-only, ordered ledger** —
+they run in filename order and are tracked by name. **Never move, rename, edit, or
+delete a migration once written**, even when "done": doing so breaks migration
+history and rebuilds fresh environments incorrectly. Need a change? Write a **new**
+migration. (See also the "confirm before DB changes" rule in `CLAUDE.md`.)
+
 ---
 
 ## 3. The folder map (detail)
