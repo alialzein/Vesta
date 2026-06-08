@@ -158,11 +158,13 @@ export function DashboardClient({
         <div
           className={[
             'relative z-[1] grid min-h-0 min-w-0 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-4 transition-[grid-template-columns] duration-300',
+            // Rail only joins the grid at xl+; below that the work queue takes
+            // the full width (Option A — rail returns on wide screens).
             onToday
               ? railCollapsed
-                ? 'lg:grid-cols-[minmax(0,1fr)_64px]'
-                : 'lg:grid-cols-[minmax(0,1fr)_400px]'
-              : 'lg:grid-cols-[minmax(0,1fr)]',
+                ? 'xl:grid-cols-[minmax(0,1fr)_64px]'
+                : 'xl:grid-cols-[minmax(0,1fr)_400px]'
+              : 'xl:grid-cols-[minmax(0,1fr)]',
           ].join(' ')}
         >
           {/* Main column */}
@@ -195,11 +197,6 @@ export function DashboardClient({
                   onFilterChange={setRadarFilter}
                 />
 
-                {/* Right rail stacked below main on small screens */}
-                <div className="lg:hidden">
-                  <AiAssistantRail item={selected} activeTab={railTab} onTabChange={setRailTab} />
-                </div>
-
                 <HowItWorks />
               </>
             ) : (
@@ -207,9 +204,9 @@ export function DashboardClient({
             )}
           </main>
 
-          {/* Right rail — desktop only; expanded panel or slim icon strip. */}
+          {/* Right rail — wide screens only (xl+); expanded panel or slim icon strip. */}
           {onToday && (
-            <aside className="v-scroll hidden min-h-0 min-w-0 flex-col gap-4 overflow-y-auto pr-[2px] lg:flex">
+            <aside className="v-scroll hidden min-h-0 min-w-0 flex-col gap-4 overflow-y-auto pr-[2px] xl:flex">
               {railCollapsed ? (
                 <CollapsedRail
                   highPriority={highPriority}
@@ -239,14 +236,14 @@ export function DashboardClient({
           aria-label="Open Vesta assistant"
           className={[
             'group fixed bottom-6 right-6 z-50 flex h-14 items-center gap-3 rounded-full border border-line-strong bg-[radial-gradient(circle_at_30%_20%,var(--accent),var(--accent-2))] text-white shadow-[0_14px_34px_rgba(47,125,235,.45)] transition hover:scale-[1.03]',
-            railExpanded ? 'w-14 justify-center px-0' : 'pl-4 pr-5',
+            railExpanded ? 'pl-4 pr-5 xl:w-14 xl:justify-center xl:px-0' : 'pl-4 pr-5',
           ].join(' ')}
         >
           <Icon name="chat" className="h-5 w-5" />
           <span
             className={[
               'font-display text-[15px] font-semibold',
-              railExpanded ? 'hidden' : 'inline',
+              railExpanded ? 'inline xl:hidden' : 'inline',
             ].join(' ')}
           >
             Ask Vesta
