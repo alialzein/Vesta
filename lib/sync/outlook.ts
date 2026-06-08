@@ -594,18 +594,25 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
 
   const { threads, workItems, hidden } = await processStoredMail(supabase, ctx, config);
 
-  // Record the sync cursor via the service role (sync_cursors is service-write).
-  await service.from('sync_cursors').upsert(
-    {
-      user_id: userId,
-      integration_id: ctx.integrationId,
-      mailbox_id: ctx.mailboxId,
-      resource_type: 'messages',
-      resource_id: 'all',
-      last_success_at: new Date().toISOString(),
-    },
-    { onConflict: 'mailbox_id,resource_type,resource_id' },
-  );
+  // Record the sync cursor + stamp last_sync_at on the integration/mailbox via the
+  // service role (sync_cursors is service-write; the stamps keep those rows honest
+  // for status surfaces). All three share one timestamp for consistency.
+  const syncedAt = new Date().toISOString();
+  await Promise.all([
+    service.from('sync_cursors').upsert(
+      {
+        user_id: userId,
+        integration_id: ctx.integrationId,
+        mailbox_id: ctx.mailboxId,
+        resource_type: 'messages',
+        resource_id: 'all',
+        last_success_at: syncedAt,
+      },
+      { onConflict: 'mailbox_id,resource_type,resource_id' },
+    ),
+    service.from('user_integrations').update({ last_sync_at: syncedAt }).eq('id', ctx.integrationId),
+    service.from('mailboxes').update({ last_sync_at: syncedAt }).eq('id', ctx.mailboxId),
+  ]);
 
   return {
     ok: true,
