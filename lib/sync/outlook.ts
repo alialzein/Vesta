@@ -1,7 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getValidAccessToken } from '@/lib/graph/tokens';
-import { fetchRecentMessages, type GraphMessage, type GraphRecipient } from '@/lib/graph/mail';
+import {
+  fetchRecentMessages,
+  fetchInboxDelta,
+  type GraphMessage,
+  type GraphRecipient,
+  type DeltaResult,
+} from '@/lib/graph/mail';
 import {
   computeThreadState,
   scoreThread,
@@ -35,7 +41,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * (Phase 7).
  */
 
-const INBOX_COUNT = 50;
 const SENT_COUNT = 25;
 
 type MessageRow = Database['public']['Tables']['email_messages']['Insert'];
@@ -393,7 +398,8 @@ async function processStoredMail(
   const { data: rows } = await supabase
     .from('email_messages')
     .select(STORED_COLS)
-    .eq('mailbox_id', ctx.mailboxId);
+    .eq('mailbox_id', ctx.mailboxId)
+    .is('deleted_at', null);
   const stored = (rows ?? []) as StoredMessage[];
   if (stored.length === 0) return { threads: 0, workItems: 0, hidden: 0 };
 
@@ -561,24 +567,39 @@ async function runMailboxSync(
   // 10-minute overlap; idempotent upserts dedupe). Cursor is service-write only.
   const { data: cursor } = await service
     .from('sync_cursors')
-    .select('last_success_at')
+    .select('last_success_at, delta_link, next_link')
     .eq('mailbox_id', ctx.mailboxId)
     .eq('resource_type', 'messages')
     .eq('resource_id', 'all')
     .maybeSingle();
+  // Inbox uses Graph delta (catches new/updated AND deletes); resume a large
+  // initial sync from next_link, else continue from the stored delta_link.
+  const inboxCursor = cursor?.next_link ?? cursor?.delta_link ?? null;
+  // Sent stays timestamp-incremental (its deletes don't affect thread state).
   const since = cursor?.last_success_at
     ? new Date(new Date(cursor.last_success_at).getTime() - 10 * 60_000).toISOString()
     : null;
 
-  let inbox: GraphMessage[] = [];
+  let delta: DeltaResult = { messages: [], removedIds: [], deltaLink: null, nextLink: null };
   let sent: GraphMessage[] = [];
   try {
-    [inbox, sent] = await Promise.all([
-      fetchRecentMessages(token, 'inbox', INBOX_COUNT, since),
+    [delta, sent] = await Promise.all([
+      fetchInboxDelta(token, inboxCursor),
       fetchRecentMessages(token, 'sentitems', SENT_COUNT, since),
     ]);
   } catch (e) {
     return { ...EMPTY_RESULT, error: e instanceof Error ? e.message : 'Graph fetch failed.' };
+  }
+  const inbox = delta.messages;
+
+  // Soft-delete messages Graph reported removed, so they drop out of threads,
+  // work_items, and the Inbox/Hidden views on this and future runs.
+  if (delta.removedIds.length > 0) {
+    await db
+      .from('email_messages')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('mailbox_id', ctx.mailboxId)
+      .in('graph_message_id', delta.removedIds);
   }
 
   // Store the raw new messages (triage decided in processStoredMail). Keep the
@@ -614,6 +635,8 @@ async function runMailboxSync(
         resource_type: 'messages',
         resource_id: 'all',
         last_success_at: syncedAt,
+        delta_link: delta.deltaLink ?? (delta.nextLink ? null : (cursor?.delta_link ?? null)),
+        next_link: delta.nextLink,
       },
       { onConflict: 'mailbox_id,resource_type,resource_id' },
     ),

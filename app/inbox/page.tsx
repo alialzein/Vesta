@@ -39,6 +39,7 @@ export default async function InboxPage() {
       )
       .eq('direction', 'inbound')
       .is('excluded_at', null)
+      .is('deleted_at', null)
       .order('received_at', { ascending: false })
       .limit(50),
     supabase.from('people').select('email').eq('is_vip', true),

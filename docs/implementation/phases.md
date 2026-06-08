@@ -278,9 +278,9 @@ Deliverables:
 
 ## Phase 5 — Delta Sync, Webhooks, and Queues
 
-Status: **Done (background + real-time sync + queue); delta tokens pending.** Keeps
-Outlook data current without the manager clicking "Sync now" — and without a
-browser open.
+Status: **Done.** Keeps Outlook data current without the manager clicking "Sync
+now" — and without a browser open: server-side scheduled sync + real-time webhooks
++ true Graph delta tokens + a webhook queue.
 
 - **Background auto-sync (live):** `components/sync/AutoSync.tsx` runs on the
   dashboard, Inbox, and Priorities — on mount (if the last sync is stale) and on a
@@ -302,6 +302,13 @@ browser open.
   `clientState` (anti-forgery), attributes each notification to its mailbox, and
   queues it in `webhook_events`; the sync cron drains it. Needs
   `MS_GRAPH_WEBHOOK_URL` set + the subscription renewed before its ~3-day expiry.
+- **Delta tokens (live):** the inbox sync uses a Graph delta query
+  (`lib/graph/mail.ts` `fetchInboxDelta`), persisting `deltaLink` / `next_link` in
+  `sync_cursors` — so it pulls only what changed (added/updated + **removed**) and
+  resumes a large first sync across runs. Removed mail is soft-deleted
+  (`deleted_at`) and dropped from threads, work_items, and the Inbox/Hidden views.
+  This precise change-detection is what server push (e.g. phone notifications with
+  no browser open) needs. Sent stays timestamp-incremental.
 
 Deliverables:
 
@@ -309,7 +316,8 @@ Deliverables:
 - Subscription create/renew/delete + lifecycle. ✅ (created on connect, renewed by cron)
 - Background/scheduled auto-sync. ✅ (server-side, service-role, all mailboxes — no browser)
 - Queue processing. ✅ (`webhook_events` drained by the sync cron)
-- True Graph delta tokens (`deltaLink`). ⏳ (next; timestamp-incremental works meanwhile)
+- True Graph delta tokens (`deltaLink`). ✅ (inbox delta — new/updated + removed;
+  resumable; deletes soft-removed and dropped from views)
 
 ## Phase 6 — Thread and Follow-up Engine
 

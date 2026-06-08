@@ -1,4 +1,4 @@
-import { graphGet } from './client';
+import { graphGet, graphGetUrl } from './client';
 
 /**
  * Microsoft Graph mail fetch (Phase 4). Server-only. Reads recent messages from
@@ -81,4 +81,85 @@ export async function fetchRecentMessages(
     `?$select=${SELECT}&$top=${top}&$orderby=receivedDateTime desc${filter}`;
   const res = await graphGet<GraphList<GraphMessage>>(accessToken, path);
   return res.value ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Delta sync (Phase 5) — Graph "delta query" tracks exactly what changed in the
+// inbox since last time: added/updated messages AND removed (deleted/moved) ids,
+// plus a deltaLink to resume from. This is what server-side push (e.g. phone
+// notifications with no browser open) needs — precise change detection.
+// ---------------------------------------------------------------------------
+
+/** A delta page item may be a removed marker ({ '@removed': {...}, id }). */
+export type GraphDeltaItem = GraphMessage & { '@removed'?: { reason?: string } };
+
+type GraphDeltaPage = {
+  value?: GraphDeltaItem[];
+  '@odata.nextLink'?: string;
+  '@odata.deltaLink'?: string;
+};
+
+export type DeltaResult = {
+  messages: GraphMessage[];
+  removedIds: string[];
+  /** Set when the enumeration caught up — persist and resume from it next run. */
+  deltaLink: string | null;
+  /** Set when more pages remain (large first sync) — resume here next run. */
+  nextLink: string | null;
+};
+
+/** Split a delta page's items into live messages vs removed ids. Pure. */
+export function splitDeltaItems(items: GraphDeltaItem[]): {
+  messages: GraphMessage[];
+  removedIds: string[];
+} {
+  const messages: GraphMessage[] = [];
+  const removedIds: string[] = [];
+  for (const item of items) {
+    if (item['@removed']) {
+      if (item.id) removedIds.push(item.id);
+    } else {
+      messages.push(item);
+    }
+  }
+  return { messages, removedIds };
+}
+
+const INBOX_DELTA_PATH = `/me/mailFolders/inbox/messages/delta?$select=${SELECT}`;
+
+/**
+ * Fetch inbox changes via Graph delta query. Pass the stored cursor (a deltaLink,
+ * or a nextLink to resume a large initial sync) — or null for the first run.
+ * Returns added/updated messages, removed ids, and the cursor to persist:
+ * deltaLink when caught up, or nextLink when more pages remain. Bounded by
+ * maxPages so a huge first sync resumes across runs instead of timing out.
+ */
+export async function fetchInboxDelta(
+  accessToken: string,
+  cursorUrl: string | null,
+  maxPages = 10,
+): Promise<DeltaResult> {
+  const messages: GraphMessage[] = [];
+  const removedIds: string[] = [];
+
+  let page: GraphDeltaPage = cursorUrl
+    ? await graphGetUrl<GraphDeltaPage>(accessToken, cursorUrl)
+    : await graphGet<GraphDeltaPage>(accessToken, INBOX_DELTA_PATH);
+
+  for (let i = 0; i < maxPages; i++) {
+    const split = splitDeltaItems(page.value ?? []);
+    messages.push(...split.messages);
+    removedIds.push(...split.removedIds);
+
+    if (page['@odata.deltaLink']) {
+      return { messages, removedIds, deltaLink: page['@odata.deltaLink'], nextLink: null };
+    }
+    const next = page['@odata.nextLink'];
+    if (!next) break; // neither delta nor next link (unexpected) — stop.
+    if (i + 1 >= maxPages) {
+      return { messages, removedIds, deltaLink: null, nextLink: next }; // resume next run
+    }
+    page = await graphGetUrl<GraphDeltaPage>(accessToken, next);
+  }
+  return { messages, removedIds, deltaLink: null, nextLink: null };
 }
