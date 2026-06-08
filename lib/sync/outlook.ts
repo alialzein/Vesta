@@ -540,14 +540,20 @@ async function processStoredMail(
   const wantedIds = new Set(drafts.map((d) => d.conversationId));
   const { data: existing } = await supabase
     .from('work_items')
-    .select('id, source_external_id')
+    .select('id, source_external_id, last_analyzed_at')
     .eq('mailbox_id', ctx.mailboxId)
     .eq('source', 'outlook');
   const idByExternal = new Map<string, string>();
+  // Items AI has already analyzed: the engine must NOT clobber their AI-owned
+  // display fields (category/priority/summary/reason) on a later no-op sync, or the
+  // AI result is silently reverted. (When a thread changes, AI re-runs this sync and
+  // refreshes them anyway.)
+  const aiOwned = new Set<string>();
   const staleIds: string[] = [];
   for (const w of existing ?? []) {
     if (!w.source_external_id) continue;
     idByExternal.set(w.source_external_id, w.id);
+    if (w.last_analyzed_at) aiOwned.add(w.id);
     if (!wantedIds.has(w.source_external_id)) staleIds.push(w.id);
   }
   if (staleIds.length > 0) {
@@ -572,21 +578,22 @@ async function processStoredMail(
     row.thread_id = convToThreadId.get(conversationId) ?? null;
     const id = idByExternal.get(conversationId);
     if (id) {
-      workItemUpdates.push(
-        supabase
-          .from('work_items')
-          .update({
-            title: row.title,
-            summary: row.summary,
-            category: row.category,
-            priority_score: row.priority_score,
-            requires_reply: row.requires_reply,
-            urgency_reason: row.urgency_reason,
-            thread_id: row.thread_id,
-            updated_at: nowIso,
-          })
-          .eq('id', id),
-      );
+      // Engine-owned fields are always refreshed. AI-owned display fields are only
+      // (re)written by the engine while the item is NOT yet AI-analyzed — once AI
+      // owns them, leave them to AI so a no-op sync can't revert the AI result.
+      const update: Database['public']['Tables']['work_items']['Update'] = {
+        title: row.title,
+        requires_reply: row.requires_reply,
+        thread_id: row.thread_id,
+        updated_at: nowIso,
+      };
+      if (!aiOwned.has(id)) {
+        update.summary = row.summary;
+        update.category = row.category;
+        update.priority_score = row.priority_score;
+        update.urgency_reason = row.urgency_reason;
+      }
+      workItemUpdates.push(supabase.from('work_items').update(update).eq('id', id));
     } else {
       inserts.push(row);
     }
