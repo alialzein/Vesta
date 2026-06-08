@@ -16,6 +16,10 @@ Everything is organized into **five buckets** (plus this map):
 
 ---
 
+> 📌 **Switching laptops / new session?** Start with **[SESSION.md](SESSION.md)** —
+> the living handoff (current status, what to verify, what's next, open reminders).
+> It travels via git; the local auto-memory does not.
+
 ## 1. Where we are right now
 
 **The single source of truth for status is [plans/phases.md](plans/phases.md).**
