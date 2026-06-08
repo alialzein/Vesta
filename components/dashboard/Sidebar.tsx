@@ -17,6 +17,7 @@ const NAV: NavGroup[] = [
       { label: 'Waiting on Me', icon: 'clock', href: '/priorities' },
       { label: 'Follow-ups', icon: 'reply', badge: 3 },
       { label: 'Draft Replies', icon: 'drafts', badge: 4 },
+      { label: 'Hidden', icon: 'eyeOff', href: '/hidden' },
     ],
   },
   {

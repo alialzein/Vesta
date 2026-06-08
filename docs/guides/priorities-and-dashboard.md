@@ -23,6 +23,14 @@ The **Priorities** view (sidebar: *Waiting on Me*) is the full, ranked list of e
 conversation waiting on your reply. Each item shows its category, a priority band, and
 a plain-language **reason** it's there (e.g. *"Maya is waiting on your reply"*).
 
+## Reading the full email behind an item
+
+A dashboard item or Priorities row is a summary. To read the actual email(s), open
+the **full thread**: select an item and use **Open full thread** in the AI rail, or
+click a **Priorities** row. That opens the full-screen conversation view (every
+message, complete bodies, your replies marked **You**) — see
+[Inbox & Hidden mail](inbox-and-hidden.md#opening-a-full-email--thread).
+
 ## How an item earns a spot
 
 Only mail that needs **you** becomes a dashboard/Priorities item. This is the second

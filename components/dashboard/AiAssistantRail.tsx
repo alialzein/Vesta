@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { MemoryType, RailTab, WorkItem, WorkItemSource } from '@/lib/types';
 import { priorityBand } from '@/lib/priority';
 import { Chip } from '@/components/ui/Chip';
@@ -252,6 +253,18 @@ function ActionTab({ item }: { item: WorkItem }) {
           ))}
         </div>
       </div>
+
+      {/* Read the whole conversation (full bodies + all messages) in one screen. */}
+      {item.threadId && (
+        <Link
+          href={`/thread/${item.threadId}`}
+          prefetch
+          className="inline-flex items-center justify-center gap-[7px] rounded-[11px] border border-line bg-panel-solid px-3 py-[10px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+        >
+          <Icon name="mail" className="h-[14px] w-[14px]" />
+          Open full thread
+        </Link>
+      )}
 
       {/* Action buttons — demo feedback only. */}
       <div className="flex flex-wrap gap-[9px]">

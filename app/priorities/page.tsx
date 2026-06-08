@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { priorityBand } from '@/lib/priority';
 import { Icon } from '@/components/ui/Icon';
 import { AutoSync } from '@/components/sync/AutoSync';
+import { encodeThreadId } from '@/lib/thread';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,9 @@ export default async function PrioritiesPage() {
 
   const { data: items } = await supabase
     .from('work_items')
-    .select('id, title, summary, category, priority_score, urgency_reason, requires_reply')
+    .select(
+      'id, title, summary, category, priority_score, urgency_reason, requires_reply, source, source_external_id',
+    )
     .eq('status', 'open')
     .order('priority_score', { ascending: false })
     .order('updated_at', { ascending: false })
@@ -45,6 +48,7 @@ export default async function PrioritiesPage() {
       <div className="mb-6 flex items-center gap-3">
         <Link
           href="/"
+          prefetch
           aria-label="Back to dashboard"
           className="grid h-9 w-9 place-items-center rounded-[11px] border border-line bg-panel text-ink-soft transition hover:border-accent hover:text-accent"
         >
@@ -58,6 +62,7 @@ export default async function PrioritiesPage() {
         </div>
         <Link
           href="/settings"
+          prefetch
           className="inline-flex items-center gap-2 rounded-[11px] border border-line bg-panel px-3 py-[9px] text-[13px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
         >
           <Icon name="refresh" className="h-[15px] w-[15px]" />
@@ -88,11 +93,12 @@ export default async function PrioritiesPage() {
         <ul className="flex flex-col gap-2">
           {list.map((w) => {
             const band = priorityBand(w.priority_score ?? 0);
-            return (
-              <li
-                key={w.id}
-                className="flex items-start gap-3 rounded-[14px] border border-line bg-panel p-4 shadow-soft transition hover:border-line-strong"
-              >
+            const href =
+              w.source === 'outlook' && w.source_external_id
+                ? `/thread/${encodeThreadId(w.source_external_id)}`
+                : null;
+            const body = (
+              <>
                 <span
                   className={`grid h-[42px] w-[42px] flex-none place-items-center rounded-[12px] font-mono text-[15px] font-bold ${bandClass[band]}`}
                 >
@@ -118,6 +124,22 @@ export default async function PrioritiesPage() {
                     </p>
                   )}
                 </div>
+                {href && (
+                  <Icon name="chevronRight" className="mt-1 h-4 w-4 flex-none text-muted" />
+                )}
+              </>
+            );
+            const rowClass =
+              'flex items-start gap-3 rounded-[14px] border border-line bg-panel p-4 shadow-soft transition hover:border-line-strong';
+            return (
+              <li key={w.id}>
+                {href ? (
+                  <Link href={href} prefetch className={rowClass}>
+                    {body}
+                  </Link>
+                ) : (
+                  <div className={rowClass}>{body}</div>
+                )}
               </li>
             );
           })}

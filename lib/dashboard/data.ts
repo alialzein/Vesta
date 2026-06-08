@@ -1,6 +1,7 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import type { Chip, KpiMetric, MorningBrief, WorkItem, WorkItemCategory } from '@/lib/types';
+import { encodeThreadId } from '@/lib/thread';
 
 /**
  * Real dashboard data (Phase 6-derived). Maps the manager's `work_items` (the
@@ -20,10 +21,11 @@ type WorkItemRow = {
   suggested_action: string | null;
   due_at: string | null;
   source: string | null;
+  source_external_id: string | null;
 };
 
 const WORK_ITEM_COLS =
-  'id, title, summary, category, priority_score, urgency_reason, suggested_action, due_at, source';
+  'id, title, summary, category, priority_score, urgency_reason, suggested_action, due_at, source, source_external_id';
 
 const CATEGORY_LABEL: Record<string, string> = {
   critical: 'Critical',
@@ -78,6 +80,10 @@ function toWorkItem(w: WorkItemRow): WorkItem {
     title: w.title?.trim() || '(no subject)',
     categories: [category],
     source: (w.source as WorkItem['source']) ?? 'outlook',
+    threadId:
+      w.source === 'outlook' && w.source_external_id
+        ? encodeThreadId(w.source_external_id)
+        : undefined,
     person,
     summary,
     suggestedAction: w.suggested_action ?? undefined,

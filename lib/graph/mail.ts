@@ -17,6 +17,8 @@ export type GraphMessage = {
   internetMessageId?: string;
   subject?: string;
   bodyPreview?: string;
+  /** Full body (we request it so the thread view can show the whole email). */
+  body?: { contentType?: 'html' | 'text'; content?: string };
   from?: GraphRecipient;
   sender?: GraphRecipient;
   toRecipients?: GraphRecipient[];
@@ -36,7 +38,8 @@ export type GraphMessage = {
 
 type GraphList<T> = { value: T[] };
 
-/** Fields we pull (keep it lean — we don't fetch full bodies in the initial sync). */
+/** Fields we pull. Includes the full `body` so the thread view can show the whole
+ * email (stored in email_messages.body_html/body_text); preview stays for lists. */
 const SELECT = [
   'id',
   'conversationId',
@@ -44,6 +47,7 @@ const SELECT = [
   'internetMessageId',
   'subject',
   'bodyPreview',
+  'body',
   'from',
   'sender',
   'toRecipients',

@@ -116,6 +116,10 @@ export function toEmailMessageRow(
     direction,
     subject: msg.subject ?? null,
     body_preview: msg.bodyPreview ?? null,
+    // Full body for the thread view. Graph returns one content type per message;
+    // store HTML and plain text in their respective columns.
+    body_html: msg.body?.contentType === 'html' ? (msg.body.content ?? null) : null,
+    body_text: msg.body?.contentType === 'text' ? (msg.body.content ?? null) : null,
     sender_name: from.name ?? null,
     sender_email: from.email ?? null,
     from_email: from.email ?? null,
