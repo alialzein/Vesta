@@ -84,6 +84,7 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
         {/* Settings → connect mailbox, preferences */}
         <Link
           href="/settings"
+          prefetch
           aria-label="Open settings"
           title="Settings"
           className="hidden h-11 w-11 flex-none place-items-center rounded-sm border border-line bg-panel text-ink-soft shadow-soft transition hover:border-accent hover:text-accent sm:grid"

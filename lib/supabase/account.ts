@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/auth';
+import type { User } from '@supabase/supabase-js';
 
 /** Display-facing account info derived from the auth user + profile row. */
 export type AccountView = {
@@ -30,22 +32,21 @@ function initialsOf(name: string): string {
 
 /**
  * Build the display account for the signed-in user, or null if not signed in.
- * Pulls full_name/role from the profiles row, with email-based fallbacks.
+ * Pulls full_name/role from the profiles row, with email-based fallbacks. Pass
+ * the already-fetched user (from requireUser) to skip a redundant getUser().
  */
-export async function getAccountView(): Promise<AccountView | null> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+export async function getAccountView(user?: User | null): Promise<AccountView | null> {
+  const u = user ?? (await getCurrentUser());
+  if (!u) return null;
 
+  const supabase = createClient();
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, email, role')
-    .eq('id', user.id)
+    .eq('id', u.id)
     .single();
 
-  const email = profile?.email ?? user.email ?? '';
+  const email = profile?.email ?? u.email ?? '';
   const fullName = profile?.full_name?.trim() || nameFromEmail(email);
   const firstName = fullName.split(/\s+/)[0] || 'there';
 

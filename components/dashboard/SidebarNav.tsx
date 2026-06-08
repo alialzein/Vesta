@@ -106,6 +106,7 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
                 <Link
                   key={item.label}
                   href={item.href}
+                  prefetch
                   aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
                   className={className}
                 >

@@ -18,14 +18,14 @@ export default async function DashboardPage({
 }: {
   searchParams: { splash?: string };
 }) {
-  await requireUser();
+  const user = await requireUser();
 
-  const profile = await getProfile();
+  // Validate the user once (requireUser/middleware are the security checkpoints),
+  // then run the profile + account queries in parallel instead of sequentially.
+  const [profile, account] = await Promise.all([getProfile(user), getAccountView(user)]);
   if (!profile?.onboarded_at) {
     redirect('/onboarding');
   }
-
-  const account = await getAccountView();
 
   // The branded splash plays once on login: the sign-in redirect lands here with
   // ?splash=1, which the dashboard consumes and strips from the URL on mount — so
