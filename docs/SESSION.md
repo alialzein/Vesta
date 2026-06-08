@@ -22,16 +22,26 @@
   - Provider abstraction in `lib/ai/` — provider/model/key from env
     (`AI_PROVIDER`/`AI_MODEL`/`AI_API_KEY`). **Currently OpenAI `gpt-5.4-mini`.**
     Swappable later from the admin panel; an Anthropic adapter slots in unchanged.
-  - Latest fix: corrected category direction (a person waiting on the manager →
-    `waiting`; automated/no-reply/closed-ticket → `fyi`). Verified live.
+- **Fixes shipped this session (all merged):**
+  - **Category direction** — a person waiting on the manager → `waiting`; automated /
+    no-reply / closed-ticket → `fyi`. Verified live.
+  - **Clobber bug** — the follow-up engine was overwriting AI-owned fields
+    (`category`/`priority`/`summary`/`urgency_reason`) on every sync, reverting the
+    AI result (badly, since the cron runs every minute). Engine now leaves AI-owned
+    fields alone once `last_analyzed_at` is set.
+  - **Open-page real-time** — on a deployment the cron keeps `last_sync_at` fresh, so
+    the browser `AutoSync` bailed early and never refreshed. It now `router.refresh()`
+    es every ~60s to reflect cron/webhook DB updates (sync-trigger is now a local-dev
+    fallback only). Setup: **Vercel + pg_cron every 1 min**.
 
 ## ✅ Verify first (next session)
 
-- Open the dashboard; confirm the 3 test items re-categorized: **Test 2 → Waiting on
-  you**, **TeamViewer + Meta → FYI** ("Waiting on You" KPI ≈ 1). `last_analyzed_at`
-  was cleared at end of last session, so the next sync re-analyzes with the fixed
-  prompt. If a category still looks wrong, tweak `lib/ai/context.ts` and re-run
-  `node scripts/reanalyze-work-items.mjs`.
+- Open the deployed dashboard; confirm the 3 test items settled: **Test 2 → Waiting
+  on you (~74)**, **TeamViewer + Meta → FYI**. `last_analyzed_at` was cleared at end
+  of last session, so once the Vercel deploy has the clobber fix the next 1-min cron
+  re-analyzes and it **sticks**.
+- Use **`node scripts/ai-status.mjs`** to see what AI actually wrote (work_items vs
+  ai_analyses + errors) if anything looks off.
 
 ## What's next (pick one)
 
@@ -43,6 +53,9 @@
   re-analysis controls, sync/cron health). Plan: `docs/plans/admin-panel-plan.md`.
 - **AI polish** — show `ai_analyses` cost in the UI; a "Re-analyze" button (instead
   of the script); optionally surface the AI reason distinctly.
+- **Instant real-time** — set `MS_GRAPH_WEBHOOK_URL` to the public Vercel URL +
+  ensure the Graph subscription is created, so new mail is *pushed* (no ~1-min cron
+  wait). Endpoint already built (`app/api/outlook/webhook`); dormant without the URL.
 
 ## ⚠️ Open reminders / TODO
 
@@ -67,6 +80,7 @@
 
 ## 🔧 Handy commands
 
+- Inspect what AI did: `node scripts/ai-status.mjs` (work_items vs ai_analyses).
 - Re-analyze items: `node scripts/reanalyze-work-items.mjs` → then open the dashboard.
 - Smoke-test AI: `node scripts/test-ai.mjs`.
 - Wipe synced mail for a clean re-sync: `node scripts/clear-synced-mail.mjs`.
