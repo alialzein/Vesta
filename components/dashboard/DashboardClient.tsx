@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { RailTab, WorkItem } from '@/lib/types';
+import type { KpiMetric, MorningBrief as MorningBriefData, RailTab, WorkItem } from '@/lib/types';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
 import { useToast } from '@/components/ui/Toast';
@@ -49,11 +49,19 @@ const SHOW_LARGE_COMMAND_CENTER = false;
 export function DashboardClient({
   account,
   showSplashInitially = false,
+  workItems = demoWorkItems,
+  kpis = demoKpis,
+  brief = demoMorningBrief,
 }: {
   account?: AccountView;
   /** Server decides (cookie-gated) so the splash plays once per session, not on
    * every navigation back to the dashboard. Defaults off (e.g. component tests). */
   showSplashInitially?: boolean;
+  /** Real work_items + the metrics/brief derived from them; default to demo data
+   *  (used by component tests and as a safe fallback). */
+  workItems?: WorkItem[];
+  kpis?: KpiMetric[];
+  brief?: MorningBriefData;
 } = {}) {
   const { showToast } = useToast();
 
@@ -73,7 +81,7 @@ export function DashboardClient({
     }
   }, [showSplashInitially]);
 
-  const [selected, setSelected] = useState<WorkItem>(demoWorkItems[0]);
+  const [selected, setSelected] = useState<WorkItem | undefined>(workItems[0]);
   const [view, setView] = useState<NavView>('today');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
@@ -93,7 +101,7 @@ export function DashboardClient({
   }
 
   const onToday = view === 'today';
-  const highPriority = priorityBand(selected.priorityScore) === 'red';
+  const highPriority = selected ? priorityBand(selected.priorityScore) === 'red' : false;
   // When the expanded rail is showing on desktop, keep the chat FAB subtle.
   const railExpanded = onToday && !railCollapsed;
 
@@ -174,7 +182,7 @@ export function DashboardClient({
             {onToday ? (
               <>
                 <MorningBrief
-                  brief={demoMorningBrief}
+                  brief={brief}
                   onAction={(action) => {
                     if (action === 'focus') handleCommand('cmd-clear-day');
                     else if (action === 'meeting') handleCommand('cmd-meeting-prep');
@@ -187,11 +195,11 @@ export function DashboardClient({
                   <AiCommandCenter cards={demoCommandCards} onCardAction={handleCommand} />
                 )}
 
-                <MetricsStrip metrics={demoKpis} />
+                <MetricsStrip metrics={kpis} />
 
                 <TodaysRadar
-                  items={demoWorkItems}
-                  selectedId={selected.id}
+                  items={workItems}
+                  selectedId={selected?.id ?? null}
                   onSelect={setSelected}
                   filter={radarFilter}
                   onFilterChange={setRadarFilter}
@@ -204,8 +212,9 @@ export function DashboardClient({
             )}
           </main>
 
-          {/* Right rail — wide screens only (xl+); expanded panel or slim icon strip. */}
-          {onToday && (
+          {/* Right rail — wide screens only (xl+); expanded panel or slim icon strip.
+              Hidden when nothing is selected (e.g. an empty work queue). */}
+          {onToday && selected && (
             <aside className="v-scroll hidden min-h-0 min-w-0 flex-col gap-4 overflow-y-auto pr-[2px] xl:flex">
               {railCollapsed ? (
                 <CollapsedRail
