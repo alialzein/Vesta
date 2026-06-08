@@ -33,10 +33,11 @@ describe('Topbar (Phase 0.4)', () => {
     expect(screen.queryByText(/Outlook Connected/i)).not.toBeInTheDocument();
   });
 
-  it('renders the notification button with its unread count', () => {
+  it('renders the notification button without a fake unread count', () => {
     renderTopbar();
     const bell = screen.getByRole('button', { name: /Notifications/i });
-    expect(bell).toHaveTextContent('3');
+    expect(bell).toBeInTheDocument();
+    expect(bell).not.toHaveTextContent('3');
   });
 
   it('renders the theme toggle', () => {

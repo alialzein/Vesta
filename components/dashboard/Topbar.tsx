@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { DEMO_USER, demoNotificationCount } from '@/lib/demo-data';
+import { DEMO_USER } from '@/lib/demo-data';
 import { useTheme } from '@/lib/theme';
 import { Icon } from '@/components/ui/Icon';
 import type { AccountView } from '@/lib/supabase/account';
@@ -25,6 +26,15 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
   const firstName = account?.firstName ?? DEMO_USER.firstName;
 
+  // Today's date — computed on the client to avoid an SSR/timezone hydration
+  // mismatch (the server renders in UTC). Empty until mounted.
+  const [today, setToday] = useState('');
+  useEffect(() => {
+    setToday(
+      new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }),
+    );
+  }, []);
+
   return (
     <div className="flex items-start justify-between gap-4">
       {/* Greeting */}
@@ -44,7 +54,7 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
             <span className="grad-text inline-block pr-[4px] italic">{firstName}</span>
           </h1>
           <p className="mt-[3px] truncate text-[13px] text-muted sm:text-sm">
-            {DEMO_USER.todayLabel} — here&apos;s what genuinely needs you today.
+            {today && `${today} — `}here&apos;s what genuinely needs you today.
           </p>
         </div>
       </div>
@@ -69,16 +79,11 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
             so it never clips, in light or dark mode or at any edge. */}
         <button
           type="button"
-          aria-label={`Notifications (${demoNotificationCount} unread)`}
+          aria-label="Notifications"
           title="Notifications"
           className="relative grid h-11 w-11 flex-none place-items-center rounded-sm border border-line bg-panel text-ink-soft shadow-soft transition hover:border-accent hover:text-accent"
         >
           <Icon name="bell" className="h-[19px] w-[19px]" />
-          {demoNotificationCount > 0 && (
-            <span className="absolute right-[5px] top-[5px] grid h-[16px] min-w-[16px] place-items-center rounded-full bg-red px-[4px] font-mono text-[10px] font-bold leading-none text-white ring-2 ring-[color:var(--panel-solid)]">
-              {demoNotificationCount}
-            </span>
-          )}
         </button>
 
         {/* Settings → connect mailbox, preferences */}
