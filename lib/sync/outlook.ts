@@ -48,7 +48,14 @@ type ThreadRow = Database['public']['Tables']['email_threads']['Insert'];
 type PersonRow = Database['public']['Tables']['people']['Insert'];
 type WorkItemRow = Database['public']['Tables']['work_items']['Insert'];
 
-type SyncContext = { userId: string; integrationId: string; mailboxId: string };
+type SyncContext = {
+  userId: string;
+  integrationId: string;
+  mailboxId: string;
+  /** The manager's own address(es), lowercased — to tell mail addressed to him
+   *  from broadcasts he's merely Cc'd on / not listed in. */
+  managerEmails?: string[];
+};
 type Tagged = { msg: GraphMessage; direction: 'inbound' | 'outbound' };
 
 export type SyncResult = {
@@ -138,6 +145,35 @@ function groupByConversation(tagged: Tagged[]): Map<string, Tagged[]> {
   return byConv;
 }
 
+/** The most recent inbound message in a conversation (drives "waiting on you"). */
+function latestInboundOf(msgs: Tagged[]): GraphMessage | undefined {
+  return msgs
+    .filter((t) => t.direction === 'inbound')
+    .sort((a, b) => (whenOf(b.msg, 'inbound') ?? '').localeCompare(whenOf(a.msg, 'inbound') ?? ''))[0]
+    ?.msg;
+}
+
+/** Lowercased recipient emails from a Graph recipient list. */
+function recipientEmails(list?: GraphRecipient[]): string[] {
+  return (list ?? [])
+    .map((r) => r.emailAddress?.address?.toLowerCase())
+    .filter((e): e is string => Boolean(e));
+}
+
+/**
+ * Is this inbound message actually directed at the manager — a direct To
+ * recipient, or his address mentioned in the body preview — versus a broadcast
+ * where he is only Cc'd or not listed at all? Prevents false "waiting on you"
+ * items. When the manager's address is unknown, do not filter (return true).
+ */
+export function isAddressedToManager(msg: GraphMessage, managerEmails: string[]): boolean {
+  const mgr = managerEmails.map((e) => e.toLowerCase()).filter(Boolean);
+  if (mgr.length === 0) return true;
+  if (recipientEmails(msg.toRecipients).some((e) => mgr.includes(e))) return true;
+  const body = (msg.bodyPreview ?? '').toLowerCase();
+  return body.length > 0 && mgr.some((m) => body.includes(m));
+}
+
 /** Build one email_threads row per conversation, including follow-up flags. */
 export function buildThreadRows(tagged: Tagged[], ctx: SyncContext): ThreadRow[] {
   const rows: ThreadRow[] = [];
@@ -145,6 +181,12 @@ export function buildThreadRows(tagged: Tagged[], ctx: SyncContext): ThreadRow[]
     const state = computeThreadState(
       msgs.map<ThreadMessage>(({ msg, direction }) => ({ direction, at: whenOf(msg, direction) })),
     );
+    // Only "waiting on you" if the latest inbound is actually addressed to the
+    // manager (To / body-mention), not a broadcast he's merely Cc'd on.
+    const latestInbound = latestInboundOf(msgs);
+    const waitingOnManager =
+      state.isWaitingOnManager &&
+      (!latestInbound || isAddressedToManager(latestInbound, ctx.managerEmails ?? []));
     const subjectSource = msgs.find((t) => t.msg.subject)?.msg.subject;
     rows.push({
       user_id: ctx.userId,
@@ -157,7 +199,7 @@ export function buildThreadRows(tagged: Tagged[], ctx: SyncContext): ThreadRow[]
       latest_outbound_at: state.latestOutboundAt,
       inbound_after_last_outbound_count: state.inboundAfterLastOutboundCount,
       followup_count: state.followupCount,
-      is_waiting_on_manager: state.isWaitingOnManager,
+      is_waiting_on_manager: waitingOnManager,
       is_waiting_on_other: state.isWaitingOnOther,
     });
   }
@@ -204,11 +246,9 @@ export function buildWorkItemDrafts(
     if (!state.isWaitingOnManager) continue; // only items that need the manager
 
     // The latest inbound message drives title/summary/age.
-    const latestInbound = msgs
-      .filter((t) => t.direction === 'inbound')
-      .sort((a, b) =>
-        (whenOf(b.msg, 'inbound') ?? '').localeCompare(whenOf(a.msg, 'inbound') ?? ''),
-      )[0]?.msg;
+    const latestInbound = latestInboundOf(msgs);
+    // Skip broadcasts the manager is merely Cc'd on / not addressed in.
+    if (latestInbound && !isAddressedToManager(latestInbound, ctx.managerEmails ?? [])) continue;
 
     const category = categorizeThread(state);
     const priority = scoreThread(state, { now });
@@ -314,7 +354,23 @@ export function buildTriageRules(rows: ManagerRuleRow[]): TriageRule[] {
 // (cron/webhooks — no user session). Queries are scoped by mailbox_id/user_id,
 // so the service client is safe here even though it bypasses RLS.
 type DbClient = SupabaseClient<Database>;
-type Mailbox = { id: string; integration_id: string; triage_mode: string };
+type Mailbox = {
+  id: string;
+  integration_id: string;
+  triage_mode: string;
+  mailbox_email: string | null;
+};
+
+/** Rebuild Graph recipients from the stored jsonb ([{ name, email }]). */
+function recipientsFromStored(j: unknown): GraphRecipient[] {
+  if (!Array.isArray(j)) return [];
+  const out: GraphRecipient[] = [];
+  for (const x of j) {
+    const r = (x ?? {}) as { name?: string; email?: string };
+    if (r.email) out.push({ emailAddress: { name: r.name, address: r.email } });
+  }
+  return out;
+}
 
 /** Reconstruct the minimal Graph-shaped message the builders/classifier need. */
 function storedToTagged(r: StoredMessage): Tagged {
@@ -332,6 +388,8 @@ function storedToTagged(r: StoredMessage): Tagged {
           address: r.sender_email ?? r.from_email ?? undefined,
         },
       },
+      toRecipients: recipientsFromStored(r.to_recipients),
+      ccRecipients: recipientsFromStored(r.cc_recipients),
       receivedDateTime: r.received_at ?? undefined,
       sentDateTime: r.sent_at ?? undefined,
       importance: r.importance ?? undefined,
@@ -351,6 +409,8 @@ type StoredMessage = {
   sender_name: string | null;
   sender_email: string | null;
   from_email: string | null;
+  to_recipients: unknown;
+  cc_recipients: unknown;
   received_at: string | null;
   sent_at: string | null;
   importance: string | null;
@@ -361,7 +421,7 @@ type StoredMessage = {
 };
 
 const STORED_COLS =
-  'id, graph_message_id, graph_conversation_id, subject, body_preview, sender_name, sender_email, from_email, received_at, sent_at, importance, flag, triage, direction, excluded_at';
+  'id, graph_message_id, graph_conversation_id, subject, body_preview, sender_name, sender_email, from_email, to_recipients, cc_recipients, received_at, sent_at, importance, flag, triage, direction, excluded_at';
 
 /** Load triage config (mode + manager rules + VIP people) for a user/mailbox. */
 async function loadTriageConfig(
@@ -520,13 +580,19 @@ async function processStoredMail(
   return { threads: threadRows.length, workItems: drafts.length, hidden };
 }
 
+/** The manager's own address(es) for a mailbox (lowercased) — used to tell mail
+ *  addressed to them from broadcasts they're merely on. */
+function managerEmailsOf(mailboxEmail: string | null | undefined): string[] {
+  return mailboxEmail ? [mailboxEmail.toLowerCase()] : [];
+}
+
 /** Find the user's active Microsoft mailbox, or return an error message. */
 async function getActiveMailbox(
   supabase: DbClient,
 ): Promise<{ mailbox?: Mailbox; error?: string }> {
   const { data } = await supabase
     .from('mailboxes')
-    .select('id, integration_id, triage_mode')
+    .select('id, integration_id, triage_mode, mailbox_email')
     .eq('provider', 'microsoft')
     .eq('status', 'active')
     .maybeSingle();
@@ -661,7 +727,12 @@ export async function syncOutlookForUser(userId: string): Promise<SyncResult> {
   const service = createServiceClient();
   const { mailbox, error } = await getActiveMailbox(supabase);
   if (!mailbox) return { ...EMPTY_RESULT, error };
-  const ctx: SyncContext = { userId, integrationId: mailbox.integration_id, mailboxId: mailbox.id };
+  const ctx: SyncContext = {
+    userId,
+    integrationId: mailbox.integration_id,
+    mailboxId: mailbox.id,
+    managerEmails: managerEmailsOf(mailbox.mailbox_email),
+  };
   return runMailboxSync(supabase, service, ctx, mailbox.triage_mode);
 }
 
@@ -681,7 +752,7 @@ export async function syncAllConnectedMailboxes(): Promise<{
   const service = createServiceClient();
   const { data: rows } = await service
     .from('mailboxes')
-    .select('id, user_id, integration_id, triage_mode')
+    .select('id, user_id, integration_id, triage_mode, mailbox_email')
     .eq('provider', 'microsoft')
     .eq('status', 'active');
   const mailboxes = (rows ?? []) as Array<{
@@ -689,6 +760,7 @@ export async function syncAllConnectedMailboxes(): Promise<{
     user_id: string;
     integration_id: string;
     triage_mode: string;
+    mailbox_email: string | null;
   }>;
   const results: MailboxSyncResult[] = [];
   for (const mb of mailboxes) {
@@ -696,6 +768,7 @@ export async function syncAllConnectedMailboxes(): Promise<{
       userId: mb.user_id,
       integrationId: mb.integration_id,
       mailboxId: mb.id,
+      managerEmails: managerEmailsOf(mb.mailbox_email),
     };
     const result = await runMailboxSync(service, service, ctx, mb.triage_mode);
     results.push({ mailboxId: mb.id, userId: mb.user_id, result });
@@ -708,7 +781,7 @@ export async function syncMailboxById(mailboxId: string): Promise<SyncResult> {
   const service = createServiceClient();
   const { data: mb } = await service
     .from('mailboxes')
-    .select('id, user_id, integration_id, triage_mode, status, provider')
+    .select('id, user_id, integration_id, triage_mode, status, provider, mailbox_email')
     .eq('id', mailboxId)
     .maybeSingle();
   if (!mb || mb.provider !== 'microsoft' || mb.status !== 'active') {
@@ -718,6 +791,7 @@ export async function syncMailboxById(mailboxId: string): Promise<SyncResult> {
     userId: mb.user_id,
     integrationId: mb.integration_id,
     mailboxId: mb.id,
+    managerEmails: managerEmailsOf(mb.mailbox_email),
   };
   return runMailboxSync(service, service, ctx, mb.triage_mode);
 }
@@ -740,7 +814,12 @@ export async function reprocessMailForUser(userId: string): Promise<SyncResult> 
   const { mailbox, error } = await getActiveMailbox(supabase);
   if (!mailbox) return { ...empty, error };
 
-  const ctx: SyncContext = { userId, integrationId: mailbox.integration_id, mailboxId: mailbox.id };
+  const ctx: SyncContext = {
+    userId,
+    integrationId: mailbox.integration_id,
+    mailboxId: mailbox.id,
+    managerEmails: managerEmailsOf(mailbox.mailbox_email),
+  };
   const config = await loadTriageConfig(supabase, userId, mailbox.triage_mode);
   const { threads, workItems, hidden } = await processStoredMail(supabase, ctx, config);
   return { ok: true, inbox: 0, sent: 0, threads, people: 0, workItems, hidden };
