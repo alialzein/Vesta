@@ -9,10 +9,16 @@ test.describe('Priorities', () => {
   test.skip(!hasAuth, 'Requires E2E test-user creds in .env.local.');
   test.use({ storageState: hasAuth ? authFile : undefined });
 
-  test('renders Priorities with an empty state when nothing is waiting', async ({ page }) => {
+  test('renders Priorities (empty state or waiting items)', async ({ page }) => {
     await page.goto('/priorities');
     await expect(page.getByRole('heading', { name: 'Priorities', exact: true })).toBeVisible();
-    // The dev user has no synced work_items, so the empty state shows.
-    await expect(page.getByText(/Nothing waiting on you/i)).toBeVisible();
+    // Header always links to sync settings, regardless of data state.
+    await expect(page.getByRole('link', { name: /Sync settings/i })).toBeVisible();
+    // The shared dev account may or may not have waiting work_items (it doubles
+    // as the real-data test account), so accept either the empty state or a
+    // populated list rather than assuming nothing is waiting.
+    const emptyState = page.getByRole('heading', { name: /Nothing waiting on you/i });
+    const priorityRow = page.getByRole('listitem');
+    await expect(emptyState.or(priorityRow).first()).toBeVisible();
   });
 });
