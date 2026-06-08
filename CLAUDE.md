@@ -2,6 +2,23 @@
 
 Follow `AGENTS.md` first. This file only adds Claude-specific working style preferences.
 
+## Multi-machine workflow (read this first)
+
+The owner works on this project from **two machines** (work laptop and home
+laptop), switching back and forth. Git is the single source of truth.
+
+- **At the start of a session:** `git pull` before doing anything, so you're not
+  building on a stale tree the other machine has moved past.
+- **At the end of a session:** make sure all work is committed and pushed before
+  stopping. Don't leave uncommitted WIP — `git stash` is local-only and will NOT
+  travel to the other machine. For cross-machine WIP, push a real commit on a
+  branch (squash/amend later).
+- **Branch + PR flow:** non-`main` work goes on a branch → push → open a PR →
+  wait for the owner's explicit confirmation before merging (never auto-merge) →
+  after merge, sync local `main`.
+- **Untracked/secret files don't sync.** `.env.local` and other gitignored files
+  exist per-machine only; set them up separately on each laptop.
+
 ## Working style
 
 1. Read the relevant docs before editing.
