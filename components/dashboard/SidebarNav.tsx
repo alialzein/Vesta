@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import type { NavView } from './Sidebar';
@@ -27,6 +28,19 @@ type SidebarNavProps = {
 };
 
 export function SidebarNav({ groups, collapsed, activeView, onSelectView }: SidebarNavProps) {
+  // Collapsed-rail tooltip. Rendered as a fixed element (positioned from the hovered
+  // icon's rect) so it escapes the sidebar's overflow clipping and the content's
+  // stacking context — otherwise it hides behind the dashboard.
+  const [tip, setTip] = useState<{ text: string; top: number; left: number } | null>(null);
+
+  function showTip(e: React.SyntheticEvent<HTMLElement>, item: NavItem) {
+    if (!collapsed) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const text = item.badge !== undefined ? `${item.label} · ${item.badge}` : item.label;
+    setTip({ text, top: r.top + r.height / 2, left: r.right + 10 });
+  }
+  const hideTip = () => setTip(null);
+
   return (
     <nav className="flex w-full flex-col gap-[3px]">
       {groups.map((group) => (
@@ -87,18 +101,15 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
                     {item.badge}
                   </span>
                 )}
-
-                {collapsed && (
-                  <span
-                    role="tooltip"
-                    className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-lg border border-line bg-panel-solid px-[10px] py-[6px] text-[12px] font-semibold text-ink opacity-0 shadow-panel transition-opacity duration-150 group-hover/nav:opacity-100 group-focus-visible/nav:opacity-100"
-                  >
-                    {item.label}
-                    {hasBadge ? ` · ${item.badge}` : ''}
-                  </span>
-                )}
               </>
             );
+
+            const hoverProps = {
+              onMouseEnter: (e: React.SyntheticEvent<HTMLElement>) => showTip(e, item),
+              onMouseLeave: hideTip,
+              onFocus: (e: React.SyntheticEvent<HTMLElement>) => showTip(e, item),
+              onBlur: hideTip,
+            };
 
             // Route link (e.g. Inbox) vs in-page view switch.
             if (item.href) {
@@ -109,6 +120,7 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
                   prefetch
                   aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
                   className={className}
+                  {...hoverProps}
                 >
                   {inner}
                 </Link>
@@ -123,6 +135,7 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
                 className={className}
+                {...hoverProps}
               >
                 {inner}
               </button>
@@ -130,6 +143,17 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
           })}
         </div>
       ))}
+
+      {/* Fixed tooltip for the collapsed rail — escapes overflow + stacking. */}
+      {tip && (
+        <span
+          role="tooltip"
+          className="pointer-events-none fixed z-[100] -translate-y-1/2 whitespace-nowrap rounded-lg border border-line bg-panel-solid px-[10px] py-[6px] text-[12px] font-semibold text-ink shadow-panel"
+          style={{ top: tip.top, left: tip.left }}
+        >
+          {tip.text}
+        </span>
+      )}
     </nav>
   );
 }
