@@ -50,6 +50,26 @@ laptop), switching back and forth. Git is the single source of truth.
   is dark; do not reset the user's choice.
 - When adding UI, verify it in **both** themes before considering it done.
 
+## Navigation performance (non-negotiable)
+
+Navigation must feel instant — never a frozen screen after a click. Whenever you add
+a link, nav button, or a new route, apply **both**:
+
+1. **Prefetch the target.** Any control that navigates to a real app route uses
+   `next/link`'s `<Link href=… prefetch>` (explicit `prefetch`), not a raw `<a>` or
+   a bare `router.push`. This preloads the route's code + data before the click.
+   (See the sidebar/topbar nav links.)
+2. **Give the route an instant skeleton.** Every route whose page does server-side
+   data fetching gets a `loading.tsx` that renders a **theme-aware** skeleton. Reuse
+   [`components/ui/PageSkeleton.tsx`](components/ui/PageSkeleton.tsx) for centered
+   list pages (Inbox/Priorities/Settings pattern); match the panel/card design and
+   support both light + dark. So a click shows a placeholder immediately, not a hang.
+
+Also keep server work cheap: validate the user once per request (`getCurrentUser` is
+`cache()`-wrapped) and **pass the fetched user down** to `getProfile`/`getAccountView`
+rather than re-fetching; run independent queries with `Promise.all`. Don't reintroduce
+serial `getUser` round-trips.
+
 ## Project priorities
 
 The first working product must prioritize:
