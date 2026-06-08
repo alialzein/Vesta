@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./', import.meta.url)),
+      // `server-only` is a Next.js build-time guard with no runtime module; stub it.
+      'server-only': fileURLToPath(new URL('./vitest.server-only-stub.ts', import.meta.url)),
     },
   },
   test: {

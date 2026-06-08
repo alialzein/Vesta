@@ -381,21 +381,34 @@ Deliverables:
 
 ## Phase 7 — AI Analysis
 
-Goal:
+Status: **Done (core analysis).** AI now reads each "waiting on you" thread and
+fills the work item's summary, category, refined priority, deadline, suggested next
+action, and user-visible reason — so the dashboard's Next Best Action / Why this
+matters / summary / ranking are real AI output, not heuristics. No migration
+(reused `ai_analyses` + existing `work_items` AI fields).
 
-- AI summarizes, classifies, prioritizes, detects deadlines, and suggests actions.
+- **Provider abstraction** (`lib/ai/`): provider + model + key read from env
+  (`AI_PROVIDER` / `AI_MODEL` / `AI_API_KEY`), so it's swappable without a deploy
+  (admin panel later). First adapter: **OpenAI** (`gpt-5.4-mini`); an Anthropic
+  adapter slots in unchanged.
+- **Prompt + output contract** (`lib/ai/context.ts`, `lib/ai/schema.ts`): sends the
+  latest message (HTML→text, quote-stripped, capped) + the Phase 6 thread state, so
+  long threads stay cheap; a defensive parser validates the JSON so a bad response
+  never breaks the dashboard. User-visible reasoning only — no chain-of-thought.
+- **Runs after sync** (`lib/ai/store.ts`, called from `lib/sync/outlook.ts`),
+  best-effort: only open Outlook items, **analyzed once per change**
+  (`last_analyzed_at` vs latest message), highest priority first.
+- **Cost/token tracking + budget caps:** each call's model, tokens, and cost are
+  written to `ai_analyses`; `AI_MAX_PER_RUN` (20) and `AI_MAX_PER_DAY` (200) bound
+  spend. Cost is computed from a price table or `AI_PRICE_INPUT`/`AI_PRICE_OUTPUT`
+  (set these for OpenAI rates). ~283 tokens/email in testing → cents/month.
 
-Deliverables:
+Deferred:
 
-- Prompt contracts.
-- Output schemas.
-- AI analysis queue.
-- Work item AI fields.
-- Cost/token tracking. (An `ai_usage` ledger — also feeds admin budgets; see
-  `docs/plans/admin-panel-plan.md`.)
-- **AI triage safety-net** — cost-aware AI second opinion on the ambiguous "gray
-  zone" so real human mail isn't wrongly hidden, without running AI over every
-  email. Design: `docs/plans/triage-ai-safety-net.md`.
+- **Suggested draft replies** → Phase 9 (with the approval + send flow).
+- **AI triage safety-net** — cost-aware second opinion on the ambiguous "gray zone"
+  so real human mail isn't wrongly hidden. Design: `docs/plans/triage-ai-safety-net.md`.
+- **`ai_usage` admin rollups / budgets UI** → admin panel (`docs/plans/admin-panel-plan.md`).
 
 ## Phase 8 — Manual Tasks and Reminders
 

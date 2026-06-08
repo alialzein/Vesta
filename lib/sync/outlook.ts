@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { analyzeMailboxWorkItems } from '@/lib/ai/store';
 import { getValidAccessToken } from '@/lib/graph/tokens';
 import {
   fetchRecentMessages,
@@ -726,6 +727,14 @@ async function runMailboxSync(
     service.from('mailboxes').update({ last_sync_at: syncedAt }).eq('id', ctx.mailboxId),
   ]);
 
+  // Phase 7 — AI-analyze the new/changed actionable items (best-effort; never
+  // breaks the sync, and no-ops when AI isn't configured).
+  try {
+    await analyzeMailboxWorkItems(db, { userId: ctx.userId, mailboxId: ctx.mailboxId });
+  } catch {
+    /* AI analysis is best-effort */
+  }
+
   return {
     ok: true,
     inbox: inbox.length,
@@ -838,5 +847,10 @@ export async function reprocessMailForUser(userId: string): Promise<SyncResult> 
   };
   const config = await loadTriageConfig(supabase, userId, mailbox.triage_mode);
   const { threads, workItems, hidden } = await processStoredMail(supabase, ctx, config);
+  try {
+    await analyzeMailboxWorkItems(supabase, { userId: ctx.userId, mailboxId: ctx.mailboxId });
+  } catch {
+    /* AI analysis is best-effort */
+  }
   return { ok: true, inbox: 0, sent: 0, threads, people: 0, workItems, hidden };
 }
