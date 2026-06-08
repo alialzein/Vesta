@@ -26,6 +26,11 @@ laptop), switching back and forth. Git is the single source of truth.
 3. Make small, reviewable changes.
 4. Prefer creating or updating tests in the same task.
 5. Update docs in the same task when behavior, schema, routes, AI prompts, or security rules change.
+5a. **Every user-facing feature must ship with a user guide in the same task.** When a
+   feature is done, create or update its plain-language guide under `docs/guides/`
+   (manager voice, no jargon) and add it to `docs/guides/README.md`. A feature is not
+   "done" until its guide exists. Keep guides in sync with the app — if they disagree,
+   the app is right and the guide must be fixed.
 6. Do not silently change architecture decisions.
 7. Ask before destructive changes.
 8. **Always get explicit confirmation before any database/schema change (a

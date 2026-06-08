@@ -142,7 +142,16 @@ function buildBrief(items: WorkItem[]): MorningBrief {
   };
 }
 
-export type DashboardData = { workItems: WorkItem[]; kpis: KpiMetric[]; brief: MorningBrief };
+export type DashboardData = {
+  workItems: WorkItem[];
+  kpis: KpiMetric[];
+  brief: MorningBrief;
+  /** Inbound mail triage hid in the last 7 days (drives the "review hidden" nudge). */
+  hiddenCount: number;
+};
+
+/** Window for the "X filtered this week" nudge. */
+const HIDDEN_NUDGE_DAYS = 7;
 
 /**
  * The signed-in manager's real Today dashboard data (RLS-scoped via the
@@ -151,13 +160,30 @@ export type DashboardData = { workItems: WorkItem[]; kpis: KpiMetric[]; brief: M
  */
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = createClient();
-  const { data } = await supabase
-    .from('work_items')
-    .select(WORK_ITEM_COLS)
-    .eq('status', 'open')
-    .order('priority_score', { ascending: false })
-    .order('updated_at', { ascending: false })
-    .limit(50);
+  const since = new Date(Date.now() - HIDDEN_NUDGE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from('work_items')
+      .select(WORK_ITEM_COLS)
+      .eq('status', 'open')
+      .order('priority_score', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .limit(50),
+    // Recently filtered mail, so the manager can self-correct without digging into
+    // Settings. Triage keeps hidden mail (excluded_at set), so this is cheap.
+    supabase
+      .from('email_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('direction', 'inbound')
+      .not('excluded_at', 'is', null)
+      .is('deleted_at', null)
+      .gte('received_at', since),
+  ]);
   const workItems = ((data ?? []) as WorkItemRow[]).map(toWorkItem);
-  return { workItems, kpis: buildKpis(workItems), brief: buildBrief(workItems) };
+  return {
+    workItems,
+    kpis: buildKpis(workItems),
+    brief: buildBrief(workItems),
+    hiddenCount: count ?? 0,
+  };
 }
