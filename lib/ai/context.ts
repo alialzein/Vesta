@@ -72,6 +72,16 @@ export function buildPrompt(input: AnalysisInput): { system: string; user: strin
     'Analyze ONE email thread and return ONLY a JSON object — no prose, no code fences.',
     'Be concise and concrete; write for the manager. Never invent facts not in the email.',
     'If no due date is stated or clearly implied, set deadline to null.',
+    [
+      'Category — pick the single best fit:',
+      '- "waiting": the manager owes the next reply or decision (the ball is in the manager\'s court).',
+      '- "followup": the manager is waiting on SOMEONE ELSE, or needs to chase/remind them.',
+      '- "decision": the manager must make an explicit choice or approval.',
+      '- "delegate": best handed off to a teammate.',
+      '- "fyi": informational only; no action needed.',
+      '- "critical": urgent AND high-stakes (use sparingly).',
+      'When the facts say the manager is the one who must reply, prefer "waiting" over "followup".',
+    ].join('\n'),
     `Return exactly this JSON shape:\n${ANALYSIS_JSON_HINT}`,
   ].join('\n');
 
