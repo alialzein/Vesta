@@ -4,10 +4,14 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-09 (Phase 9 — Draft Replies — merged to `main`)
-**Repo state:** `main`, clean and pushed. Phase 8 done; **Phase 9 (Draft Replies)
-merged** (commit `bcc93c2`) — 260 unit/component tests green, typecheck + lint + build
-clean. Verify live on a connected mailbox (see "Verify live (Phase 9)" below).
+**Last updated:** 2026-06-09 (Phase 9 — Draft Replies — DONE + verified live ✅)
+**Repo state:** `main`, clean and pushed (latest `6a7aa2f`). Phase 8 done; **Phase 9
+(Draft Replies) merged AND verified live** — sending a real threaded Outlook reply
+works end to end (generate → edit recipients/tone → Approve & Send → lands in Outlook
+→ item leaves the radar). 262 tests green, typecheck + lint + build clean.
+**Mailbox connection + `Mail.Send` grant live in Supabase (shared across laptops), so
+sending works on the home laptop too** — just recreate `.env.local` there (below).
+Next up: **Phase 10 — Memory & Rules** (see "Other open tracks").
 
 ---
 
@@ -46,21 +50,29 @@ auto-sent; every send audit-logged. **No migration** (reused Phase 1 `draft_repl
   Approve & Send). Opened from the AI rail Action/Draft tabs + the Morning Brief
   "Draft Replies" quick action. Dashboard loads existing drafts (`canDraft` / `draft`
   on `WorkItem`).
-- **Scopes**: added `Mail.Send`; `hasSendScope` gates the UI; Settings + composer show
-  **"Reconnect to enable sending"** for mailboxes connected pre-Phase 9.
-  `DRAFT_SEND_MODE=draft_only` → build an Outlook draft instead of sending.
+  - **Editable recipients**: To/Cc/Bcc show as chips with the real addresses — remove
+    any, add more (incl. Bcc); reply-all toggle re-seeds To/Cc. Send goes to exactly
+    the final list.
+- **Sending (`fix 6a7aa2f`)**: uses the Graph **`reply` action** (needs only
+  **`Mail.Send`**) with our composed HTML (reply + quoted original built from the
+  stored message) + the exact edited To/Cc/Bcc — one call, threaded, saved to Sent.
+  ⚠️ **Do NOT switch back to `createReply` for sending** — it creates a draft and needs
+  `Mail.ReadWrite` (that was the original "Outlook refused to send" 403). `createReply`
+  is used only by `DRAFT_SEND_MODE=draft_only` (which then needs `Mail.ReadWrite`).
+- **Scopes**: `Mail.Read` + `Mail.Send` (`lib/graph/oauth.ts`); `hasSendScope` gates the
+  UI; Settings + composer show **"Reconnect to enable sending"** for mailboxes connected
+  pre-Phase 9.
 - **Tests**: `lib/ai/__tests__/draft`, `lib/email/__tests__/reply`,
   `lib/graph/__tests__/send`, `components/__tests__/DraftComposer`; updated the rail +
   dashboard tests (old "Approve Draft" placeholder removed). Guide:
   `docs/guides/draft-replies.md`.
 
-### ⚠️ Verify live (Phase 9)
-- **Reconnect Outlook once** (to grant `Mail.Send`) — Settings → Outlook shows
-  "Sending replies: Reconnect to enable" until you do.
-- Select a waiting item → **Draft reply** → a draft appears → edit/tone/regenerate →
-  **Approve & Send** → confirm it lands in Outlook as a threaded reply and the item
-  leaves the radar. Try a sensitive-topic thread → expect the "Check before sending"
-  caution. Try `DRAFT_SEND_MODE=draft_only` → it should save to Outlook Drafts instead.
+### ✅ Verified live (Phase 9) — done on the work laptop 2026-06-09
+- Reconnected Outlook (granted `Mail.Send`) → Settings shows **"Sending replies:
+  Enabled"**. Generated a draft, edited it, **Approve & Send** → arrived in Outlook as a
+  threaded reply; item left the radar. Working end to end.
+- Optional re-checks on the home laptop if you want: a **sensitive-topic** thread
+  (expect the "Check before sending" caution) and **Bcc**/recipient removal.
 
 ## 🆕 Shipped earlier (all merged to `main`)
 
@@ -102,8 +114,8 @@ them** item (own category + Radar filter chip) instead of vanishing; it flips ba
 
 ## Other open tracks (pick next)
 
-- **Phase 9 — Draft replies — DONE** (this session; pending PR review/merge). Next up:
-- **Phase 10 — Memory & Rules** (the natural follow-on; drafting already reads tone
+- **Phase 9 — Draft replies — DONE + verified live.** ✅
+- **Phase 10 — Memory & Rules** (recommended next; drafting already reads tone
   memories, so deeper memory retrieval + a control UI fit here).
 - **Admin panel — Wave 1** (retention/purge, **initial-sync scan window** — default
   last 7 days, see `admin-panel-plan.md` §2 — AI usage UI + budgets + **reply-intent
@@ -112,10 +124,9 @@ them** item (own category + Radar filter chip) instead of vanishing; it flips ba
 
 ## ⚠️ Open reminders / TODO
 
-- ✉️ **Reconnect Outlook to enable sending (Phase 9).** Existing mailboxes were
-  connected with read-only scopes; reconnect once so `Mail.Send` is granted. Vercel +
-  Azure: ensure `Mail.Send` is on the app's delegated permissions. Optional:
-  `DRAFT_SEND_MODE=draft_only` to build Outlook drafts instead of sending.
+- ✅ **Reconnect Outlook for sending — DONE** (work laptop, 2026-06-09; `Mail.Send`
+  granted, send verified live). For **deployment**, ensure `Mail.Send` is on the Azure
+  app's delegated permissions so production can send too.
 - 🔑 **Rotate the OpenAI API key** — it appeared in chat (treat as exposed). Then
   update `.env.local` and Vercel.
 - 💲 Set `AI_PRICE_INPUT` / `AI_PRICE_OUTPUT` (gpt-5.4-mini USD per 1M tokens) so
