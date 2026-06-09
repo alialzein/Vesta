@@ -1,7 +1,8 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
-import type { Chip, KpiMetric, MorningBrief, WorkItem, WorkItemCategory } from '@/lib/types';
+import type { Chip, DraftView, KpiMetric, MorningBrief, WorkItem, WorkItemCategory } from '@/lib/types';
 import { encodeThreadId } from '@/lib/thread';
+import { toDraftView, ACTIVE_DRAFT_STATUSES, type DraftRow } from '@/lib/drafts/serialize';
 
 /**
  * Real dashboard data (Phase 6-derived). Maps the manager's `work_items` (the
@@ -100,12 +101,19 @@ function chipsFor(category: WorkItemCategory, score: number): Chip[] {
   return chips;
 }
 
-function toWorkItem(w: WorkItemRow, lastActivityAt?: string, unread?: boolean): WorkItem {
+function toWorkItem(
+  w: WorkItemRow,
+  lastActivityAt?: string,
+  unread?: boolean,
+  draft?: DraftView,
+): WorkItem {
   const category = (w.category ?? 'fyi') as WorkItemCategory;
   const score = w.priority_score ?? 0;
   const person = personFrom(w.urgency_reason);
   const due = dueOf(w.due_at, category);
   const summary = cleanPreview(w.summary) || w.urgency_reason?.trim() || 'Open item from your mailbox.';
+  // Only Outlook threads can be replied to; manual tasks have nothing to answer.
+  const canDraft = w.source === 'outlook' && !!w.source_external_id;
 
   return {
     id: w.id,
@@ -136,7 +144,11 @@ function toWorkItem(w: WorkItemRow, lastActivityAt?: string, unread?: boolean): 
           : category === 'waiting_on_them'
             ? `Follow up with ${person ?? 'them'} if you haven't heard back.`
             : 'Review the latest message and reply.'),
-    suggestedDraft: 'AI draft replies arrive in a later phase — open this thread in Outlook to reply.',
+    suggestedDraft:
+      draft?.bodyText ||
+      (canDraft
+        ? 'Generate an AI reply for this thread, then review and approve before it sends.'
+        : 'This is a task, not an email thread — there is nothing to reply to.'),
     riskChips: chipsFor(category, score),
     memoryUsed: [],
     activity: [
@@ -145,6 +157,8 @@ function toWorkItem(w: WorkItemRow, lastActivityAt?: string, unread?: boolean): 
       { label: 'Source', value: 'Outlook' },
       ...(w.due_at ? [{ label: 'Due', value: due.label.replace(/^Due /, '') }] : []),
     ],
+    canDraft,
+    draft,
   };
 }
 
@@ -248,11 +262,31 @@ export async function getDashboardData(): Promise<DashboardData> {
     }
   }
 
+  // Any already-generated/edited draft replies for these items, so the rail can
+  // show "draft ready" and the composer reopens with the saved text.
+  const itemIds = rows.map((r) => r.id);
+  const draftByItem = new Map<string, DraftView>();
+  if (itemIds.length > 0) {
+    const { data: drafts } = await supabase
+      .from('draft_replies')
+      .select('*')
+      .in('work_item_id', itemIds)
+      .in('status', [...ACTIVE_DRAFT_STATUSES])
+      .order('updated_at', { ascending: false });
+    // Newest-first, so the first draft seen per item is the live one.
+    for (const d of (drafts ?? []) as DraftRow[]) {
+      if (d.work_item_id && !draftByItem.has(d.work_item_id)) {
+        draftByItem.set(d.work_item_id, toDraftView(d));
+      }
+    }
+  }
+
   const workItems = rows.map((w) =>
     toWorkItem(
       w,
       w.source_external_id ? lastByConv.get(w.source_external_id) : undefined,
       w.source_external_id ? unreadByConv.get(w.source_external_id) : undefined,
+      draftByItem.get(w.id),
     ),
   );
   return { workItems, kpis: buildKpis(workItems), brief: buildBrief(workItems) };

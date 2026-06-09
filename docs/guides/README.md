@@ -23,6 +23,7 @@ manual. Each guide is self-contained and matches the product as it actually ship
 | [Inbox & Hidden mail](inbox-and-hidden.md) | Reading synced mail and reviewing what Vesta filtered out |
 | [Your dashboard & Priorities](priorities-and-dashboard.md) | Today's Radar, "Waiting on you", and how items are ranked |
 | [How Vesta's AI reads your email](ai-analysis.md) | What the AI produces (summary, priority, deadline, next action), what it reads, cost & privacy |
+| [Draft replies](draft-replies.md) | Let Vesta write a reply, edit it, and approve & send — nothing sends without you |
 | [Settings & appearance](settings-and-themes.md) | Managing your mailbox connection, filter mode, and light/dark theme |
 
 ## How the pieces fit together

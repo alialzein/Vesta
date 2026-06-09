@@ -37,6 +37,20 @@ export async function deleteTokens(integrationId: string): Promise<void> {
 }
 
 /**
+ * Whether this integration's stored token was granted the Mail.Send scope.
+ * Mailboxes connected before Phase 9 won't have it; the UI uses this to ask the
+ * manager to reconnect before sending. Microsoft may return scopes as short names
+ * ("Mail.Send") or resource-qualified URIs, so we match the suffix, case-insensitively.
+ */
+export async function hasSendScope(integrationId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { data } = await supabase.rpc('get_graph_token', { p_integration_id: integrationId });
+  const row = Array.isArray(data) ? data[0] : data;
+  const scopes: string[] = row?.granted_scopes ?? [];
+  return scopes.some((s) => /(^|[/.])mail\.send$/i.test(String(s).trim()));
+}
+
+/**
  * Return a valid access token for an integration, refreshing if needed.
  * Returns null if there are no stored tokens or no config.
  */

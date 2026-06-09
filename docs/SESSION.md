@@ -4,8 +4,10 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-09 (Phase 8 in progress)
-**Repo state:** `main`, clean — Phase 8 Slices A + B merged; Slice C (Waiting-on-them) NOT started.
+**Last updated:** 2026-06-09 (Phase 9 — Draft Replies — built; on a branch, pending review)
+**Repo state:** branch `feature/phase-9-draft-replies` (off `main`). Phase 8 done;
+Phase 9 (Draft Replies) implemented + tested (252 unit/component tests green, typecheck
+clean). **Not merged** — open a PR and review before merge.
 
 ---
 
@@ -25,7 +27,42 @@
   - Latest fix: corrected category direction (a person waiting on the manager →
     `waiting`; automated/no-reply/closed-ticket → `fyi`). Verified live.
 
-## 🆕 Shipped this session (all merged to `main`)
+## 🆕 Phase 9 — Draft Replies (this session, on `feature/phase-9-draft-replies`)
+
+Generate → edit → **approve** → send a threaded Outlook reply; draft-first, never
+auto-sent; every send audit-logged. **No migration** (reused Phase 1 `draft_replies`
++ `audit_logs`).
+
+- **AI**: `lib/ai/draft.ts` (prompt + parser: subject/body/tone/warnings/
+  requires_human_review; tone pulled from onboarding `manager_memories`). Pure helpers
+  `lib/email/reply.ts` (reply/reply-all recipients, HTML body compose, deterministic
+  sensitive-topic net). Graph send `lib/graph/send.ts` (createReply→PATCH body→send).
+- **Actions** `app/actions/drafts.ts`: `generateDraft` / `ensureBlankDraft` (manual /
+  AI-off path) / `saveDraft` / `sendDraft` / `discardDraft` / `loadDraftForItem`. Send
+  writes `audit_logs` (`email_sent`, service role) and marks the work item **done**
+  (resurfaces on reply).
+- **UI**: `components/dashboard/DraftComposer.tsx` (slide-over: recipients, reply-all,
+  subject, tone chips, instruction, editor, cautions, safety copy, Regenerate / Save /
+  Approve & Send). Opened from the AI rail Action/Draft tabs + the Morning Brief
+  "Draft Replies" quick action. Dashboard loads existing drafts (`canDraft` / `draft`
+  on `WorkItem`).
+- **Scopes**: added `Mail.Send`; `hasSendScope` gates the UI; Settings + composer show
+  **"Reconnect to enable sending"** for mailboxes connected pre-Phase 9.
+  `DRAFT_SEND_MODE=draft_only` → build an Outlook draft instead of sending.
+- **Tests**: `lib/ai/__tests__/draft`, `lib/email/__tests__/reply`,
+  `lib/graph/__tests__/send`, `components/__tests__/DraftComposer`; updated the rail +
+  dashboard tests (old "Approve Draft" placeholder removed). Guide:
+  `docs/guides/draft-replies.md`.
+
+### ⚠️ Verify live (Phase 9)
+- **Reconnect Outlook once** (to grant `Mail.Send`) — Settings → Outlook shows
+  "Sending replies: Reconnect to enable" until you do.
+- Select a waiting item → **Draft reply** → a draft appears → edit/tone/regenerate →
+  **Approve & Send** → confirm it lands in Outlook as a threaded reply and the item
+  leaves the radar. Try a sensitive-topic thread → expect the "Check before sending"
+  caution. Try `DRAFT_SEND_MODE=draft_only` → it should save to Outlook Drafts instead.
+
+## 🆕 Shipped earlier (all merged to `main`)
 
 - **Sync flag fix (`bb3cb74`)** — Graph delta updates (flag/read/importance) now land
   on already-stored messages; the insert-only upsert used to drop them, so a newly
@@ -63,9 +100,11 @@ them** item (own category + Radar filter chip) instead of vanishing; it flips ba
 - ⚠️ **Verify live:** reply to a thread asking a question → it should appear under the
   **Waiting on them** filter; a "thanks" reply should not.
 
-## Other open tracks (pick after Slice C)
+## Other open tracks (pick next)
 
-- **Phase 9 — Draft replies** (generate → edit → **approve** → send via Graph + audit).
+- **Phase 9 — Draft replies — DONE** (this session; pending PR review/merge). Next up:
+- **Phase 10 — Memory & Rules** (the natural follow-on; drafting already reads tone
+  memories, so deeper memory retrieval + a control UI fit here).
 - **Admin panel — Wave 1** (retention/purge, **initial-sync scan window** — default
   last 7 days, see `admin-panel-plan.md` §2 — AI usage UI + budgets + **reply-intent
   mode per user**, sync/cron health).
@@ -73,6 +112,10 @@ them** item (own category + Radar filter chip) instead of vanishing; it flips ba
 
 ## ⚠️ Open reminders / TODO
 
+- ✉️ **Reconnect Outlook to enable sending (Phase 9).** Existing mailboxes were
+  connected with read-only scopes; reconnect once so `Mail.Send` is granted. Vercel +
+  Azure: ensure `Mail.Send` is on the app's delegated permissions. Optional:
+  `DRAFT_SEND_MODE=draft_only` to build Outlook drafts instead of sending.
 - 🔑 **Rotate the OpenAI API key** — it appeared in chat (treat as exposed). Then
   update `.env.local` and Vercel.
 - 💲 Set `AI_PRICE_INPUT` / `AI_PRICE_OUTPUT` (gpt-5.4-mini USD per 1M tokens) so

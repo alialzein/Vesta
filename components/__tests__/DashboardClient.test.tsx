@@ -18,6 +18,16 @@ vi.mock('@/app/actions/work-items', () => ({
   createTaskWithAi: vi.fn(async () => ({ ok: true })),
 }));
 
+// The draft composer imports server-only draft actions; stub them so the client
+// shell renders in jsdom (their logic is covered by the drafts/email/graph tests).
+vi.mock('@/app/actions/drafts', () => ({
+  generateDraft: vi.fn(async () => ({ ok: true })),
+  ensureBlankDraft: vi.fn(async () => ({ ok: true })),
+  saveDraft: vi.fn(async () => ({ ok: true })),
+  sendDraft: vi.fn(async () => ({ ok: true })),
+  discardDraft: vi.fn(async () => ({ ok: true })),
+}));
+
 function renderDashboard() {
   return render(
     <ThemeProvider>
@@ -157,9 +167,9 @@ describe('DashboardClient shell', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    // Use the first visible "Approve Draft" action button in the rail.
-    await user.click(screen.getAllByRole('button', { name: /^Approve Draft$/i })[0]);
-    expect(screen.getByText(/AI draft replies arrive in Phase 9/i)).toBeInTheDocument();
+    // Use the first visible "Delegate" action button in the rail (a later phase).
+    await user.click(screen.getAllByRole('button', { name: /^Delegate$/i })[0]);
+    expect(screen.getByText(/delegation arrives in Phase 8/i)).toBeInTheDocument();
   });
 
   it('renders the full-page Memory & Rules workspace with category tabs and add form', async () => {

@@ -3,6 +3,7 @@ import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { requireUser, getProfile } from '@/lib/supabase/auth';
 import { getAccountView } from '@/lib/supabase/account';
 import { getDashboardData } from '@/lib/dashboard/data';
+import { getDraftCapabilities } from '@/lib/drafts/capabilities';
 
 /**
  * Protected dashboard route (Phase 2).
@@ -23,10 +24,11 @@ export default async function DashboardPage({
 
   // Validate the user once (requireUser/middleware are the security checkpoints),
   // then run the profile + account queries in parallel instead of sequentially.
-  const [profile, account, dashboard] = await Promise.all([
+  const [profile, account, dashboard, capabilities] = await Promise.all([
     getProfile(user),
     getAccountView(user),
     getDashboardData(),
+    getDraftCapabilities(),
   ]);
   if (!profile?.onboarded_at) {
     redirect('/onboarding');
@@ -45,6 +47,7 @@ export default async function DashboardPage({
       workItems={dashboard.workItems}
       kpis={dashboard.kpis}
       brief={dashboard.brief}
+      capabilities={capabilities}
     />
   );
 }

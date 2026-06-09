@@ -82,6 +82,10 @@ export type WorkItem = {
   memoryUsed: ManagerMemory[];
   /** Recent thread/activity facts (Activity tab). */
   activity: WorkItemActivity[];
+  /** Whether this item can be replied to (an Outlook thread, not a manual task). */
+  canDraft?: boolean;
+  /** An already-generated/edited draft reply for this item, if one exists. */
+  draft?: DraftView;
 };
 
 /** A single AI Command Center card (Clear My Day, Meeting Prep, …). */
@@ -113,6 +117,38 @@ export type KpiMetric = {
   tone: 'red' | 'amber' | 'blue' | 'green';
   /** Category this card maps onto for future click-to-filter behavior. */
   filter: WorkItemCategory;
+};
+
+/** A recipient on a draft reply (mirrors the stored jsonb shape). */
+export type DraftRecipient = { name?: string | null; email?: string | null };
+
+/**
+ * A draft reply as the dashboard/composer sees it (Phase 9). Mirrors a
+ * draft_replies row plus the AI cautions kept in its metadata. tone is a free
+ * string here (the server validates it against DRAFT_TONES).
+ */
+export type DraftView = {
+  id: string;
+  workItemId: string;
+  /** draft | edited | approved | sent | failed | discarded */
+  status: string;
+  subject: string;
+  bodyText: string;
+  tone: string;
+  warnings: string[];
+  /** Deterministic sensitive-topic labels (legal/finance/HR…) for an always-on caution. */
+  sensitiveTopics: string[];
+  requiresHumanReview: boolean;
+  to: DraftRecipient[];
+  cc: DraftRecipient[];
+  /** Bcc the manager added (a reply never inherits Bcc). */
+  bcc: DraftRecipient[];
+  replyAll: boolean;
+  /** Raw participants of the message being answered, so the composer can re-seed
+   *  To/Cc when the reply-all toggle flips. */
+  threadParticipants?: { from: DraftRecipient | null; to: DraftRecipient[]; cc: DraftRecipient[] };
+  /** The manager's own address (excluded from reply recipients). */
+  managerEmail?: string | null;
 };
 
 /** Mirrors manager_memories.memory_type. */

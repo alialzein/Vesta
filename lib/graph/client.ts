@@ -39,3 +39,54 @@ export async function graphGetUrl<T>(accessToken: string, url: string): Promise<
 export function getMe(accessToken: string): Promise<GraphMe> {
   return graphGet<GraphMe>(accessToken, '/me');
 }
+
+/** A Graph error we can branch on — notably 403 (missing the Mail.Send scope). */
+export class GraphRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly path: string,
+    readonly body: string,
+  ) {
+    super(`Graph ${path} failed (${status}): ${body}`);
+    this.name = 'GraphRequestError';
+  }
+}
+
+/** POST a JSON body and return the parsed response (used for createReply). */
+export async function graphPost<T>(accessToken: string, path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${GRAPH_BASE}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!res.ok) throw new GraphRequestError(res.status, path, await res.text());
+  return (await res.json()) as T;
+}
+
+/** POST with no response body expected (used for /send — returns 202 Accepted). */
+export async function graphPostNoContent(
+  accessToken: string,
+  path: string,
+  body?: unknown,
+): Promise<void> {
+  const res = await fetch(`${GRAPH_BASE}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new GraphRequestError(res.status, path, await res.text());
+}
+
+/** PATCH a JSON body with no meaningful response (used to set a draft's body). */
+export async function graphPatchNoContent(
+  accessToken: string,
+  path: string,
+  body: unknown,
+): Promise<void> {
+  const res = await fetch(`${GRAPH_BASE}${path}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new GraphRequestError(res.status, path, await res.text());
+}

@@ -426,17 +426,43 @@ Deliverables:
 
 ## Phase 9 — Draft Replies
 
-Goal:
+Status: **Done.** The manager can have Vesta **generate** a reply, **edit** it,
+**approve** it, and **send** it as a properly threaded Outlook reply — draft-first,
+never auto-sent. No migration (reused the Phase 1 `draft_replies` + `audit_logs`
+tables).
 
-- Manager can generate, edit, approve, and send draft replies.
+- **Generation** (`lib/ai/draft.ts`): a draft prompt + defensive parser following
+  the prompt contract (`subject` / `body_text` / `tone` / `warnings` /
+  `requires_human_review`). Sends only the latest inbound message + the manager's
+  tone/preference memories (data minimization); never invents facts; flags sensitive
+  topics. Cost tracked in `ai_analyses`.
+- **Composer** (`components/dashboard/DraftComposer.tsx`): a theme-aware slide-over
+  with recipients (reply / reply-all), subject, tone selector, a per-reply
+  instruction, a roomy editor, AI + deterministic sensitive-topic cautions, the
+  required safety copy, and **Regenerate / Save / Approve & Send**. Auto-generates on
+  open when AI is on; opens a blank editor (backed by a real draft row) when it's off,
+  so manual replies work too. Opened from the AI rail's Action/Draft tabs.
+- **Send** (`lib/graph/send.ts`): `createReply`/`createReplyAll` → PATCH the draft's
+  body (the manager's text above Graph's quoted original) → `send`. Preserves
+  threading, the "RE:" subject, recipients, and history. Pure recipient/body helpers
+  in `lib/email/reply.ts` (unit-tested); the send flow is mocked-tested.
+- **Approval + audit** (`app/actions/drafts.ts`): every send runs only on explicit
+  approval, writes an immutable `audit_logs` row (`email_sent`, service-write), and
+  marks the work item **done** (it resurfaces if the person replies). One active draft
+  per item; drafts persist (a "Draft ready" state on the radar).
+- **Scopes:** added `Mail.Send` (`lib/graph/oauth.ts`); `hasSendScope` detects
+  mailboxes connected before Phase 9 and the UI shows **"Reconnect to enable
+  sending"** (Settings + composer). `DRAFT_SEND_MODE=draft_only` builds an Outlook
+  draft instead of sending (no send scope needed).
+- Guide: `docs/guides/draft-replies.md`.
 
 Deliverables:
 
-- Draft editor.
-- Draft generation prompt.
-- Approval flow.
-- Send through Graph.
-- Audit logs.
+- Draft editor. ✅ (composer drawer; edit body/subject/recipients/tone)
+- Draft generation prompt. ✅ (`lib/ai/draft.ts` + parser + tests)
+- Approval flow. ✅ (explicit Approve & Send; no auto-send; sensitive-topic review)
+- Send through Graph. ✅ (threaded reply/reply-all with quoted history)
+- Audit logs. ✅ (`audit_logs` `email_sent`, service-write)
 
 ## Phase 10 — Memory and Rules
 

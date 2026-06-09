@@ -4,8 +4,12 @@
  * all users; each user gets their own token pair. Server-only.
  *
  * Scopes: offline_access (refresh token → auto-reconnect), User.Read (identity),
- * Mail.Read (read mail). Least-privilege for the read MVP; send scopes come with
- * draft replies (later, approval-gated).
+ * Mail.Read (read mail), Mail.Send (send approved draft replies — Phase 9; every
+ * send is still explicitly approved by the manager, never automatic).
+ *
+ * Mailboxes connected before Mail.Send was added won't have granted it; the app
+ * detects that (granted_scopes on the stored token) and asks the manager to
+ * reconnect once to enable sending.
  */
 
 export const GRAPH_SCOPES = [
@@ -15,7 +19,11 @@ export const GRAPH_SCOPES = [
   'offline_access',
   'User.Read',
   'Mail.Read',
+  'Mail.Send',
 ] as const;
+
+/** The scope required to send mail on the manager's behalf. */
+export const SEND_SCOPE = 'Mail.Send';
 
 export type GraphConfig = {
   clientId: string;
