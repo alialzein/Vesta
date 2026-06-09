@@ -12,8 +12,6 @@ import { useToast } from '@/components/ui/Toast';
 /** Honest "coming soon" feedback for actions that aren't built yet — tells the
  *  manager what the button will do and which phase it arrives in. */
 const SOON = {
-  draft:
-    'AI draft replies arrive in Phase 9 — Vesta writes a reply for you to review, edit, and approve. Nothing sends without you.',
   delegate: 'One-click delegation arrives in Phase 8.',
   snooze: 'Snooze & reminders arrive in Phase 8.',
   memory: 'Teaching Vesta memories & rules arrives in Phase 10.',
@@ -108,6 +106,8 @@ type AiAssistantRailProps = {
   onResolve?: (kind: 'done' | 'dismiss') => void;
   /** Phase 8 — snooze until an ISO timestamp; it returns when due. */
   onSnooze?: (untilIso: string) => void;
+  /** Phase 9 — open the draft-reply composer for this item. */
+  onOpenDraft?: () => void;
   /** Disables the action buttons while a resolve/snooze request is in flight. */
   busy?: boolean;
 };
@@ -119,6 +119,7 @@ export function AiAssistantRail({
   onCollapse,
   onResolve,
   onSnooze,
+  onOpenDraft,
   busy,
 }: AiAssistantRailProps) {
   const band = priorityBand(item.priorityScore);
@@ -235,9 +236,15 @@ export function AiAssistantRail({
       {/* Tab panels */}
       <div role="tabpanel" className="p-5">
         {activeTab === 'action' && (
-          <ActionTab item={item} onResolve={onResolve} onSnooze={onSnooze} busy={busy} />
+          <ActionTab
+            item={item}
+            onResolve={onResolve}
+            onSnooze={onSnooze}
+            onOpenDraft={onOpenDraft}
+            busy={busy}
+          />
         )}
-        {activeTab === 'draft' && <DraftTab item={item} />}
+        {activeTab === 'draft' && <DraftTab item={item} onOpenDraft={onOpenDraft} />}
         {activeTab === 'memory' && <MemoryTab item={item} />}
         {activeTab === 'activity' && <ActivityTab item={item} />}
       </div>
@@ -251,11 +258,13 @@ function ActionTab({
   item,
   onResolve,
   onSnooze,
+  onOpenDraft,
   busy,
 }: {
   item: WorkItem;
   onResolve?: (kind: 'done' | 'dismiss') => void;
   onSnooze?: (untilIso: string) => void;
+  onOpenDraft?: () => void;
   busy?: boolean;
 }) {
   const { showToast } = useToast();
@@ -365,11 +374,13 @@ function ActionTab({
         </div>
       )}
 
-      {/* AI actions — arrive in later phases (honest placeholders). */}
+      {/* AI actions — Draft reply is live (Phase 9); Delegate is a later phase. */}
       <div className="flex flex-wrap gap-[9px]">
-        <RailButton primary icon="check" onClick={() => showToast(SOON.draft)}>
-          Approve Draft
-        </RailButton>
+        {item.canDraft && (
+          <RailButton primary icon="edit" onClick={onOpenDraft}>
+            {item.draft ? 'Review draft' : 'Draft reply'}
+          </RailButton>
+        )}
         <RailButton icon="delegate" onClick={() => showToast(SOON.delegate)}>
           Delegate
         </RailButton>
@@ -421,17 +432,53 @@ function ContextCell({ label, value, icon }: { label: string; value: string; ico
   );
 }
 
-function DraftTab({ item }: { item: WorkItem }) {
-  const { showToast } = useToast();
+function DraftTab({ item, onOpenDraft }: { item: WorkItem; onOpenDraft?: () => void }) {
+  // Manual tasks / notes have no thread to answer.
+  if (!item.canDraft) {
+    return (
+      <div className="flex flex-col gap-[12px]">
+        <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+          Draft reply
+        </span>
+        <div className="rounded-[13px] border border-line bg-panel-solid p-[14px] text-[13px] leading-relaxed text-muted">
+          This item isn&apos;t an email thread, so there&apos;s nothing to reply to.
+        </div>
+      </div>
+    );
+  }
+
+  const hasDraft = !!item.draft;
+  const flagged = item.draft?.requiresHumanReview || (item.draft?.sensitiveTopics?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-[12px]">
-      <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-        Suggested draft
-      </span>
-      <div className="rounded-[13px] border border-dashed border-line-strong bg-panel-solid p-[14px] text-[13px] leading-relaxed text-ink-soft">
-        {item.suggestedDraft}
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+          {hasDraft ? 'Draft ready' : 'AI draft reply'}
+        </span>
+        {hasDraft && (
+          <span className="rounded-full bg-green-soft px-[8px] py-[2px] font-mono text-[10px] font-semibold uppercase tracking-wide text-green">
+            {item.draft?.status === 'edited' ? 'Edited' : 'Drafted'}
+          </span>
+        )}
       </div>
+
+      <div className="rounded-[13px] border border-line bg-panel-solid p-[14px] text-[13px] leading-relaxed text-ink-soft">
+        {hasDraft ? (
+          <span className="block max-h-[180px] overflow-hidden whitespace-pre-wrap">
+            {item.draft?.bodyText}
+          </span>
+        ) : (
+          'Vesta can write a reply to the latest message in this thread. You review and edit it, then approve — nothing sends without you.'
+        )}
+      </div>
+
+      {flagged && (
+        <p className="flex items-start gap-2 rounded-[10px] bg-amber-soft/60 px-3 py-2 text-[11.5px] leading-snug text-ink-soft">
+          <Icon name="info" className="mt-px h-[14px] w-[14px] flex-none text-amber" />
+          Flagged for careful review before sending.
+        </p>
+      )}
 
       {/* Safety copy — required by the UX spec. */}
       <p className="flex items-start gap-2 text-[11.5px] leading-snug text-muted">
@@ -440,11 +487,8 @@ function DraftTab({ item }: { item: WorkItem }) {
       </p>
 
       <div className="flex flex-wrap gap-[9px]">
-        <RailButton primary icon="check" onClick={() => showToast(SOON.draft)}>
-          Approve Draft
-        </RailButton>
-        <RailButton icon="edit" onClick={() => showToast(SOON.draft)}>
-          Edit
+        <RailButton primary icon="edit" onClick={onOpenDraft}>
+          {hasDraft ? 'Review & send' : 'Draft a reply'}
         </RailButton>
       </div>
     </div>

@@ -22,6 +22,7 @@ import { TodaysRadar, type RadarFilter } from './TodaysRadar';
 import { QuickAddTask } from './QuickAddTask';
 import { HowItWorks } from './HowItWorks';
 import { AiAssistantRail } from './AiAssistantRail';
+import { DraftComposer } from './DraftComposer';
 import { CollapsedRail } from './CollapsedRail';
 import { MemoryView } from './MemoryView';
 import { AssistantChat } from './AssistantChat';
@@ -33,6 +34,15 @@ import { DashboardAtmosphere } from './DashboardAtmosphere';
 import { AutoSync } from '@/components/sync/AutoSync';
 import { Icon } from '@/components/ui/Icon';
 import type { AccountView } from '@/lib/supabase/account';
+import type { DraftCapabilities } from '@/lib/drafts/capabilities';
+
+/** Safe default when capabilities aren't provided (component tests / demo). */
+const DEFAULT_CAPABILITIES: DraftCapabilities = {
+  aiEnabled: false,
+  mailboxConnected: false,
+  sendingEnabled: false,
+  sendMode: 'send',
+};
 
 /**
  * Demo feature flag (Phase 0.3): the large AI Command Center gradient cards are
@@ -59,6 +69,7 @@ export function DashboardClient({
   workItems = demoWorkItems,
   kpis = demoKpis,
   brief = demoMorningBrief,
+  capabilities = DEFAULT_CAPABILITIES,
 }: {
   account?: AccountView;
   /** Server decides (cookie-gated) so the splash plays once per session, not on
@@ -69,6 +80,8 @@ export function DashboardClient({
   workItems?: WorkItem[];
   kpis?: KpiMetric[];
   brief?: MorningBriefData;
+  /** Phase 9 — what the draft composer may do (AI on? sending enabled?). */
+  capabilities?: DraftCapabilities;
 } = {}) {
   const { showToast } = useToast();
 
@@ -102,6 +115,7 @@ export function DashboardClient({
   const [railTab, setRailTab] = useState<RailTab>('action');
   const [radarFilter, setRadarFilter] = useState<RadarFilter>('all');
   const [chatOpen, setChatOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   // Quick-action preview drawers (demo only).
   const [focusOpen, setFocusOpen] = useState(false);
@@ -167,6 +181,24 @@ export function DashboardClient({
     if (!selected) return;
     const id = selected.id;
     void applyItemAction(id, () => snoozeWorkItem(id, untilIso), 'Snoozed.');
+  }
+
+  /** Open the draft composer for the selected item (if it's a repliable thread). */
+  function openComposer() {
+    if (!selected?.canDraft) {
+      showToast('Pick an email thread to draft a reply.');
+      return;
+    }
+    setComposerOpen(true);
+  }
+
+  /** After a reply is sent, the server marks the item done — drop it off the radar. */
+  function handleSent(workItemId: string) {
+    setItems((prev) => {
+      const next = prev.filter((i) => i.id !== workItemId);
+      if (selected?.id === workItemId) setSelected(next[0]);
+      return next;
+    });
   }
 
   /** Quick-add a manual task; the radar refreshes from the server on success. */
@@ -264,10 +296,7 @@ export function DashboardClient({
                   onAction={(action) => {
                     if (action === 'focus')
                       showToast('Clear My Day / Focus Mode arrives in Phase 11.');
-                    else if (action === 'drafts')
-                      showToast(
-                        'AI draft replies arrive in Phase 9 — review & approve before anything sends.',
-                      );
+                    else if (action === 'drafts') openComposer();
                     else showToast('Meeting Prep arrives after calendar integration (Phase 12).');
                   }}
                 />
@@ -313,6 +342,7 @@ export function DashboardClient({
                   onCollapse={() => setRailCollapsed(true)}
                   onResolve={handleResolve}
                   onSnooze={handleSnooze}
+                  onOpenDraft={openComposer}
                   busy={actionBusy}
                 />
               )}
@@ -348,6 +378,15 @@ export function DashboardClient({
 
       {/* Chat drawer */}
       <AssistantChat open={chatOpen} onClose={() => setChatOpen(false)} />
+
+      {/* Draft reply composer (Phase 9) — generate, edit, approve & send. */}
+      <DraftComposer
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        item={selected ?? null}
+        capabilities={capabilities}
+        onSent={handleSent}
+      />
 
       {/* Quick-action preview drawers (demo only) */}
       <FocusModeDrawer open={focusOpen} onClose={() => setFocusOpen(false)} items={demoWorkItems} />

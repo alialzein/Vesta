@@ -52,13 +52,15 @@ aggressively AI is used here is a per-account setting (`pregate_ai` default,
   Which provider/model is used is a setting (today: OpenAI), changeable later without
   a code change.
 
-## What's not here yet
+## Writing replies
 
-The AI **analyzes** today; it does **not write replies** yet. Suggested draft
-replies — and sending them, always with your approval — arrive in a later phase. The
-"Approve Draft" button tells you so when clicked.
+The AI also **writes draft replies** for you — open the **Draft** tab (or the
+**Draft reply** button) on any waiting item and Vesta drafts a response in your tone.
+You review, edit, and **approve** it; nothing sends without you. See
+[Draft replies](draft-replies.md).
 
 ## Related
 
 - [Your dashboard & Priorities](priorities-and-dashboard.md)
+- [Draft replies](draft-replies.md)
 - [How Vesta filters your email](email-filtering.md)

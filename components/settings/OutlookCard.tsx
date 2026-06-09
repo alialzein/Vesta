@@ -20,6 +20,8 @@ export type OutlookStatus = {
   connectedAt: string | null;
   configured: boolean;
   triageMode: TriageMode;
+  /** The connected mailbox granted Mail.Send (Phase 9) — sending works without reconnecting. */
+  sendingEnabled: boolean;
 };
 
 /** The triage modes, in display order, with a short manager-facing description. */
@@ -188,6 +190,32 @@ export function OutlookCard({ status, notice }: { status: OutlookStatus; notice?
                   Review hidden mail →
                 </Link>
               </div>
+            </div>
+          )}
+
+          {status.connected && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px]">
+              <span className="inline-flex items-center gap-[6px] font-semibold text-ink-soft">
+                <Icon name="send" className="h-[14px] w-[14px] text-muted" />
+                Sending replies
+              </span>
+              {status.sendingEnabled ? (
+                <span className="rounded-full bg-green-soft px-[9px] py-[2px] font-semibold text-green">
+                  Enabled
+                </span>
+              ) : (
+                <>
+                  <span className="rounded-full bg-amber-soft px-[9px] py-[2px] font-semibold text-amber">
+                    Reconnect to enable
+                  </span>
+                  <a
+                    href="/api/outlook/connect"
+                    className="font-semibold text-accent underline-offset-2 hover:underline"
+                  >
+                    Reconnect Outlook →
+                  </a>
+                </>
+              )}
             </div>
           )}
 

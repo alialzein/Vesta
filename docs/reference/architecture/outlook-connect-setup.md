@@ -41,12 +41,22 @@ Azure Portal → **Microsoft Entra ID → App registrations → New registration
 ```txt
 offline_access   (refresh token → stay connected)
 User.Read        (identity / mailbox address)
-Mail.Read        (read mail — the MVP)
+Mail.Read        (read mail)
+Mail.Send        (send approved draft replies — Phase 9; never automatic)
 ```
 
 (`openid`, `profile`, `email` are included by default.) Click **Grant admin
 consent** if your tenant requires it; otherwise each user consents on first
-connect. Send scopes are added later with draft replies (approval-gated).
+connect. `Mail.Send` only ever sends a reply **after the manager explicitly
+approves it** in the draft composer — Vesta never auto-sends.
+
+> **Reconnect note.** Mailboxes connected **before** `Mail.Send` was added did not
+> grant it. Vesta detects this (it stores each token's granted scopes) and shows a
+> **"Reconnect to enable sending"** prompt in Settings → Outlook and in the draft
+> composer. Reconnecting once re-consents with the send scope; nothing else changes.
+> To run drafts **without** sending at all, set `DRAFT_SEND_MODE=draft_only` — Vesta
+> then builds the reply as an Outlook *draft* you finish/send yourself (no `Mail.Send`
+> needed).
 
 ## 4. Fill the env (`.env.local`)
 
@@ -89,4 +99,5 @@ verify a live Graph `/me` call. **Disconnect** removes the tokens + integration.
   the browser. Per-user tokens are encrypted (AES-256-GCM) and stored in the
   private schema, reachable only via service-role RPCs.
 - The redirect URI must match exactly (scheme, host, port, path).
-- Least privilege: read scopes only for now; nothing is sent without approval.
+- Least privilege: read + send scopes only. Sending happens **only** on explicit
+  per-reply approval and is recorded in `audit_logs` (action `email_sent`).

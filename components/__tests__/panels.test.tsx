@@ -74,25 +74,33 @@ describe('AiAssistantRail', () => {
     await user.click(screen.getByRole('tab', { name: /Draft/i }));
     expect(onTabChange).toHaveBeenCalledWith('draft');
 
-    // Render the draft tab and assert the required safety copy is present.
+    // Render the draft tab for a repliable thread; assert the required safety copy
+    // and the entry point into the composer are present.
+    const onOpenDraft = vi.fn();
     rerender(
       <ToastProvider>
-        <AiAssistantRail item={item} activeTab="draft" onTabChange={onTabChange} />
+        <AiAssistantRail
+          item={{ ...item, canDraft: true }}
+          activeTab="draft"
+          onTabChange={onTabChange}
+          onOpenDraft={onOpenDraft}
+        />
       </ToastProvider>,
     );
-    expect(screen.getByText(item.suggestedDraft)).toBeInTheDocument();
     expect(
       screen.getByText(/will not send emails without your explicit approval/i),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Draft a reply/i }));
+    expect(onOpenDraft).toHaveBeenCalled();
   });
 
-  it('shows an honest "coming soon" message when an action button is clicked', async () => {
+  it('shows an honest "coming soon" message when the Delegate action is clicked', async () => {
     const user = userEvent.setup();
     const item = demoWorkItems[0];
     renderWithToast(<AiAssistantRail item={item} activeTab="action" onTabChange={() => {}} />);
 
-    await user.click(screen.getByRole('button', { name: /^Approve Draft$/i }));
-    expect(screen.getByText(/AI draft replies arrive in Phase 9/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^Delegate$/i }));
+    expect(screen.getByText(/delegation arrives in Phase 8/i)).toBeInTheDocument();
   });
 
   it('lists the memory/rules used on the Memory tab', () => {

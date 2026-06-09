@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { isGraphConfigured } from '@/lib/graph/oauth';
+import { hasSendScope } from '@/lib/graph/tokens';
 import { OutlookCard, type OutlookStatus } from '@/components/settings/OutlookCard';
 import { ManagedSenders, type ManagedRule } from '@/components/settings/ManagedSenders';
 import { Icon } from '@/components/ui/Icon';
@@ -34,7 +35,7 @@ export default async function SettingsPage({
         .maybeSingle(),
       supabase
         .from('mailboxes')
-        .select('triage_mode')
+        .select('triage_mode, integration_id')
         .eq('provider', 'microsoft')
         .eq('status', 'active')
         .maybeSingle(),
@@ -45,12 +46,17 @@ export default async function SettingsPage({
       supabase.from('people').select('email, display_name').eq('is_vip', true),
     ]);
 
+  const connected = integration?.status === 'connected';
+  const sendingEnabled =
+    connected && mailbox?.integration_id ? await hasSendScope(mailbox.integration_id) : false;
+
   const status: OutlookStatus = {
-    connected: integration?.status === 'connected',
+    connected,
     email: integration?.provider_email ?? null,
     connectedAt: integration?.connected_at ?? null,
     configured: isGraphConfigured(),
     triageMode: (mailbox?.triage_mode as OutlookStatus['triageMode']) ?? 'focused',
+    sendingEnabled,
   };
 
   const managedRules: ManagedRule[] = (ruleRows ?? [])
