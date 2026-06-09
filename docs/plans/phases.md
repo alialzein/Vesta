@@ -437,23 +437,29 @@ tables).
   tone/preference memories (data minimization); never invents facts; flags sensitive
   topics. Cost tracked in `ai_analyses`.
 - **Composer** (`components/dashboard/DraftComposer.tsx`): a theme-aware slide-over
-  with recipients (reply / reply-all), subject, tone selector, a per-reply
+  with **editable To/Cc/Bcc** (real addresses as chips — remove any, add more incl.
+  Bcc), a reply-all toggle that re-seeds To/Cc, subject, tone selector, a per-reply
   instruction, a roomy editor, AI + deterministic sensitive-topic cautions, the
   required safety copy, and **Regenerate / Save / Approve & Send**. Auto-generates on
   open when AI is on; opens a blank editor (backed by a real draft row) when it's off,
   so manual replies work too. Opened from the AI rail's Action/Draft tabs.
-- **Send** (`lib/graph/send.ts`): `createReply`/`createReplyAll` → PATCH the draft's
-  body (the manager's text above Graph's quoted original) → `send`. Preserves
-  threading, the "RE:" subject, recipients, and history. Pure recipient/body helpers
-  in `lib/email/reply.ts` (unit-tested); the send flow is mocked-tested.
+- **Send** (`lib/graph/send.ts`): the Graph **`reply` action** (needs only
+  **`Mail.Send`**) with the composed HTML body (the manager's reply + the quoted
+  original, built from our stored copy of the message) and the **exact edited
+  To/Cc/Bcc**. One call, threaded, saved to Sent Items. We deliberately avoid
+  `createReply` for sending — it creates a *draft* and would need the broader
+  `Mail.ReadWrite` scope (it's used only by the optional draft-only mode). Pure
+  recipient/quote/body helpers in `lib/email/reply.ts` (unit-tested); the send flow is
+  mocked-tested.
 - **Approval + audit** (`app/actions/drafts.ts`): every send runs only on explicit
   approval, writes an immutable `audit_logs` row (`email_sent`, service-write), and
   marks the work item **done** (it resurfaces if the person replies). One active draft
   per item; drafts persist (a "Draft ready" state on the radar).
-- **Scopes:** added `Mail.Send` (`lib/graph/oauth.ts`); `hasSendScope` detects
-  mailboxes connected before Phase 9 and the UI shows **"Reconnect to enable
-  sending"** (Settings + composer). `DRAFT_SEND_MODE=draft_only` builds an Outlook
-  draft instead of sending (no send scope needed).
+- **Scopes:** added `Mail.Send` (`lib/graph/oauth.ts`) — sending uses the `reply`
+  action, which needs only that. `hasSendScope` detects mailboxes connected before
+  Phase 9 and the UI shows **"Reconnect to enable sending"** (Settings + composer).
+  `DRAFT_SEND_MODE=draft_only` builds an Outlook draft instead of sending — that path
+  uses `createReply` and so additionally needs the `Mail.ReadWrite` scope.
 - Guide: `docs/guides/draft-replies.md`.
 
 Deliverables:

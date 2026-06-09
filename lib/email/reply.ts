@@ -123,12 +123,53 @@ export function replyTextToHtml(text: string): string {
 
 /**
  * Compose the final HTML body sent to Graph: the manager's reply on top, then the
- * quoted original conversation (as returned by Graph's createReply) below it.
+ * quoted original conversation below it.
  */
 export function composeReplyHtml(replyText: string, quotedHtml: string | null | undefined): string {
   const top = replyTextToHtml(replyText);
   if (!quotedHtml) return top;
   return `${top}\n<br>\n${quotedHtml}`;
+}
+
+/** The original message we're answering, for building the quoted history block. */
+export type OriginalMessage = {
+  senderName?: string | null;
+  senderEmail?: string | null;
+  sentAt?: string | null;
+  subject?: string | null;
+  /** A display string of the original To recipients (names/emails joined). */
+  toLine?: string | null;
+  bodyHtml?: string | null;
+  bodyText?: string | null;
+};
+
+/**
+ * Build the quoted-original block (an Outlook-style "From/Sent/To/Subject" header
+ * plus the original body in a blockquote) from our stored copy of the message —
+ * so a reply sent via the `reply` action still carries the thread history, the way
+ * hitting Reply in Outlook would. Light inline styles keep it readable in both
+ * light and dark mail clients.
+ */
+export function buildQuotedOriginal(o: OriginalMessage): string {
+  const who = o.senderName?.trim() || o.senderEmail?.trim() || 'the sender';
+  const headerLines = [
+    `<b>From:</b> ${escapeHtml(who)}${o.senderEmail ? ` &lt;${escapeHtml(o.senderEmail)}&gt;` : ''}`,
+    o.sentAt ? `<b>Sent:</b> ${escapeHtml(new Date(o.sentAt).toUTCString())}` : '',
+    o.toLine ? `<b>To:</b> ${escapeHtml(o.toLine)}` : '',
+    o.subject ? `<b>Subject:</b> ${escapeHtml(o.subject)}` : '',
+  ]
+    .filter(Boolean)
+    .join('<br>');
+
+  const quotedBody =
+    o.bodyHtml && o.bodyHtml.trim()
+      ? o.bodyHtml
+      : `<p>${escapeHtml((o.bodyText ?? '').trim()).replace(/\n/g, '<br>')}</p>`;
+
+  return (
+    `<div style="border-top:1px solid #d0d0d0;margin-top:14px;padding-top:10px;color:#666;font-size:12px">${headerLines}</div>\n` +
+    `<blockquote style="margin:8px 0 0;padding-left:12px;border-left:2px solid #d0d0d0">${quotedBody}</blockquote>`
+  );
 }
 
 /**

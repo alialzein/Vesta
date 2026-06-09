@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildQuotedOriginal,
   buildReplyRecipients,
   composeReplyHtml,
   dedupeRecipients,
@@ -81,6 +82,34 @@ describe('replyTextToHtml / composeReplyHtml', () => {
 
   it('works with no quote', () => {
     expect(composeReplyHtml('Hi', null)).toBe('<p>Hi</p>');
+  });
+});
+
+describe('buildQuotedOriginal', () => {
+  it('builds a From/Sent/Subject header + a blockquote of the original body', () => {
+    const q = buildQuotedOriginal({
+      senderName: 'Maya Chen',
+      senderEmail: 'maya@acme.com',
+      sentAt: '2026-06-09T10:00:00Z',
+      subject: 'Q3 budget',
+      toLine: 'Ali',
+      bodyHtml: '<p>Please approve.</p>',
+    });
+    expect(q).toContain('Maya Chen');
+    expect(q).toContain('&lt;maya@acme.com&gt;');
+    expect(q).toContain('<b>Subject:</b> Q3 budget');
+    expect(q).toContain('<blockquote');
+    expect(q).toContain('<p>Please approve.</p>');
+  });
+
+  it('falls back to escaped plain text when there is no HTML body', () => {
+    const q = buildQuotedOriginal({ senderEmail: 'x@y.com', bodyText: 'line1\nline2' });
+    expect(q).toContain('line1<br>line2');
+  });
+
+  it('composeReplyHtml puts the reply above the quoted original', () => {
+    const out = composeReplyHtml('Approved.', buildQuotedOriginal({ bodyText: 'orig' }));
+    expect(out.indexOf('Approved')).toBeLessThan(out.indexOf('orig'));
   });
 });
 

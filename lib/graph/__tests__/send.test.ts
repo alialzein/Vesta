@@ -3,6 +3,12 @@ import { sendReply, createReplyDraft } from '../send';
 
 type Call = { url: string; method: string; body: unknown };
 
+const recipients = {
+  to: [{ name: 'Maya', email: 'maya@acme.com' }],
+  cc: [{ name: null, email: 'lee@acme.com' }],
+  bcc: [{ name: null, email: 'boss@acme.com' }],
+};
+
 /** Mock global fetch and record each call; return canned responses by URL suffix. */
 function mockGraph(): { calls: Call[] } {
   const calls: Call[] = [];
@@ -14,19 +20,12 @@ function mockGraph(): { calls: Call[] } {
         method: init?.method ?? 'GET',
         body: init?.body ? JSON.parse(init.body as string) : undefined,
       });
-      if (url.endsWith('/createReply') || url.endsWith('/createReplyAll')) {
-        return new Response(
-          JSON.stringify({
-            id: 'draft-123',
-            subject: 'RE: Q3 budget',
-            body: { contentType: 'html', content: '<div>quoted original</div>' },
-            toRecipients: [{ emailAddress: { name: 'Maya', address: 'maya@acme.com' } }],
-            ccRecipients: [],
-          }),
-          { status: 201 },
-        );
+      if (url.endsWith('/createReply')) {
+        return new Response(JSON.stringify({ id: 'draft-123', subject: 'RE: Q3 budget' }), {
+          status: 201,
+        });
       }
-      // PATCH body, /send → no content.
+      // /reply, PATCH → no content.
       return new Response(null, { status: 202 });
     }),
   );
@@ -35,55 +34,39 @@ function mockGraph(): { calls: Call[] } {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('sendReply', () => {
-  it('creates a reply draft, patches the body with reply + quote, then sends', async () => {
+describe('sendReply (reply action, Mail.Send only)', () => {
+  it('POSTs the reply action once with the HTML body + exact recipients', async () => {
     const { calls } = mockGraph();
-    const out = await sendReply('tok', 'msg-1', 'Approved — go ahead.', { replyAll: false });
+    const out = await sendReply('tok', 'msg-1', '<p>Approved.</p>', { recipients });
 
-    // Three Graph calls in order: createReply (POST), PATCH body, send (POST).
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe('POST');
-    expect(calls[0].url).toContain('/me/messages/msg-1/createReply');
-    expect(calls[1].method).toBe('PATCH');
-    expect(calls[1].url).toContain('/me/messages/draft-123');
-    expect(calls[2].method).toBe('POST');
-    expect(calls[2].url).toContain('/me/messages/draft-123/send');
+    expect(calls[0].url).toContain('/me/messages/msg-1/reply');
 
-    // The patched body has the reply ABOVE the quoted original.
-    const patched = (calls[1].body as { body: { content: string } }).body.content;
-    expect(patched.indexOf('Approved')).toBeLessThan(patched.indexOf('quoted original'));
-
-    expect(out.graphDraftId).toBe('draft-123');
-    expect(out.to).toEqual([{ name: 'Maya', email: 'maya@acme.com' }]);
-    expect(out.htmlSent).toContain('Approved');
-  });
-
-  it('uses createReplyAll when replyAll is set', async () => {
-    const { calls } = mockGraph();
-    await sendReply('tok', 'msg-1', 'Thanks all.', { replyAll: true });
-    expect(calls[0].url).toContain('/createReplyAll');
-  });
-
-  it('PATCHes the manager\'s edited To/Cc/Bcc onto the draft', async () => {
-    const { calls } = mockGraph();
-    const out = await sendReply('tok', 'msg-1', 'Hi', {
-      replyAll: false,
-      recipients: {
-        to: [{ name: 'Maya', email: 'maya@acme.com' }],
-        cc: [{ name: null, email: 'lee@acme.com' }],
-        bcc: [{ name: null, email: 'boss@acme.com' }],
-      },
-    });
-    const patch = calls[1].body as {
-      toRecipients: unknown[];
-      ccRecipients: unknown[];
-      bccRecipients: unknown[];
+    const body = calls[0].body as {
+      message: {
+        body: { contentType: string; content: string };
+        toRecipients: unknown[];
+        ccRecipients: unknown[];
+        bccRecipients: unknown[];
+      };
     };
-    expect(patch.toRecipients).toEqual([{ emailAddress: { address: 'maya@acme.com', name: 'Maya' } }]);
-    expect(patch.ccRecipients).toEqual([{ emailAddress: { address: 'lee@acme.com' } }]);
-    expect(patch.bccRecipients).toEqual([{ emailAddress: { address: 'boss@acme.com' } }]);
-    // The returned recipients reflect exactly what was sent.
-    expect(out.bcc).toEqual([{ name: null, email: 'boss@acme.com' }]);
+    expect(body.message.body).toEqual({ contentType: 'HTML', content: '<p>Approved.</p>' });
+    expect(body.message.toRecipients).toEqual([
+      { emailAddress: { address: 'maya@acme.com', name: 'Maya' } },
+    ]);
+    expect(body.message.ccRecipients).toEqual([{ emailAddress: { address: 'lee@acme.com' } }]);
+    expect(body.message.bccRecipients).toEqual([{ emailAddress: { address: 'boss@acme.com' } }]);
+
+    expect(out.graphDraftId).toBeNull();
+    expect(out.htmlSent).toBe('<p>Approved.</p>');
+    expect(out.bcc).toEqual(recipients.bcc);
+  });
+
+  it('does NOT call createReply (which would need Mail.ReadWrite)', async () => {
+    const { calls } = mockGraph();
+    await sendReply('tok', 'msg-1', '<p>hi</p>', { recipients });
+    expect(calls.some((c) => c.url.includes('createReply'))).toBe(false);
   });
 
   it('propagates a Graph error (e.g. 403 missing Mail.Send)', async () => {
@@ -91,16 +74,19 @@ describe('sendReply', () => {
       'fetch',
       vi.fn(async () => new Response('Access denied', { status: 403 })),
     );
-    await expect(sendReply('tok', 'msg-1', 'hi', { replyAll: false })).rejects.toThrow(/403/);
+    await expect(sendReply('tok', 'msg-1', '<p>hi</p>', { recipients })).rejects.toThrow(/403/);
   });
 });
 
-describe('createReplyDraft', () => {
-  it('creates + patches the draft but does NOT call send', async () => {
+describe('createReplyDraft (draft-only, Mail.ReadWrite)', () => {
+  it('creates a draft and PATCHes the body + recipients, without sending', async () => {
     const { calls } = mockGraph();
-    const out = await createReplyDraft('tok', 'msg-1', 'Draft only.', { replyAll: false });
-    expect(calls).toHaveLength(2); // createReply + PATCH, no /send
-    expect(calls.some((c) => c.url.endsWith('/send'))).toBe(false);
+    const out = await createReplyDraft('tok', 'msg-1', '<p>Draft.</p>', { recipients });
+
+    expect(calls).toHaveLength(2); // createReply + PATCH, no /reply, no /send
+    expect(calls[0].url).toContain('/createReply');
+    expect(calls[1].method).toBe('PATCH');
+    expect(calls.some((c) => c.url.endsWith('/reply') || c.url.endsWith('/send'))).toBe(false);
     expect(out.graphDraftId).toBe('draft-123');
   });
 });

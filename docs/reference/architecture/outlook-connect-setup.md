@@ -54,9 +54,10 @@ approves it** in the draft composer — Vesta never auto-sends.
 > grant it. Vesta detects this (it stores each token's granted scopes) and shows a
 > **"Reconnect to enable sending"** prompt in Settings → Outlook and in the draft
 > composer. Reconnecting once re-consents with the send scope; nothing else changes.
-> To run drafts **without** sending at all, set `DRAFT_SEND_MODE=draft_only` — Vesta
-> then builds the reply as an Outlook *draft* you finish/send yourself (no `Mail.Send`
-> needed).
+> Sending uses the Graph **`reply` action**, which needs only `Mail.Send`. To run
+> drafts **without** sending at all, set `DRAFT_SEND_MODE=draft_only` — Vesta then
+> builds the reply as an Outlook *draft* you finish/send yourself; that path uses
+> `createReply` and so needs **`Mail.ReadWrite`** instead of `Mail.Send`.
 
 ## 4. Fill the env (`.env.local`)
 

@@ -15,6 +15,8 @@ import { bodyForAi } from '@/lib/ai/context';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import {
   buildReplyRecipients,
+  buildQuotedOriginal,
+  composeReplyHtml,
   detectSensitiveTopics,
   dedupeRecipients,
   isValidEmail,
@@ -76,6 +78,20 @@ function recipientsJson(list: Recipient[]): Json {
 
 /** A recipient as the client sends it (plain serializable object). */
 export type RecipientInput = { name?: string | null; email?: string | null };
+
+/** The stored original-message fields needed to build the quoted reply body. */
+type OriginalForQuote = {
+  graph_message_id: string;
+  sender_name: string | null;
+  sender_email: string | null;
+  subject: string | null;
+  received_at: string | null;
+  sent_at: string | null;
+  to_recipients: unknown;
+  body_html: string | null;
+  body_text: string | null;
+  body_preview: string | null;
+};
 
 /** Keep only valid, de-duplicated email recipients from client-supplied input. */
 function sanitizeRecipients(list: RecipientInput[] | undefined): Recipient[] {
@@ -502,19 +518,37 @@ export async function sendDraft(
   }
   const recipients: ReplyRecipientsInput = { to, cc, bcc };
 
-  // The Graph id of the message we're replying to (stored at generation time).
-  let graphMessageId: string | null = null;
+  // The original message we're replying to (Graph id + fields for the quoted block).
+  let original: OriginalForQuote | null = null;
   if (draft.email_message_id) {
     const { data: m } = await db
       .from('email_messages')
-      .select('graph_message_id')
+      .select(
+        'graph_message_id, sender_name, sender_email, subject, received_at, sent_at, to_recipients, body_html, body_text, body_preview',
+      )
       .eq('id', draft.email_message_id)
       .maybeSingle();
-    graphMessageId = m?.graph_message_id ?? null;
+    original = (m as OriginalForQuote | null) ?? null;
   }
+  const graphMessageId = original?.graph_message_id ?? null;
   if (!graphMessageId) {
     return { ok: false, error: 'Could not find the original message to reply to. Try regenerating the draft.' };
   }
+
+  // Compose the final HTML body: the manager's reply on top + the quoted original
+  // (built from our stored copy, since the reply action doesn't add it for us).
+  const quoted = buildQuotedOriginal({
+    senderName: original?.sender_name,
+    senderEmail: original?.sender_email,
+    sentAt: original?.received_at ?? original?.sent_at,
+    subject: original?.subject,
+    toLine: (((original?.to_recipients as Recipient[] | null) ?? [])
+      .map((r) => r.name || r.email)
+      .filter(Boolean) as string[]).join(', '),
+    bodyHtml: original?.body_html,
+    bodyText: original?.body_text ?? original?.body_preview,
+  });
+  const replyHtml = composeReplyHtml(text, quoted);
 
   const mailbox = await getActiveMailbox(db);
   if (!mailbox) {
@@ -553,8 +587,8 @@ export async function sendDraft(
 
   try {
     const sent = draftOnly
-      ? await createReplyDraft(token, graphMessageId, text, { replyAll, recipients })
-      : await sendReply(token, graphMessageId, text, { replyAll, recipients });
+      ? await createReplyDraft(token, graphMessageId, replyHtml, { recipients })
+      : await sendReply(token, graphMessageId, replyHtml, { recipients });
 
     const nowIso = new Date().toISOString();
     await db
