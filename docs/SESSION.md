@@ -4,10 +4,10 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-09 (Phase 9 — Draft Replies — built; on a branch, pending review)
-**Repo state:** branch `feature/phase-9-draft-replies` (off `main`). Phase 8 done;
-Phase 9 (Draft Replies) implemented + tested (252 unit/component tests green, typecheck
-clean). **Not merged** — open a PR and review before merge.
+**Last updated:** 2026-06-09 (Phase 9 — Draft Replies — merged to `main`)
+**Repo state:** `main`, clean and pushed. Phase 8 done; **Phase 9 (Draft Replies)
+merged** (commit `bcc93c2`) — 260 unit/component tests green, typecheck + lint + build
+clean. Verify live on a connected mailbox (see "Verify live (Phase 9)" below).
 
 ---
 
@@ -27,7 +27,7 @@ clean). **Not merged** — open a PR and review before merge.
   - Latest fix: corrected category direction (a person waiting on the manager →
     `waiting`; automated/no-reply/closed-ticket → `fyi`). Verified live.
 
-## 🆕 Phase 9 — Draft Replies (this session, on `feature/phase-9-draft-replies`)
+## 🆕 Phase 9 — Draft Replies (merged to `main`, commit `bcc93c2`)
 
 Generate → edit → **approve** → send a threaded Outlook reply; draft-first, never
 auto-sent; every send audit-logged. **No migration** (reused Phase 1 `draft_replies`
