@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import type { KpiMetric, MorningBrief as MorningBriefData, RailTab, WorkItem } from '@/lib/types';
-import { resolveWorkItem, snoozeWorkItem, createManualTask } from '@/app/actions/work-items';
+import {
+  resolveWorkItem,
+  snoozeWorkItem,
+  createManualTask,
+  createTaskWithAi,
+} from '@/app/actions/work-items';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
 import { useToast } from '@/components/ui/Toast';
@@ -173,6 +178,16 @@ export function DashboardClient({
     });
   }
 
+  /** AI quick-capture (✨). Passes the manager's local time so dates resolve right. */
+  function handleAiAddTask(input: string) {
+    setActionBusy(true);
+    showToast('✨ Reading your note…');
+    void createTaskWithAi(input, new Date().toString()).then((res) => {
+      setActionBusy(false);
+      showToast(res.ok ? 'Task added.' : (res.error ?? 'Could not add the task.'));
+    });
+  }
+
   /** Quick actions — demo-only local behavior. */
   function handleCommand(cardId: string) {
     switch (cardId) {
@@ -263,7 +278,7 @@ export function DashboardClient({
 
                 <MetricsStrip metrics={kpis} />
 
-                <QuickAddTask onAdd={handleAddTask} busy={actionBusy} />
+                <QuickAddTask onAdd={handleAddTask} onAiAdd={handleAiAddTask} busy={actionBusy} />
 
                 <TodaysRadar
                   items={items}

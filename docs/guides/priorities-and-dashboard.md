@@ -40,11 +40,17 @@ type a plain line and press **Add task**:
 > at 3:00 PM**.
 
 Vesta reads the due date out of your words (no AI needed) — it understands **today**,
-**tomorrow**, **tonight**, **next week**, weekday names (**Friday**), **in 3 days**,
-and clock times (**3pm**, **9:30am**, **15:00**). A date with no time defaults to 9 AM.
-If it can't find a date, it just saves the task with no due date. Tasks appear on the
-Radar under the **Tasks** filter and support the same **Done / Snooze** actions as
-email items.
+**tomorrow** (typos like *tommorw* too), **tonight**, **next week**, weekday names
+(**Friday**), **in 3 days**, and clock times (**3pm**, **9:30am**, **15:00**). A date
+with no time defaults to 9 AM. If it can't find a date, it saves the task with no due
+date. Tasks appear on the Radar under the **Tasks** filter and support the same
+**Done / Snooze** actions as email items.
+
+**The ✨ AI button** (next to *Add task*) does more with messier notes: it reads your
+line with AI and figures out the **kind** (task, reminder, call, or meeting), the
+**person**, and the **time** — so "set up a 30-min call with Toufik next Tuesday
+afternoon" lands correctly. Plain "Add task" stays free/instant; ✨ uses one AI call,
+so it's there when you want the extra smarts.
 
 ## Acting on an item — Done, Dismiss, Snooze
 

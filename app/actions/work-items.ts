@@ -4,6 +4,20 @@ import { revalidatePath } from 'next/cache';
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { parseQuickTask } from '@/lib/tasks/parse';
+import { getAiConfig } from '@/lib/ai/config';
+import { getAiClient } from '@/lib/ai/client';
+import { buildCapturePrompt, parseCapture } from '@/lib/ai/quick-capture';
+import { estimateCostUsd } from '@/lib/ai/cost';
+
+/** Priority by how soon a task is due, so near-term tasks sort up the radar. */
+function priorityForDue(dueAt: string | null): number {
+  if (!dueAt) return 35;
+  const ms = new Date(dueAt).getTime() - Date.now();
+  if (ms <= 0) return 75;
+  if (ms <= 24 * 60 * 60 * 1000) return 65;
+  if (ms <= 3 * 24 * 60 * 60 * 1000) return 50;
+  return 40;
+}
 
 /**
  * Phase 8 — manager actions on a Today's Radar item. All are RLS-scoped (the
@@ -89,16 +103,6 @@ export async function createManualTask(input: string): Promise<WorkItemActionRes
   const { title, dueAt } = parseQuickTask(input);
   if (!title) return { ok: false, error: 'Please enter a task.' };
 
-  // Light priority by due proximity so near-term tasks sort up the radar.
-  let priority = 35;
-  if (dueAt) {
-    const ms = new Date(dueAt).getTime() - Date.now();
-    if (ms <= 0) priority = 75;
-    else if (ms <= 24 * 60 * 60 * 1000) priority = 65;
-    else if (ms <= 3 * 24 * 60 * 60 * 1000) priority = 50;
-    else priority = 40;
-  }
-
   const supabase = createClient();
   const { error } = await supabase.from('work_items').insert({
     user_id: user.id,
@@ -106,13 +110,92 @@ export async function createManualTask(input: string): Promise<WorkItemActionRes
     title,
     category: 'task',
     status: 'open',
-    priority_score: priority,
+    priority_score: priorityForDue(dueAt),
     due_at: dueAt,
     requires_reply: false,
     urgency_reason: dueAt ? 'Task you added.' : 'Task you added (no due date).',
     metadata: { origin: 'quick_add' },
   });
   if (error) return { ok: false, error: error.message };
+
+  revalidatePath('/');
+  return { ok: true };
+}
+
+/**
+ * AI quick-capture (the "✨" button). Turns free text into a structured task — clean
+ * title, kind (task/reminder/call/meeting), due time, person — with one AI call. If
+ * AI isn't configured or errors, it falls back to the deterministic createManualTask,
+ * so it never hard-fails. `localNow` is the manager's local time (carries their tz).
+ */
+export async function createTaskWithAi(
+  input: string,
+  localNow: string,
+): Promise<WorkItemActionResult> {
+  const user = await requireUser();
+  const text = input.trim();
+  if (!text) return { ok: false, error: 'Please enter a task.' };
+
+  const cfg = getAiConfig();
+  const client = getAiClient();
+  if (!cfg || !client) return createManualTask(text); // no AI → deterministic
+
+  const fallback = parseQuickTask(text);
+  let capture;
+  let usage;
+  try {
+    const prompt = buildCapturePrompt(text, localNow);
+    const res = await client.complete(prompt);
+    usage = res.usage;
+    capture = parseCapture(res.content, fallback.title || text);
+  } catch {
+    return createManualTask(text); // AI failed → deterministic
+  }
+
+  const dueAt = capture.dueAt ?? fallback.dueAt;
+  const kindLabel =
+    capture.kind === 'call'
+      ? 'Call'
+      : capture.kind === 'meeting'
+        ? 'Meeting'
+        : capture.kind === 'reminder'
+          ? 'Reminder'
+          : 'Task';
+  const who = capture.person ? ` with ${capture.person}` : '';
+
+  const supabase = createClient();
+  const { data: inserted, error } = await supabase
+    .from('work_items')
+    .insert({
+      user_id: user.id,
+      source: 'manual',
+      title: capture.title,
+      category: 'task',
+      status: 'open',
+      priority_score: priorityForDue(dueAt),
+      due_at: dueAt,
+      requires_reply: false,
+      urgency_reason: `${kindLabel}${who} you added.`,
+      metadata: { origin: 'ai_quick_add', kind: capture.kind, person: capture.person },
+    })
+    .select('id')
+    .single();
+  if (error) return { ok: false, error: error.message };
+
+  // Record the AI call for cost/usage tracking (best-effort).
+  if (usage && inserted) {
+    await supabase.from('ai_analyses').insert({
+      user_id: user.id,
+      work_item_id: inserted.id,
+      model: cfg.model,
+      prompt_version: 'capture-v1',
+      input_summary: text.slice(0, 500),
+      category: 'task',
+      token_input: usage.inputTokens,
+      token_output: usage.outputTokens,
+      cost_estimate_usd: estimateCostUsd(cfg.model, usage),
+    });
+  }
 
   revalidatePath('/');
   return { ok: true };

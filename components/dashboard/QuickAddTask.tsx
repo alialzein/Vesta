@@ -10,9 +10,12 @@ import { Icon } from '@/components/ui/Icon';
  */
 export function QuickAddTask({
   onAdd,
+  onAiAdd,
   busy = false,
 }: {
   onAdd: (input: string) => void;
+  /** AI capture (the ✨ button): structures the note with one AI call. */
+  onAiAdd?: (input: string) => void;
   busy?: boolean;
 }) {
   const [value, setValue] = useState('');
@@ -22,6 +25,12 @@ export function QuickAddTask({
     e.preventDefault();
     if (!canSubmit) return;
     onAdd(value.trim());
+    setValue('');
+  }
+
+  function aiAdd() {
+    if (!canSubmit || !onAiAdd) return;
+    onAiAdd(value.trim());
     setValue('');
   }
 
@@ -41,6 +50,18 @@ export function QuickAddTask({
         placeholder="Add a task — e.g. “Call the vendor tomorrow 3pm”"
         className="min-w-0 flex-1 bg-transparent text-[13.5px] text-ink placeholder:text-muted focus:outline-none"
       />
+      {onAiAdd && (
+        <button
+          type="button"
+          onClick={aiAdd}
+          disabled={!canSubmit}
+          title="Let AI structure this (a meeting, call, reminder…)"
+          className="inline-flex flex-none items-center gap-[5px] rounded-[10px] border border-accent/40 bg-accent-soft px-[11px] py-[7px] text-[12.5px] font-semibold text-accent transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Icon name="sparkle" className="h-[14px] w-[14px]" />
+          AI
+        </button>
+      )}
       <button
         type="submit"
         disabled={!canSubmit}
