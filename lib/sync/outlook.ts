@@ -685,6 +685,9 @@ async function processStoredMail(
         if (resolvedAt && latestInboundAt && latestInboundAt > resolvedAt) {
           update.status = 'open';
           update.completed_at = null;
+          // Adopt the current engine category: e.g. an AI-dismissed "waiting on them"
+          // item is now "waiting on you" because the recipient finally replied.
+          update.category = row.category;
         }
       }
       workItemUpdates.push(supabase.from('work_items').update(update).eq('id', id));

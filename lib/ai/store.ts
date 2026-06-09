@@ -1,10 +1,11 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/database.types';
-import { getAiConfig } from './config';
+import { getAiConfig, getReplyIntentMode } from './config';
 import { getAiClient } from './client';
 import { buildPrompt, bodyForAi } from './context';
 import { parseAnalysis, PROMPT_VERSION } from './schema';
+import { buildReplyIntentPrompt, parseReplyIntent } from './reply-intent';
 import { estimateCostUsd } from './cost';
 
 type DbClient = SupabaseClient<Database>;
@@ -31,6 +32,7 @@ export async function analyzeMailboxWorkItems(
   const cfg = getAiConfig();
   const client = getAiClient();
   if (!cfg || !client) return EMPTY;
+  const replyIntentMode = getReplyIntentMode();
 
   // Daily cap — count this user's analyses since local midnight (UTC-based here).
   const dayStart = new Date();
@@ -62,10 +64,105 @@ export async function analyzeMailboxWorkItems(
       skipped++;
       continue;
     }
-    // "Waiting on them" items are about the manager's OWN reply, not the latest
-    // inbound message this analyzer reads — leave them to their dedicated pass.
+    // "Waiting on them": confirm against the manager's OWN reply (not the latest
+    // inbound message the normal pass reads). Heuristic/off modes don't use AI here.
     if (w.category === 'waiting_on_them') {
-      skipped++;
+      if (replyIntentMode === 'heuristic' || replyIntentMode === 'off') {
+        skipped++;
+        continue;
+      }
+      const { data: wThread } = await db
+        .from('email_threads')
+        .select('latest_message_at, latest_outbound_at')
+        .eq('mailbox_id', ctx.mailboxId)
+        .eq('graph_conversation_id', w.source_external_id)
+        .maybeSingle();
+      const wLatestAt = wThread?.latest_outbound_at ?? wThread?.latest_message_at ?? null;
+      if (w.last_analyzed_at && wLatestAt && new Date(w.last_analyzed_at) >= new Date(wLatestAt)) {
+        skipped++;
+        continue;
+      }
+      const { data: outMsgs } = await db
+        .from('email_messages')
+        .select('subject, to_recipients, body_text, body_html, body_preview, sent_at')
+        .eq('mailbox_id', ctx.mailboxId)
+        .eq('graph_conversation_id', w.source_external_id)
+        .eq('direction', 'outbound')
+        .is('deleted_at', null)
+        .order('sent_at', { ascending: false })
+        .limit(1);
+      const om = outMsgs?.[0];
+      const recipientName =
+        (om?.to_recipients as Array<{ name?: string; email?: string }> | null)?.[0]?.name ?? null;
+      const intentPrompt = buildReplyIntentPrompt({
+        subject: om?.subject ?? w.title ?? null,
+        recipientName,
+        reply: bodyForAi({
+          body_text: om?.body_text,
+          body_html: om?.body_html,
+          body_preview: om?.body_preview,
+        }),
+      });
+
+      budget--;
+      try {
+        const { content, usage } = await client.complete(intentPrompt);
+        const intent = parseReplyIntent(content);
+        const cost = estimateCostUsd(cfg.model, usage);
+        const nowIso = new Date().toISOString();
+        await db.from('ai_analyses').insert({
+          user_id: w.user_id,
+          work_item_id: w.id,
+          model: cfg.model,
+          prompt_version: PROMPT_VERSION,
+          input_summary: intentPrompt.user.slice(0, 500),
+          output: intent as unknown as Json,
+          category: intent.expectsReply ? 'waiting_on_them' : 'fyi',
+          user_visible_reason: intent.reason,
+          token_input: usage.inputTokens,
+          token_output: usage.outputTokens,
+          cost_estimate_usd: cost,
+        });
+        if (intent.expectsReply) {
+          await db
+            .from('work_items')
+            .update({
+              summary: intent.summary,
+              suggested_action: intent.nextAction,
+              urgency_reason: intent.reason,
+              last_analyzed_at: nowIso,
+              analysis_version: 1,
+            })
+            .eq('id', w.id);
+        } else {
+          // AI says nothing is owed — drop it off the radar. It resurfaces (as a
+          // normal waiting item) if the recipient later replies (sync compares
+          // resolved_at vs the new inbound message).
+          await db
+            .from('work_items')
+            .update({
+              status: 'dismissed',
+              last_analyzed_at: nowIso,
+              analysis_version: 1,
+              metadata: {
+                awaiting: 'other',
+                resolved_at: nowIso,
+                resolved_kind: 'ai_no_reply_expected',
+              },
+            })
+            .eq('id', w.id);
+        }
+        analyzed++;
+      } catch (e) {
+        errors++;
+        await db.from('ai_analyses').insert({
+          user_id: w.user_id,
+          work_item_id: w.id,
+          model: cfg.model,
+          prompt_version: PROMPT_VERSION,
+          error: e instanceof Error ? e.message : 'Reply-intent analysis failed',
+        });
+      }
       continue;
     }
 

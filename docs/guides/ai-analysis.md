@@ -29,10 +29,20 @@ histories every time — so a 20-message thread costs about the same as a short 
 
 Automatically, **after each sync**. To keep it efficient and low-cost:
 
-- Only **waiting-on-you** items are analyzed.
+- Only **waiting-on-you** items are analyzed (plus a quick **reply-intent** check on
+  "Waiting on them" items — see below).
 - Each item is analyzed **once per change** — if nothing new arrived on a thread, it
   isn't re-analyzed.
 - Daily and per-sync **caps** bound how much is analyzed, so cost stays predictable.
+
+### "Waiting on them" reply-intent
+
+When you reply to a thread, Vesta decides whether your reply actually **expects a
+response** (so it becomes a *Waiting on them* item) or just closes the loop. A free
+heuristic skips the obvious "thanks/done" replies; only the plausible asks cost an AI
+call, which confirms and writes the follow-up note (or drops it if nothing's owed). How
+aggressively AI is used here is a per-account setting (`pregate_ai` default,
+`ai_always`, `heuristic`, or `off`).
 
 ## Cost & privacy
 

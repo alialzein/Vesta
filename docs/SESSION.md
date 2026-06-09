@@ -47,22 +47,21 @@
   Dismiss / Snooze**; add a task ("Call vendor tomorrow 3pm") and confirm it lands on
   the radar under **Tasks** with the right due time.
 
-## ▶ Next up — Phase 8 Slice C: "Waiting on them" (Q3) — DESIGNED, not built
+## ✅ Phase 8 Slice C: "Waiting on them" (Q3) — DONE
 
-When the manager replies asking for something, the item must NOT vanish — it should
-flip to **waiting on them** (manager owed a reply). Decisions already made:
-- **AI decides** reply-intent, but **default = deterministic pre-gate then AI** (skip
-  obvious "thanks/done" replies for free; AI judges only plausible asks). The mode
-  (`pregate_ai` | `ai_always` | `heuristic` | `off`) must be **env-driven now and
-  per-user admin-panel-controllable later** — add to `admin-panel-plan.md`.
-- Build steps: (1) `buildWorkItemDrafts` creates items for `isWaitingOnOther` threads
-  (engine already exposes this) gated by a pure reply-intent pre-gate; (2) the AI step
-  reads the **manager's reply** (not latest inbound) for these and confirms/demotes;
-  (3) the AI prompt already has a `followup` = "waiting on someone else" notion to
-  reuse. **OPEN DECISION:** taxonomy/surfacing — new `waiting_on_them` category + filter
-  (like `task`) vs. repurpose `followup`. Ask the owner before building.
-- Scoring note: for waiting-on-them, *older* = more concerning (opposite of the
-  recency boost in `scoreThread`) — adjust or let AI own the priority.
+When the manager replies asking for something, the thread now becomes a **Waiting on
+them** item (own category + Radar filter chip) instead of vanishing; it flips back to
+**Waiting on you** when the recipient replies.
+- **Detection:** pure pre-gate `lib/engine/replies.ts` gates creation in
+  `buildWorkItemDrafts` (`isWaitingOnOther`); scored so older = higher.
+- **AI confirm (part 2):** `lib/ai/reply-intent.ts` + the branch in `lib/ai/store.ts`
+  read the **manager's own reply**, confirm it expects a response (writes summary /
+  next-action) or **demote** (`status='dismissed'`, resurfaces if the recipient later
+  replies — the sync also re-adopts the engine category on resurface).
+- **Mode** `AI_REPLY_INTENT_MODE` = `pregate_ai` (default) | `ai_always` | `heuristic`
+  | `off`. Env now; per-user admin-panel control is in `admin-panel-plan.md`.
+- ⚠️ **Verify live:** reply to a thread asking a question → it should appear under the
+  **Waiting on them** filter; a "thanks" reply should not.
 
 ## Other open tracks (pick after Slice C)
 
