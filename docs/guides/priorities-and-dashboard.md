@@ -36,13 +36,18 @@ message, complete bodies, your replies marked **You**) — see
 Select an item to open the **AI rail** on the right. Under *Why this matters* you'll
 find three ways to clear it off your Radar:
 
-- **Mark done** — you've handled it. It leaves the Radar.
+- **Mark done** — you've handled it. It leaves the Radar and is recorded as
+  completed (for your Weekly Review later).
 - **Dismiss** — it didn't need you (e.g. an FYI or a closed-ticket notice). It leaves
-  the Radar, **but if that person replies again on the same thread, it comes back** —
-  so dismissing is safe; you won't miss a genuine follow-up. (To stop hearing from a
-  sender entirely, **mute** them in Settings instead.)
+  the Radar.
 - **Snooze** — hide it until later. Pick **Later today**, **Tomorrow**, or **Next
   week**, and it returns to the Radar on its own when the time comes.
+
+**Done and Dismiss both come back if the sender replies again** on that thread — new
+activity on a thread you closed needs you again, so you won't miss a genuine
+follow-up. The difference is only intent: *Done* = "I handled it" (counts toward what
+you got done); *Dismiss* = "this didn't need me". To stop hearing from a sender
+entirely, **mute** them in Settings instead.
 
 These update instantly. If something was a mistake, the action shows a confirmation
 and the item simply reappears on the next sync if it still needs you.

@@ -607,14 +607,16 @@ async function processStoredMail(
         update.priority_score = row.priority_score;
         update.urgency_reason = row.urgency_reason;
       }
-      // Resurface a dismissed thread when a newer inbound message has arrived since
-      // the manager dismissed it. (Snoozed/done are left as-is — only "dismiss"
-      // promises to return on reply.)
-      if (statusByExternal.get(conversationId) === 'dismissed') {
+      // Resurface a cleared thread (done OR dismissed) when a newer inbound message
+      // has arrived since the manager cleared it — new activity on a thread you
+      // closed needs you again. Snoozed is left to its timer.
+      const prevStatus = statusByExternal.get(conversationId);
+      if (prevStatus === 'dismissed' || prevStatus === 'done') {
         const resolvedAt = resolvedAtByExternal.get(conversationId);
         const latestInboundAt = latestInboundByConv.get(conversationId);
         if (resolvedAt && latestInboundAt && latestInboundAt > resolvedAt) {
           update.status = 'open';
+          update.completed_at = null;
         }
       }
       workItemUpdates.push(supabase.from('work_items').update(update).eq('id', id));

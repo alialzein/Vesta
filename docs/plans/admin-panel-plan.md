@@ -35,6 +35,14 @@ Today Vesta keeps a copy of all synced mail and only **soft-deletes** removed
 messages; there is **no automatic clean-up**, so storage grows forever. The panel
 owns the policy controls:
 
+- **Initial sync window (scan-back limit)** — when a mailbox first connects, only
+  import mail received within a bounded window (**default: last 7 days**) instead of
+  the entire inbox. A manager with 10k+ emails over a year should not pull and store
+  everything on day one (storage + the per-sync re-classification both scale with the
+  stored count). The window is **admin-panel-configurable** (per user or global
+  default), and a manager could later request a deeper back-fill. *Implementation: the
+  sync filters inbound messages older than the cutoff before storing them; the delta
+  cursor still advances so ongoing new mail flows normally.*
 - **Retention window** — configurable per user or global default (e.g. "keep mail
   for 6 / 12 / 24 months"). Mail older than the window is purged.
 - **Hard-delete of soft-deleted mail** — permanently clear rows marked
