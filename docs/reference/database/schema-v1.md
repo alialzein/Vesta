@@ -595,6 +595,61 @@ error
 created_at
 ```
 
+## Admin / operator (Admin Panel — Wave 1)
+
+Added by `supabase/migrations/20260609170001_admin_panel.sql`. All four tables are
+operator-only (RLS `is_admin()`); the app writes via the service role after an
+in-app admin check. `profiles` also gained `suspended`, `suspended_at`,
+`suspended_reason`, and the `role = 'admin'` convention. Helper:
+`public.is_admin(uid uuid default auth.uid())` (SECURITY DEFINER).
+
+### app_settings
+
+Purpose: global operator config (single row, `id = true`). Runtime reads these as
+defaults layered over env (NULL = "use env").
+
+```txt
+id boolean primary key (singleton)
+initial_scan_back_days, retention_months, soft_delete_grace_days
+ai_provider, ai_model, ai_model_analysis, ai_model_draft
+ai_max_per_run, ai_max_per_day, ai_price_input, ai_price_output
+ai_daily_cost_cap_usd, reply_intent_mode, draft_send_mode
+feature_flags jsonb
+updated_at, updated_by
+```
+
+### user_settings
+
+Purpose: per-user overrides of the global defaults.
+
+```txt
+user_id uuid primary key references profiles(id)
+initial_scan_back_days, retention_months
+reply_intent_mode, draft_send_mode
+ai_daily_cost_cap_usd, ai_paused, notes
+updated_at, updated_by
+```
+
+### ai_usage
+
+Purpose: unified per-call AI usage/cost ledger across all features (broader than
+`ai_analyses`). Service-write, admin-read.
+
+```txt
+id, user_id, feature (analysis|draft|reply_intent|brief|triage|other)
+provider, model, token_input, token_output, request_count
+cost_estimate_usd, work_item_id, error, metadata, created_at
+```
+
+### purge_jobs
+
+Purpose: audit of email retention / soft-delete / manual-wipe runs.
+
+```txt
+id, kind (retention|soft_delete|manual_wipe), user_id (null = global)
+status, rows_affected, params, error, created_by, started_at, finished_at
+```
+
 ### account_transfer_events
 
 Purpose: audit account/mailbox transfer or reattachment events.

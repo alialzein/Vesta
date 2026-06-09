@@ -1,9 +1,10 @@
 # Admin Panel — Plan (Operator Console)
 
-> **Status: design locked, not built yet.** This is the agreed plan for the internal
-> **admin / operator console**. Code is built in waves (see §7). Anything needing a
-> **new database table is proposed as SQL and approved first** (per `CLAUDE.md`),
-> separately from this doc — see §6.
+> **Status: Wave 1 BUILT ✅ (tabs 1–5) — Wave 2 pending.** The operator console ships
+> at `/admin` (role-gated; non-admins 404). Migration
+> `supabase/migrations/20260609170001_admin_panel.sql` adds the settings/usage/purge
+> tables + `is_admin()`. Guide: `docs/guides/admin-panel.md`. Wave 2 (tabs 6–8 +
+> impersonation) is still planned — see §7.
 
 The admin panel is for **us (the operators)**, not for managers using Vesta. It is a
 separate, **role-gated** surface at `/admin`, reachable only when

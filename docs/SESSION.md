@@ -4,16 +4,50 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-09 (Phase 9 — Draft Replies — DONE + verified live ✅)
-**Repo state:** `main`, clean and pushed (latest `6a7aa2f`). Phase 8 done; **Phase 9
-(Draft Replies) merged AND verified live** — sending a real threaded Outlook reply
-works end to end (generate → edit recipients/tone → Approve & Send → lands in Outlook
-→ item leaves the radar). 262 tests green, typecheck + lint + build clean.
-**Mailbox connection + `Mail.Send` grant live in Supabase (shared across laptops), so
-sending works on the home laptop too** — just recreate `.env.local` there (below).
-Next up: **Phase 10 — Memory & Rules** (see "Other open tracks").
+**Last updated:** 2026-06-09 (Admin Panel — Wave 1 — BUILT, on a branch ⏳)
+**Repo state:** Phases 0–9 done. **Admin Panel Wave 1 built on branch
+`feature/admin-panel-wave1`** (PR open) — the `/admin` operator console: Overview,
+Users, Mailboxes/Sync, Email/Retention, AI Control Center. 270 tests green, typecheck
++ lint + build clean.
+
+> ⚠️ **MIGRATION NOT YET APPLIED.** `supabase/migrations/20260609170001_admin_panel.sql`
+> is written but **not run** — I couldn't reach the DB from the work laptop (direct
+> host is IPv6-only; the pooler region is unknown and I won't brute-force it). **Apply
+> it before using `/admin`** (see "Apply the admin migration" below), then
+> `node scripts/grant-admin.mjs <your-login-email>`.
+
+Earlier this session: **Phase 9 (Draft Replies) merged AND verified live**. Mailbox
+connection + `Mail.Send` grant live in Supabase (shared across laptops).
 
 ---
+
+## 🔑 Apply the admin migration (do this first on a machine that can reach the DB)
+
+The migration adds `app_settings`, `user_settings`, `ai_usage`, `purge_jobs`,
+`is_admin()`, and `profiles.suspended`. Apply it **once** by either:
+
+- **Supabase SQL editor** (easiest): paste the contents of
+  `supabase/migrations/20260609170001_admin_panel.sql` and run; **or**
+- **Script** (from a network that can reach your DB):
+  `node scripts/apply-sql.mjs supabase/migrations/20260609170001_admin_panel.sql`
+  — for the IPv4 pooler add
+  `--host aws-0-<region>.pooler.supabase.com --port 5432 --user postgres.<project-ref>`
+  (find `<region>` in Supabase → Project Settings → Database → Connection pooling).
+
+Then grant yourself access: `node scripts/grant-admin.mjs <your-login-email>` and open
+`/admin`. (`scripts/apply-sql.mjs` needs the `pg` dev-dependency added this session;
+run `npm install` first.)
+
+## Admin Panel — Wave 1 (branch `feature/admin-panel-wave1`)
+
+`/admin` operator console, role-gated on `profiles.role='admin'` (non-admins get a
+404). Reuses login + splash + theme. Tabs: **Overview/Health**, **Users** (reset pw,
+make/revoke admin, suspend, hard-delete — typed confirm + audit-logged), **Mailboxes &
+Sync** (force sync, re-process), **Email & Retention** (scan-back/retention/grace
+policy, purge soft-deleted, apply retention, per-user wipe, storage-by-user), **AI
+Control Center** (usage ledger by feature/user, model + budget overrides, re-analyze).
+`lib/admin/*` + `app/(admin)/admin/*`. AI usage now recorded to `ai_usage` from
+`lib/ai/store.ts`. Wave 2 (Triage/Rules, Drafts, Audit, impersonation) still planned.
 
 ## Where we are
 
