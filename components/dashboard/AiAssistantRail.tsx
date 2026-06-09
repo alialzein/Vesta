@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import type { MemoryType, RailTab, WorkItem, WorkItemSource } from '@/lib/types';
 import { priorityBand } from '@/lib/priority';
@@ -94,6 +95,12 @@ type AiAssistantRailProps = {
   onTabChange: (tab: RailTab) => void;
   /** Collapses the rail to the slim icon strip. Optional (omitted on mobile). */
   onCollapse?: () => void;
+  /** Phase 8 — clear the item off the radar (done = handled, dismiss = FYI). */
+  onResolve?: (kind: 'done' | 'dismiss') => void;
+  /** Phase 8 — snooze until an ISO timestamp; it returns when due. */
+  onSnooze?: (untilIso: string) => void;
+  /** Disables the action buttons while a resolve/snooze request is in flight. */
+  busy?: boolean;
 };
 
 export function AiAssistantRail({
@@ -101,6 +108,9 @@ export function AiAssistantRail({
   activeTab,
   onTabChange,
   onCollapse,
+  onResolve,
+  onSnooze,
+  busy,
 }: AiAssistantRailProps) {
   const band = priorityBand(item.priorityScore);
 
@@ -215,7 +225,9 @@ export function AiAssistantRail({
 
       {/* Tab panels */}
       <div role="tabpanel" className="p-5">
-        {activeTab === 'action' && <ActionTab item={item} />}
+        {activeTab === 'action' && (
+          <ActionTab item={item} onResolve={onResolve} onSnooze={onSnooze} busy={busy} />
+        )}
         {activeTab === 'draft' && <DraftTab item={item} />}
         {activeTab === 'memory' && <MemoryTab item={item} />}
         {activeTab === 'activity' && <ActivityTab item={item} />}
@@ -226,8 +238,19 @@ export function AiAssistantRail({
 
 /* ------------------------------- Tab panels ------------------------------- */
 
-function ActionTab({ item }: { item: WorkItem }) {
+function ActionTab({
+  item,
+  onResolve,
+  onSnooze,
+  busy,
+}: {
+  item: WorkItem;
+  onResolve?: (kind: 'done' | 'dismiss') => void;
+  onSnooze?: (untilIso: string) => void;
+  busy?: boolean;
+}) {
   const { showToast } = useToast();
+  const [snoozeOpen, setSnoozeOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-[14px]">
@@ -288,7 +311,52 @@ function ActionTab({ item }: { item: WorkItem }) {
         </div>
       </div>
 
-      {/* Action buttons — demo feedback only. */}
+      {/* Manage — real Phase 8 actions: clear the item or snooze it. */}
+      {(onResolve || onSnooze) && (
+        <div className="flex flex-wrap items-center gap-[9px]">
+          {onResolve && (
+            <>
+              <RailButton icon="check" disabled={busy} onClick={() => onResolve('done')}>
+                Mark done
+              </RailButton>
+              <RailButton icon="close" disabled={busy} onClick={() => onResolve('dismiss')}>
+                Dismiss
+              </RailButton>
+            </>
+          )}
+          {onSnooze && (
+            <div className="relative">
+              <RailButton icon="snooze" disabled={busy} onClick={() => setSnoozeOpen((o) => !o)}>
+                Snooze
+              </RailButton>
+              {snoozeOpen && (
+                <div
+                  role="menu"
+                  className="absolute left-0 top-[calc(100%+6px)] z-10 flex min-w-[170px] flex-col overflow-hidden rounded-[12px] border border-line bg-panel-solid p-1 shadow-glow"
+                >
+                  {snoozeOptions().map((opt) => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setSnoozeOpen(false);
+                        onSnooze(opt.iso);
+                      }}
+                      className="flex items-center justify-between gap-3 rounded-[9px] px-[10px] py-[8px] text-left text-[12.5px] font-semibold text-ink-soft transition hover:bg-accent-soft hover:text-accent"
+                    >
+                      {opt.label}
+                      <span className="font-mono text-[10.5px] text-muted">{opt.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AI actions — arrive in later phases (honest placeholders). */}
       <div className="flex flex-wrap gap-[9px]">
         <RailButton primary icon="check" onClick={() => showToast(SOON.draft)}>
           Approve Draft
@@ -299,12 +367,39 @@ function ActionTab({ item }: { item: WorkItem }) {
         <RailButton icon="delegate" onClick={() => showToast(SOON.delegate)}>
           Delegate
         </RailButton>
-        <RailButton icon="snooze" onClick={() => showToast(SOON.snooze)}>
-          Snooze
-        </RailButton>
       </div>
     </div>
   );
+}
+
+/** Snooze presets shown in the rail menu. Computed at click time in the viewer's
+ *  local zone; the server stores the resulting absolute instant. */
+function snoozeOptions(): { label: string; hint: string; iso: string }[] {
+  const now = new Date();
+  const later = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+  const nextWeek = new Date(now);
+  nextWeek.setDate(now.getDate() + 7);
+  nextWeek.setHours(9, 0, 0, 0);
+  return [
+    {
+      label: 'Later today',
+      hint: later.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
+      iso: later.toISOString(),
+    },
+    {
+      label: 'Tomorrow',
+      hint: tomorrow.toLocaleDateString(undefined, { weekday: 'short' }) + ' 9 AM',
+      iso: tomorrow.toISOString(),
+    },
+    {
+      label: 'Next week',
+      hint: nextWeek.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      iso: nextWeek.toISOString(),
+    },
+  ];
 }
 
 /** A label/value cell in the rail header context grid. */
@@ -426,18 +521,21 @@ function RailButton({
   icon,
   primary = false,
   onClick,
+  disabled = false,
 }: {
   children: React.ReactNode;
   icon: IconName;
   primary?: boolean;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={[
-        'inline-flex items-center gap-[6px] rounded-[11px] px-[11px] py-[7px] text-[12px] font-semibold transition',
+        'inline-flex items-center gap-[6px] rounded-[11px] px-[11px] py-[7px] text-[12px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50',
         primary
           ? 'bg-gradient-to-br from-accent to-accent-2 text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] hover:brightness-110'
           : 'border border-line-strong bg-panel-solid text-ink hover:-translate-y-[2px] hover:border-accent hover:text-accent',

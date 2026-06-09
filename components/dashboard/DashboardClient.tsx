@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { KpiMetric, MorningBrief as MorningBriefData, RailTab, WorkItem } from '@/lib/types';
+import { resolveWorkItem, snoozeWorkItem } from '@/app/actions/work-items';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
 import { useToast } from '@/components/ui/Toast';
@@ -81,6 +82,12 @@ export function DashboardClient({
     }
   }, [showSplashInitially]);
 
+  // Local copy of the server's work items so radar actions (done/dismiss/snooze)
+  // can optimistically drop a card; re-synced whenever the server sends fresh data.
+  const [items, setItems] = useState<WorkItem[]>(workItems);
+  useEffect(() => setItems(workItems), [workItems]);
+  const [actionBusy, setActionBusy] = useState(false);
+
   const [selected, setSelected] = useState<WorkItem | undefined>(workItems[0]);
   const [view, setView] = useState<NavView>('today');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -103,9 +110,9 @@ export function DashboardClient({
   const onToday = view === 'today';
   // Real sidebar badge counts from the open work items (no fake numbers).
   const navCounts = {
-    today: workItems.length,
-    waiting: workItems.filter((i) => i.categories.includes('waiting')).length,
-    followup: workItems.filter((i) => i.categories.includes('followup')).length,
+    today: items.length,
+    waiting: items.filter((i) => i.categories.includes('waiting')).length,
+    followup: items.filter((i) => i.categories.includes('followup')).length,
   };
   const highPriority = selected ? priorityBand(selected.priorityScore) === 'red' : false;
   // When the expanded rail is showing on desktop, keep the chat FAB subtle.
@@ -115,6 +122,45 @@ export function DashboardClient({
   function expandRail(tab?: RailTab) {
     if (tab) setRailTab(tab);
     setRailCollapsed(false);
+  }
+
+  /** Optimistically remove an item, run the server action, roll back on failure. */
+  async function applyItemAction(
+    id: string,
+    run: () => Promise<{ ok: boolean; error?: string }>,
+    successMsg: string,
+  ) {
+    setActionBusy(true);
+    const prev = items;
+    const next = items.filter((i) => i.id !== id);
+    setItems(next);
+    if (selected?.id === id) setSelected(next[0]);
+    const res = await run();
+    setActionBusy(false);
+    if (res.ok) {
+      showToast(successMsg);
+    } else {
+      setItems(prev);
+      showToast(res.error ?? 'Could not update the item. Please try again.');
+    }
+  }
+
+  /** Clear the selected item off the radar (done = handled, dismiss = FYI). */
+  function handleResolve(kind: 'done' | 'dismiss') {
+    if (!selected) return;
+    const id = selected.id;
+    void applyItemAction(
+      id,
+      () => resolveWorkItem(id, kind),
+      kind === 'done' ? 'Marked done.' : 'Dismissed — it returns if they reply.',
+    );
+  }
+
+  /** Snooze the selected item until the chosen time; it returns when due. */
+  function handleSnooze(untilIso: string) {
+    if (!selected) return;
+    const id = selected.id;
+    void applyItemAction(id, () => snoozeWorkItem(id, untilIso), 'Snoozed.');
   }
 
   /** Quick actions — demo-only local behavior. */
@@ -208,7 +254,7 @@ export function DashboardClient({
                 <MetricsStrip metrics={kpis} />
 
                 <TodaysRadar
-                  items={workItems}
+                  items={items}
                   selectedId={selected?.id ?? null}
                   onSelect={setSelected}
                   filter={radarFilter}
@@ -238,6 +284,9 @@ export function DashboardClient({
                   activeTab={railTab}
                   onTabChange={setRailTab}
                   onCollapse={() => setRailCollapsed(true)}
+                  onResolve={handleResolve}
+                  onSnooze={handleSnooze}
+                  busy={actionBusy}
                 />
               )}
             </aside>

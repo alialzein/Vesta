@@ -22,10 +22,12 @@ type WorkItemRow = {
   due_at: string | null;
   source: string | null;
   source_external_id: string | null;
+  status: string | null;
+  snoozed_until: string | null;
 };
 
 const WORK_ITEM_COLS =
-  'id, title, summary, category, priority_score, urgency_reason, suggested_action, due_at, source, source_external_id';
+  'id, title, summary, category, priority_score, urgency_reason, suggested_action, due_at, source, source_external_id, status, snoozed_until';
 
 const CATEGORY_LABEL: Record<string, string> = {
   critical: 'Critical',
@@ -184,11 +186,18 @@ export async function getDashboardData(): Promise<DashboardData> {
   const { data } = await supabase
     .from('work_items')
     .select(WORK_ITEM_COLS)
-    .eq('status', 'open')
+    // Open items, plus snoozed ones whose snooze time has passed (those come back
+    // to the radar on their own — see the due filter below).
+    .in('status', ['open', 'snoozed'])
     .order('priority_score', { ascending: false })
     .order('updated_at', { ascending: false })
     .limit(50);
-  const rows = (data ?? []) as WorkItemRow[];
+  const now = Date.now();
+  const rows = ((data ?? []) as WorkItemRow[]).filter(
+    (r) =>
+      r.status !== 'snoozed' ||
+      (r.snoozed_until != null && new Date(r.snoozed_until).getTime() <= now),
+  );
 
   // Pull each thread's latest message time so rows/rail can show "last email" in
   // the manager's local time (work_items.updated_at is a sync timestamp, not the

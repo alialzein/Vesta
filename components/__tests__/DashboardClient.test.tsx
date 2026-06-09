@@ -9,6 +9,13 @@ import { ToastProvider } from '@/components/ui/Toast';
 // test stays isolated (its logic is covered by lib/sync/__tests__/auto.test.ts).
 vi.mock('@/components/sync/AutoSync', () => ({ AutoSync: () => null }));
 
+// The radar action server functions pull in server-only modules (React cache,
+// the Supabase server client). Stub them so the client shell renders in jsdom.
+vi.mock('@/app/actions/work-items', () => ({
+  resolveWorkItem: vi.fn(async () => ({ ok: true })),
+  snoozeWorkItem: vi.fn(async () => ({ ok: true })),
+}));
+
 function renderDashboard() {
   return render(
     <ThemeProvider>
