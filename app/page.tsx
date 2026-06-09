@@ -18,21 +18,28 @@ import { getDraftCapabilities } from '@/lib/drafts/capabilities';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { splash?: string };
+  searchParams: { splash?: string; app?: string };
 }) {
   const user = await requireUser();
 
-  // Validate the user once (requireUser/middleware are the security checkpoints),
-  // then run the profile + account queries in parallel instead of sequentially.
-  const [profile, account, dashboard, capabilities] = await Promise.all([
-    getProfile(user),
+  // Admins land on the operator console, not the manager dashboard. `?app=1` is the
+  // escape hatch (the console's "Back to app" link) so an admin can still view the
+  // manager app when they want. Checked before the dashboard queries run.
+  const profile = await getProfile(user);
+  if (profile?.role === 'admin' && searchParams?.app !== '1') {
+    redirect('/admin');
+  }
+  if (!profile?.onboarded_at) {
+    redirect('/onboarding');
+  }
+
+  // Run the remaining queries in parallel (the user is cache()-wrapped, so passing
+  // it down avoids extra getUser round-trips).
+  const [account, dashboard, capabilities] = await Promise.all([
     getAccountView(user),
     getDashboardData(),
     getDraftCapabilities(),
   ]);
-  if (!profile?.onboarded_at) {
-    redirect('/onboarding');
-  }
 
   // The branded splash plays once on login: the sign-in redirect lands here with
   // ?splash=1, which the dashboard consumes and strips from the URL on mount — so
