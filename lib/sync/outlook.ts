@@ -608,7 +608,7 @@ async function processStoredMail(
   const wantedIds = new Set(drafts.map((d) => d.conversationId));
   const { data: existing } = await supabase
     .from('work_items')
-    .select('id, source_external_id, last_analyzed_at, status, metadata')
+    .select('id, source_external_id, last_analyzed_at, status, metadata, category')
     .eq('mailbox_id', ctx.mailboxId)
     .eq('source', 'outlook');
   const idByExternal = new Map<string, string>();
@@ -621,12 +621,15 @@ async function processStoredMail(
   // replies again (dismiss = "handled for now", not a permanent mute).
   const statusByExternal = new Map<string, string | null>();
   const resolvedAtByExternal = new Map<string, string>();
+  // Prior category, so we can detect a change in WHO is waiting (see below).
+  const categoryByExternal = new Map<string, string | null>();
   const staleIds: string[] = [];
   for (const w of existing ?? []) {
     if (!w.source_external_id) continue;
     idByExternal.set(w.source_external_id, w.id);
     if (w.last_analyzed_at) aiOwned.add(w.id);
     statusByExternal.set(w.source_external_id, w.status ?? null);
+    categoryByExternal.set(w.source_external_id, w.category ?? null);
     const resolvedAt = (w.metadata as { resolved_at?: string } | null)?.resolved_at;
     if (resolvedAt) resolvedAtByExternal.set(w.source_external_id, resolvedAt);
     if (!wantedIds.has(w.source_external_id)) staleIds.push(w.id);
@@ -674,6 +677,21 @@ async function processStoredMail(
         update.category = row.category;
         update.priority_score = row.priority_score;
         update.urgency_reason = row.urgency_reason;
+      }
+      // A change in WHO is waiting — into or out of "waiting on them" — is an engine
+      // fact (the manager replied, or the other party replied) that the AI must NOT
+      // pin over. Force the engine fields and re-queue for AI, even when AI-owned;
+      // otherwise an item the manager already answered stays stuck as "waiting on you".
+      const prevCategory = categoryByExternal.get(conversationId);
+      const directionFlipped =
+        (prevCategory === 'waiting_on_them') !== (row.category === 'waiting_on_them');
+      if (directionFlipped) {
+        update.summary = row.summary;
+        update.category = row.category;
+        update.priority_score = row.priority_score;
+        update.urgency_reason = row.urgency_reason;
+        update.suggested_action = null;
+        update.last_analyzed_at = null; // let AI re-analyze the new state next pass
       }
       // Resurface a cleared thread (done OR dismissed) when a newer inbound message
       // has arrived since the manager cleared it — new activity on a thread you
