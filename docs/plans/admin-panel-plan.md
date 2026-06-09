@@ -88,6 +88,11 @@ This is critical because AI cost scales with usage and can surprise us.
   (and optionally clear stored analyses), plus see each item's `last_analyzed_at`,
   model, and prompt version. *(Today this is the `scripts/reanalyze-work-items.mjs`
   dev tool, which clears `last_analyzed_at` so the next sync re-runs AI.)*
+- **Reply-intent mode (per user)** — Phase 8 "Waiting on them" detection has a
+  cost/accuracy knob: `pregate_ai` (default — a free heuristic skips obvious
+  "thanks/done" replies, AI judges the rest), `ai_always` (AI on every reply, most
+  thorough + most cost), `heuristic` (no AI), or `off`. Set from env today
+  (`AI_REPLY_INTENT_MODE`); the panel should let an operator change it **per user**.
 - **Prompt versioning** — track which `prompt_version` produced each analysis so we
   can compare/roll back prompt changes (already stored on `ai_analyses`).
 - **Rate limits** to protect against runaway loops.

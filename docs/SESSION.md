@@ -4,8 +4,8 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-09 (end of session)
-**Repo state:** `main`, clean — all work merged.
+**Last updated:** 2026-06-09 (Phase 8 in progress)
+**Repo state:** `main`, clean — Phase 8 Slices A + B merged; Slice C (Waiting-on-them) NOT started.
 
 ---
 
@@ -25,24 +25,52 @@
   - Latest fix: corrected category direction (a person waiting on the manager →
     `waiting`; automated/no-reply/closed-ticket → `fyi`). Verified live.
 
+## 🆕 Shipped this session (all merged to `main`)
+
+- **Sync flag fix (`bb3cb74`)** — Graph delta updates (flag/read/importance) now land
+  on already-stored messages; the insert-only upsert used to drop them, so a newly
+  flagged email stayed hidden in flagged-only mode. Volatile fields updated per
+  message after the insert. Verified live (re-flagging an email now surfaces it).
+- **Phase 8 Slice A** — radar **Unread** dot; **Done / Dismiss / Snooze** actions in
+  the AI rail (`app/actions/work-items.ts`); a *dismissed OR done* thread **resurfaces**
+  when the sender replies again (sync compares `metadata.resolved_at` vs latest
+  inbound). Snooze presets + the dashboard re-surfaces snoozed items when due.
+- **Phase 8 Slice B** — **quick-add manual tasks** with deterministic NL date parsing
+  (`lib/tasks/parse.ts`, no AI), stored as `source='manual'`, new `task` category +
+  radar filter. Add-a-task box above the radar.
+- **Done vs Dismiss:** both clear the radar and both reopen on a new reply; *Done*
+  records a completion (for Weekly Review), *Dismiss* = "didn't need me".
+
 ## ✅ Verify first (next session)
 
-- Open the dashboard; confirm the 3 test items re-categorized: **Test 2 → Waiting on
-  you**, **TeamViewer + Meta → FYI** ("Waiting on You" KPI ≈ 1). `last_analyzed_at`
-  was cleared at end of last session, so the next sync re-analyzes with the fixed
-  prompt. If a category still looks wrong, tweak `lib/ai/context.ts` and re-run
-  `node scripts/reanalyze-work-items.mjs`.
+- The Phase 8 actions on the live dashboard: select a card → rail → **Mark done /
+  Dismiss / Snooze**; add a task ("Call vendor tomorrow 3pm") and confirm it lands on
+  the radar under **Tasks** with the right due time.
 
-## What's next (pick one)
+## ▶ Next up — Phase 8 Slice C: "Waiting on them" (Q3) — DESIGNED, not built
 
-- **Phase 8 — Manual tasks & reminders** (quick add, NL parser, snooze/done). The
-  rail's **Snooze** button currently says "Phase 8".
-- **Phase 9 — Draft replies** (generate → edit → **approve** → send via Graph +
-  audit). The rail's **Approve Draft / Edit** and **Draft Replies** say "Phase 9".
-- **Admin panel — Wave 1** (email retention/purge, AI usage UI + budgets,
-  re-analysis controls, sync/cron health). Plan: `docs/plans/admin-panel-plan.md`.
-- **AI polish** — show `ai_analyses` cost in the UI; a "Re-analyze" button (instead
-  of the script); optionally surface the AI reason distinctly.
+When the manager replies asking for something, the item must NOT vanish — it should
+flip to **waiting on them** (manager owed a reply). Decisions already made:
+- **AI decides** reply-intent, but **default = deterministic pre-gate then AI** (skip
+  obvious "thanks/done" replies for free; AI judges only plausible asks). The mode
+  (`pregate_ai` | `ai_always` | `heuristic` | `off`) must be **env-driven now and
+  per-user admin-panel-controllable later** — add to `admin-panel-plan.md`.
+- Build steps: (1) `buildWorkItemDrafts` creates items for `isWaitingOnOther` threads
+  (engine already exposes this) gated by a pure reply-intent pre-gate; (2) the AI step
+  reads the **manager's reply** (not latest inbound) for these and confirms/demotes;
+  (3) the AI prompt already has a `followup` = "waiting on someone else" notion to
+  reuse. **OPEN DECISION:** taxonomy/surfacing — new `waiting_on_them` category + filter
+  (like `task`) vs. repurpose `followup`. Ask the owner before building.
+- Scoring note: for waiting-on-them, *older* = more concerning (opposite of the
+  recency boost in `scoreThread`) — adjust or let AI own the priority.
+
+## Other open tracks (pick after Slice C)
+
+- **Phase 9 — Draft replies** (generate → edit → **approve** → send via Graph + audit).
+- **Admin panel — Wave 1** (retention/purge, **initial-sync scan window** — default
+  last 7 days, see `admin-panel-plan.md` §2 — AI usage UI + budgets + **reply-intent
+  mode per user**, sync/cron health).
+- **AI polish** — show `ai_analyses` cost in the UI; a "Re-analyze" button.
 
 ## ⚠️ Open reminders / TODO
 
