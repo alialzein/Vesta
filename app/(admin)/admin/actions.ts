@@ -307,3 +307,60 @@ export async function adminReanalyze(userId?: string): Promise<ActionResult> {
   revalidateAdmin();
   return ok(`Queued ${rows} item(s) for re-analysis on the next sync.`);
 }
+
+// ---------------------------------------------------------------------------
+// Wave 2 — Triage & Rules
+// ---------------------------------------------------------------------------
+export async function adminToggleRule(ruleId: string, enabled: boolean): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const svc = createServiceClient();
+  const { error } = await svc.from('manager_rules').update({ is_enabled: enabled }).eq('id', ruleId);
+  if (error) return fail(error.message);
+  await logAdminAction({ actorId: admin.id, action: 'toggle_rule', entityType: 'manager_rules', entityId: ruleId, after: { enabled } });
+  revalidateAdmin();
+  return ok(enabled ? 'Rule enabled.' : 'Rule disabled.');
+}
+
+export async function adminDeleteRule(ruleId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const svc = createServiceClient();
+  const { error } = await svc.from('manager_rules').delete().eq('id', ruleId);
+  if (error) return fail(error.message);
+  await logAdminAction({ actorId: admin.id, action: 'delete_rule', entityType: 'manager_rules', entityId: ruleId });
+  revalidateAdmin();
+  return ok('Rule deleted.');
+}
+
+export async function adminToggleMemory(memoryId: string, active: boolean): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const svc = createServiceClient();
+  const { error } = await svc.from('manager_memories').update({ is_active: active }).eq('id', memoryId);
+  if (error) return fail(error.message);
+  await logAdminAction({ actorId: admin.id, action: 'toggle_memory', entityType: 'manager_memories', entityId: memoryId, after: { active } });
+  revalidateAdmin();
+  return ok(active ? 'Memory activated.' : 'Memory deactivated.');
+}
+
+export async function adminDeleteMemory(memoryId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const svc = createServiceClient();
+  const { error } = await svc.from('manager_memories').delete().eq('id', memoryId);
+  if (error) return fail(error.message);
+  await logAdminAction({ actorId: admin.id, action: 'delete_memory', entityType: 'manager_memories', entityId: memoryId });
+  revalidateAdmin();
+  return ok('Memory deleted.');
+}
+
+// ---------------------------------------------------------------------------
+// Wave 2 — Drafts & Sending
+// ---------------------------------------------------------------------------
+/** Remove a draft (cleanup of errored/stale drafts). Never sends anything. */
+export async function adminDeleteDraft(draftId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const svc = createServiceClient();
+  const { error } = await svc.from('draft_replies').delete().eq('id', draftId);
+  if (error) return fail(error.message);
+  await logAdminAction({ actorId: admin.id, action: 'delete_draft', entityType: 'draft_replies', entityId: draftId });
+  revalidateAdmin();
+  return ok('Draft deleted.');
+}

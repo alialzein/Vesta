@@ -1,10 +1,11 @@
 # Admin Panel — Plan (Operator Console)
 
-> **Status: Wave 1 BUILT ✅ (tabs 1–5) — Wave 2 pending.** The operator console ships
-> at `/admin` (role-gated; non-admins 404). Migration
-> `supabase/migrations/20260609170001_admin_panel.sql` adds the settings/usage/purge
-> tables + `is_admin()`. Guide: `docs/guides/admin-panel.md`. Wave 2 (tabs 6–8 +
-> impersonation) is still planned — see §7.
+> **Status: Wave 1 + Wave 2 BUILT ✅ (tabs 1–8) — impersonation still deferred.** The
+> operator console ships at `/admin` (role-gated; non-admins 404). Admin access is the
+> Supabase **`app_metadata.is_admin`** claim (NOT `profiles.role`, which onboarding uses
+> for the job title). Migration `supabase/migrations/20260609170001_admin_panel.sql`
+> adds the settings/usage/purge tables. Guide: `docs/guides/admin-panel.md`. Only
+> **impersonation** ("view as user") remains deferred — see §1 tab 2.
 
 The admin panel is for **us (the operators)**, not for managers using Vesta. It is a
 separate, **role-gated** surface at `/admin`, reachable only when
@@ -147,8 +148,9 @@ work everywhere (per `CLAUDE.md`, non-negotiable).
 
 ## 3. Access control & security
 
-- Route group `app/(admin)/admin/...`, gated **twice**: middleware + a server check of
-  `profiles.role = 'admin'` on every admin server action / route.
+- Route group `app/(admin)/admin/...`, gated on the Supabase **`app_metadata.is_admin`**
+  auth claim (server-only, user-uneditable) on every admin route + server action.
+  *(Not `profiles.role` — onboarding writes the user's job title there.)*
 - Non-admins receive a **404** (not a redirect) so the surface isn't disclosed.
 - All admin **writes** go through server actions that re-verify the admin role and
   **audit-log** the action (actor, target, before/after).
@@ -231,8 +233,11 @@ Plus a scheduled **purge job** (extend the existing cron) and a **role** convent
 Each ships its **`loading.tsx`**, tests for logic, and is verified in **both themes**.
 Migrations (§6) are approved before the tabs that depend on them.
 
-**Wave 2 — full panel:**
-7. Triage & Rules · 8. Drafts & Sending · 9. Audit & Security · impersonation.
+**Wave 2 — full panel: ✅ BUILT**
+7. **Triage & Rules** (manager_rules + manager_memories toggle/delete, feedback_events
+   stream) · 8. **Drafts & Sending** (draft_replies oversight + KPIs + send mode, delete
+   stuck drafts) · 9. **Audit & Security** (audit_logs viewer + action filter, secrets
+   presence status, admins list). **Impersonation still deferred** (privacy-sensitive).
 
 ## 8. Deliverables (definition of done — per `CLAUDE.md`)
 
