@@ -1,12 +1,15 @@
 /**
  * Grant (or revoke) operator-console admin access by email.
- * Sets profiles.role = 'admin' so the user can reach /admin.
+ * Sets the Supabase auth claim app_metadata.is_admin (NOT profiles.role — that
+ * column is the user's job title, set by onboarding). Takes effect on the user's
+ * next request; a re-login is not required.
  *
  * Usage:
  *   node scripts/grant-admin.mjs <email>            # grant admin
- *   node scripts/grant-admin.mjs <email> --revoke   # revoke (role -> null)
+ *   node scripts/grant-admin.mjs <email> --revoke   # revoke
  *
  * Reads NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY from .env.local.
+ * Uses the Supabase admin API (HTTPS), so it works without direct DB access.
  */
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
@@ -29,18 +32,22 @@ if (!url || !serviceKey) {
 
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-const { data, error } = await db
-  .from('profiles')
-  .update({ role: revoke ? null : 'admin' })
-  .eq('email', email)
-  .select('id, email, role');
+const { data: list, error: listErr } = await db.auth.admin.listUsers({ perPage: 1000 });
+if (listErr) {
+  console.error('Failed to list users:', listErr.message);
+  process.exit(1);
+}
+const user = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+if (!user) {
+  console.error(`No auth user found with email "${email}". Has the user signed up yet?`);
+  process.exit(1);
+}
 
+const { error } = await db.auth.admin.updateUserById(user.id, {
+  app_metadata: { is_admin: !revoke },
+});
 if (error) {
   console.error('Failed:', error.message);
   process.exit(1);
 }
-if (!data || data.length === 0) {
-  console.error(`No profile found with email "${email}". Has the user signed up yet?`);
-  process.exit(1);
-}
-console.log(`✓ ${revoke ? 'Revoked admin from' : 'Granted admin to'} ${email} (role=${data[0].role ?? 'null'}).`);
+console.log(`✓ ${revoke ? 'Revoked admin from' : 'Granted admin to'} ${email} (app_metadata.is_admin=${!revoke}).`);

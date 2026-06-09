@@ -57,6 +57,7 @@ export async function getHealthOverview(): Promise<HealthOverview> {
     usageTodayRes,
     usageMonthRes,
     aiErrRes,
+    authListRes,
   ] = await Promise.all([
     svc.from('profiles').select('id, role, suspended'),
     svc.from('mailboxes').select('id').eq('status', 'active'),
@@ -76,8 +77,12 @@ export async function getHealthOverview(): Promise<HealthOverview> {
       .not('error', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5),
+    svc.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
+  const adminCount = (authListRes.data?.users ?? []).filter(
+    (u) => u.app_metadata?.is_admin === true,
+  ).length;
   const profiles = profilesRes.data ?? [];
   const cursors = cursorsRes.data ?? [];
   const lastSuccess = cursors
@@ -123,7 +128,7 @@ export async function getHealthOverview(): Promise<HealthOverview> {
   return {
     users: {
       total: profiles.length,
-      admins: profiles.filter((p) => p.role === 'admin').length,
+      admins: adminCount,
       suspended: profiles.filter((p) => p.suspended).length,
       connected: mailboxesRes.data?.length ?? 0,
     },
@@ -257,7 +262,8 @@ export type AdminUserRow = {
   id: string;
   email: string | null;
   fullName: string | null;
-  role: string | null;
+  role: string | null; // job title (from onboarding), display only
+  isAdmin: boolean; // operator-console access (app_metadata.is_admin)
   suspended: boolean;
   onboardedAt: string | null;
   createdAt: string;
@@ -281,9 +287,7 @@ export async function listUsers(): Promise<AdminUserRow[]> {
   for (const c of cursors ?? []) {
     if (c.resource_type === 'messages') lastSyncByUser.set(c.user_id, c.last_success_at);
   }
-  const signInById = new Map(
-    (authList.data?.users ?? []).map((u) => [u.id, u.last_sign_in_at ?? null]),
-  );
+  const authById = new Map((authList.data?.users ?? []).map((u) => [u.id, u]));
 
   // Message counts per user (one grouped pass).
   const { data: msgs } = await svc.from('email_messages').select('user_id');
@@ -291,19 +295,23 @@ export async function listUsers(): Promise<AdminUserRow[]> {
   for (const m of msgs ?? []) countByUser.set(m.user_id, (countByUser.get(m.user_id) ?? 0) + 1);
 
   return (profiles ?? [])
-    .map((p) => ({
-      id: p.id,
-      email: p.email,
-      fullName: p.full_name,
-      role: p.role,
-      suspended: p.suspended,
-      onboardedAt: p.onboarded_at,
-      createdAt: p.created_at,
-      lastSignInAt: signInById.get(p.id) ?? null,
-      connected: connectedUsers.has(p.id),
-      lastSyncAt: lastSyncByUser.get(p.id) ?? connectedUsers.get(p.id) ?? null,
-      messageCount: countByUser.get(p.id) ?? 0,
-    }))
+    .map((p) => {
+      const auth = authById.get(p.id);
+      return {
+        id: p.id,
+        email: p.email,
+        fullName: p.full_name,
+        role: p.role,
+        isAdmin: auth?.app_metadata?.is_admin === true,
+        suspended: p.suspended,
+        onboardedAt: p.onboarded_at,
+        createdAt: p.created_at,
+        lastSignInAt: auth?.last_sign_in_at ?? null,
+        connected: connectedUsers.has(p.id),
+        lastSyncAt: lastSyncByUser.get(p.id) ?? connectedUsers.get(p.id) ?? null,
+        messageCount: countByUser.get(p.id) ?? 0,
+      };
+    })
     .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1));
 }
 

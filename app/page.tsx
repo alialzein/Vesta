@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { requireUser, getProfile } from '@/lib/supabase/auth';
+import { isAdminUser } from '@/lib/admin/auth';
 import { getAccountView } from '@/lib/supabase/account';
 import { getDashboardData } from '@/lib/dashboard/data';
 import { getDraftCapabilities } from '@/lib/drafts/capabilities';
@@ -22,24 +23,25 @@ export default async function DashboardPage({
 }) {
   const user = await requireUser();
 
-  // Admins land on the operator console, not the manager dashboard. `?app=1` is the
-  // escape hatch (the console's "Back to app" link) so an admin can still view the
-  // manager app when they want. Checked before the dashboard queries run.
-  const profile = await getProfile(user);
-  if (profile?.role === 'admin' && searchParams?.app !== '1') {
+  // Admins land on the operator console, not the manager dashboard. Gated on the
+  // `app_metadata.is_admin` auth claim (NOT profiles.role — that's the job title,
+  // set by onboarding). `?app=1` is the escape hatch (the console's "Back to app"
+  // link) so an admin can still view the manager app. Checked before any DB query.
+  if (isAdminUser(user) && searchParams?.app !== '1') {
     redirect('/admin');
   }
-  if (!profile?.onboarded_at) {
-    redirect('/onboarding');
-  }
 
-  // Run the remaining queries in parallel (the user is cache()-wrapped, so passing
-  // it down avoids extra getUser round-trips).
-  const [account, dashboard, capabilities] = await Promise.all([
+  // Validate the user once (requireUser/middleware are the security checkpoints),
+  // then run the profile + account queries in parallel instead of sequentially.
+  const [profile, account, dashboard, capabilities] = await Promise.all([
+    getProfile(user),
     getAccountView(user),
     getDashboardData(),
     getDraftCapabilities(),
   ]);
+  if (!profile?.onboarded_at) {
+    redirect('/onboarding');
+  }
 
   // The branded splash plays once on login: the sign-in redirect lands here with
   // ?splash=1, which the dashboard consumes and strips from the URL on mount — so
