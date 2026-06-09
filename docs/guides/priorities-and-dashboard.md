@@ -31,6 +31,28 @@ click a **Priorities** row. That opens the full-screen conversation view (every
 message, complete bodies, your replies marked **You**) — see
 [Inbox & Hidden mail](inbox-and-hidden.md#opening-a-full-email--thread).
 
+## Acting on an item — Done, Dismiss, Snooze
+
+Select an item to open the **AI rail** on the right. Under *Why this matters* you'll
+find three ways to clear it off your Radar:
+
+- **Mark done** — you've handled it. It leaves the Radar.
+- **Dismiss** — it didn't need you (e.g. an FYI or a closed-ticket notice). It leaves
+  the Radar, **but if that person replies again on the same thread, it comes back** —
+  so dismissing is safe; you won't miss a genuine follow-up. (To stop hearing from a
+  sender entirely, **mute** them in Settings instead.)
+- **Snooze** — hide it until later. Pick **Later today**, **Tomorrow**, or **Next
+  week**, and it returns to the Radar on its own when the time comes.
+
+These update instantly. If something was a mistake, the action shows a confirmation
+and the item simply reappears on the next sync if it still needs you.
+
+## The "Unread" marker
+
+If the newest message in a thread is still **unread** in Outlook, its Radar card shows
+a small blue **Unread** dot — so you can tell at a glance what you haven't actually
+opened yet, separate from what you've read but not yet answered.
+
 ## How an item earns a spot
 
 Only mail that needs **you** becomes a dashboard/Priorities item. This is the second
