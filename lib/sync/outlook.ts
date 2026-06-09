@@ -540,7 +540,7 @@ async function processStoredMail(
   const wantedIds = new Set(drafts.map((d) => d.conversationId));
   const { data: existing } = await supabase
     .from('work_items')
-    .select('id, source_external_id, last_analyzed_at')
+    .select('id, source_external_id, last_analyzed_at, status, metadata')
     .eq('mailbox_id', ctx.mailboxId)
     .eq('source', 'outlook');
   const idByExternal = new Map<string, string>();
@@ -549,12 +549,26 @@ async function processStoredMail(
   // AI result is silently reverted. (When a thread changes, AI re-runs this sync and
   // refreshes them anyway.)
   const aiOwned = new Set<string>();
+  // Status + dismissal time, so a dismissed thread can resurface when the person
+  // replies again (dismiss = "handled for now", not a permanent mute).
+  const statusByExternal = new Map<string, string | null>();
+  const resolvedAtByExternal = new Map<string, string>();
   const staleIds: string[] = [];
   for (const w of existing ?? []) {
     if (!w.source_external_id) continue;
     idByExternal.set(w.source_external_id, w.id);
     if (w.last_analyzed_at) aiOwned.add(w.id);
+    statusByExternal.set(w.source_external_id, w.status ?? null);
+    const resolvedAt = (w.metadata as { resolved_at?: string } | null)?.resolved_at;
+    if (resolvedAt) resolvedAtByExternal.set(w.source_external_id, resolvedAt);
     if (!wantedIds.has(w.source_external_id)) staleIds.push(w.id);
+  }
+  // Latest inbound time per conversation (from the thread rows just built) — used
+  // to tell whether a dismissed thread has new activity since it was dismissed.
+  const latestInboundByConv = new Map<string, string | null>();
+  for (const t of threadRows) {
+    if (t.graph_conversation_id)
+      latestInboundByConv.set(t.graph_conversation_id, t.latest_inbound_at ?? null);
   }
   if (staleIds.length > 0) {
     await supabase.from('work_items').delete().in('id', staleIds);
@@ -592,6 +606,16 @@ async function processStoredMail(
         update.category = row.category;
         update.priority_score = row.priority_score;
         update.urgency_reason = row.urgency_reason;
+      }
+      // Resurface a dismissed thread when a newer inbound message has arrived since
+      // the manager dismissed it. (Snoozed/done are left as-is — only "dismiss"
+      // promises to return on reply.)
+      if (statusByExternal.get(conversationId) === 'dismissed') {
+        const resolvedAt = resolvedAtByExternal.get(conversationId);
+        const latestInboundAt = latestInboundByConv.get(conversationId);
+        if (resolvedAt && latestInboundAt && latestInboundAt > resolvedAt) {
+          update.status = 'open';
+        }
       }
       workItemUpdates.push(supabase.from('work_items').update(update).eq('id', id));
     } else {
