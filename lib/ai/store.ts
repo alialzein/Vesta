@@ -15,6 +15,40 @@ export type AnalyzeResult = { analyzed: number; skipped: number; errors: number 
 
 const EMPTY: AnalyzeResult = { analyzed: 0, skipped: 0, errors: 0 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Small deterministic nudge added to the AI's priority so items the model scores
+ * identically still rank by real signals (deadline proximity, repeat follow-ups,
+ * recency) instead of sitting at the same number. Range roughly [-5, +12].
+ */
+function priorityTiebreak(
+  deadline: string | null,
+  thread: {
+    latest_inbound_at?: string | null;
+    latest_message_at?: string | null;
+    inbound_after_last_outbound_count?: number | null;
+  } | null,
+  now: number,
+): number {
+  let d = 0;
+  if (deadline) {
+    const days = (new Date(`${deadline}T09:00:00Z`).getTime() - now) / DAY_MS;
+    if (days <= 1) d += 6;
+    else if (days <= 3) d += 3;
+    else if (days <= 7) d += 1;
+    else d -= 1;
+  }
+  d += Math.min((thread?.inbound_after_last_outbound_count ?? 0) * 2, 4);
+  const latest = thread?.latest_inbound_at ?? thread?.latest_message_at;
+  if (latest) {
+    const ageDays = (now - new Date(latest).getTime()) / DAY_MS;
+    if (ageDays <= 1) d += 2;
+    else if (ageDays > 7) d -= 2;
+  }
+  return d;
+}
+
 /**
  * Phase 7 — analyze the actionable work_items of one mailbox with AI and persist
  * the results. Runs after a sync. Cost-bounded:
@@ -213,6 +247,11 @@ export async function analyzeMailboxWorkItems(
       const analysis = parseAnalysis(content);
       const cost = estimateCostUsd(cfg.model, usage);
       const nowIso = new Date().toISOString();
+      // Spread out identical AI scores using deadline / follow-up / recency signals.
+      const blendedPriority = Math.max(
+        0,
+        Math.min(100, analysis.priority + priorityTiebreak(analysis.deadline, thread, Date.now())),
+      );
 
       const record: AnalysisInsert = {
         user_id: w.user_id,
@@ -235,7 +274,7 @@ export async function analyzeMailboxWorkItems(
         .update({
           summary: analysis.summary,
           category: analysis.category,
-          priority_score: analysis.priority,
+          priority_score: blendedPriority,
           suggested_action: analysis.nextAction,
           urgency_reason: analysis.reason,
           due_at: analysis.deadline ? `${analysis.deadline}T09:00:00Z` : null,
