@@ -194,15 +194,26 @@ export async function adminWipeUserMail(userId: string): Promise<ActionResult> {
 // ---------------------------------------------------------------------------
 // Users & Accounts
 // ---------------------------------------------------------------------------
-export async function adminSetRole(userId: string, role: 'admin' | 'user'): Promise<ActionResult> {
+/**
+ * Grant/revoke operator-console access via the `app_metadata.is_admin` auth claim
+ * (NOT profiles.role — that's the job title). Takes effect on the user's next
+ * request (getUser() returns fresh app_metadata; a re-login is not required).
+ */
+export async function adminSetAdmin(userId: string, makeAdmin: boolean): Promise<ActionResult> {
   const admin = await requireAdmin();
+  if (userId === admin.id && !makeAdmin) return fail('You cannot revoke your own admin access.');
   const svc = createServiceClient();
-  const value = role === 'admin' ? 'admin' : null;
-  const { error } = await svc.from('profiles').update({ role: value }).eq('id', userId);
+  const { error } = await svc.auth.admin.updateUserById(userId, {
+    app_metadata: { is_admin: makeAdmin },
+  });
   if (error) return fail(error.message);
-  await logAdminAction({ actorId: admin.id, action: 'set_role', targetUserId: userId, after: { role: value } });
+  await logAdminAction({
+    actorId: admin.id,
+    action: makeAdmin ? 'grant_admin' : 'revoke_admin',
+    targetUserId: userId,
+  });
   revalidateAdmin();
-  return ok(role === 'admin' ? 'Granted admin.' : 'Revoked admin.');
+  return ok(makeAdmin ? 'Granted admin access.' : 'Revoked admin access.');
 }
 
 export async function adminSuspendUser(

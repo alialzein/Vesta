@@ -4,24 +4,23 @@ import { ActionButton } from '@/components/admin/ActionButton';
 import {
   adminResetPassword,
   adminSuspendUser,
-  adminSetRole,
+  adminSetAdmin,
   adminDeleteUser,
 } from '@/app/(admin)/admin/actions';
 
 export function UserRowActions({
   userId,
   email,
-  role,
+  isAdmin,
   suspended,
   isSelf,
 }: {
   userId: string;
   email: string | null;
-  role: string | null;
+  isAdmin: boolean;
   suspended: boolean;
   isSelf: boolean;
 }) {
-  const isAdmin = role === 'admin';
   return (
     <div className="flex flex-wrap justify-end gap-1.5">
       <ActionButton
@@ -39,7 +38,7 @@ export function UserRowActions({
             ? 'Revoke operator-console (admin) access from this user?'
             : 'Grant operator-console (admin) access to this user?'
         }
-        run={() => adminSetRole(userId, isAdmin ? 'user' : 'admin')}
+        run={() => adminSetAdmin(userId, !isAdmin)}
       >
         {isAdmin ? 'Revoke admin' : 'Make admin'}
       </ActionButton>

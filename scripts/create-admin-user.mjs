@@ -32,17 +32,20 @@ if (!url || !serviceKey) {
 }
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-// 1) Create the auth user (email pre-confirmed so they can log in immediately).
+// Create the auth user with the admin claim. Email pre-confirmed so they can log
+// in immediately. Admin access lives in app_metadata.is_admin (NOT profiles.role,
+// which onboarding uses for the job title), so it can't be clobbered.
 let userId;
 const created = await db.auth.admin.createUser({
   email,
   password,
   email_confirm: true,
   user_metadata: { full_name: 'Vesta Admin' },
+  app_metadata: { is_admin: true },
 });
 
 if (created.error) {
-  // Likely already exists — find them in the user list and just (re)set admin.
+  // Likely already exists — find them and just (re)set the admin claim.
   if (/already/i.test(created.error.message)) {
     const { data: list } = await db.auth.admin.listUsers({ perPage: 1000 });
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase());
@@ -51,7 +54,7 @@ if (created.error) {
       process.exit(1);
     }
     userId = existing.id;
-    console.log(`User already existed — leaving password unchanged, ensuring admin role.`);
+    console.log('User already existed — leaving password unchanged, ensuring admin claim.');
   } else {
     console.error('Failed to create user:', created.error.message);
     process.exit(1);
@@ -61,13 +64,12 @@ if (created.error) {
   console.log(`Created auth user ${email}.`);
 }
 
-// 2) Ensure a profile row exists and is admin (the signup trigger usually makes
-//    the row; upsert is idempotent either way).
-const { error: upsertErr } = await db
-  .from('profiles')
-  .upsert({ id: userId, email, full_name: 'Vesta Admin', role: 'admin' }, { onConflict: 'id' });
-if (upsertErr) {
-  console.error('Created the user but failed to set admin role:', upsertErr.message);
+// Ensure the admin claim is set (idempotent — covers the already-existed path).
+const { error: claimErr } = await db.auth.admin.updateUserById(userId, {
+  app_metadata: { is_admin: true },
+});
+if (claimErr) {
+  console.error('Created the user but failed to set admin claim:', claimErr.message);
   process.exit(1);
 }
 

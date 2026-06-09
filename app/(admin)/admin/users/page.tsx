@@ -27,7 +27,7 @@ export default async function AdminUsersPage() {
           <thead>
             <tr>
               <Th>User</Th>
-              <Th>Role</Th>
+              <Th>Access</Th>
               <Th>State</Th>
               <Th>Mailbox</Th>
               <Th className="text-right">Mail</Th>
@@ -43,7 +43,13 @@ export default async function AdminUsersPage() {
                   <div className="font-medium text-ink">{u.email ?? u.id}</div>
                   {u.fullName && <div className="text-[11.5px] text-muted">{u.fullName}</div>}
                 </Td>
-                <Td>{u.role === 'admin' ? <Badge tone="accent">admin</Badge> : <span className="text-muted">user</span>}</Td>
+                <Td>
+                  {u.isAdmin ? (
+                    <Badge tone="accent">admin</Badge>
+                  ) : (
+                    <span className="text-muted">{u.role || 'user'}</span>
+                  )}
+                </Td>
                 <Td>
                   {u.suspended ? (
                     <Badge tone="bad">suspended</Badge>
@@ -67,7 +73,7 @@ export default async function AdminUsersPage() {
                   <UserRowActions
                     userId={u.id}
                     email={u.email}
-                    role={u.role}
+                    isAdmin={u.isAdmin}
                     suspended={u.suspended}
                     isSelf={u.id === admin.id}
                   />
