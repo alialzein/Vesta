@@ -90,7 +90,7 @@ function chipsFor(category: WorkItemCategory, score: number): Chip[] {
   return chips;
 }
 
-function toWorkItem(w: WorkItemRow, lastActivityAt?: string): WorkItem {
+function toWorkItem(w: WorkItemRow, lastActivityAt?: string, unread?: boolean): WorkItem {
   const category = (w.category ?? 'fyi') as WorkItemCategory;
   const score = w.priority_score ?? 0;
   const person = personFrom(w.urgency_reason);
@@ -107,6 +107,7 @@ function toWorkItem(w: WorkItemRow, lastActivityAt?: string): WorkItem {
         ? encodeThreadId(w.source_external_id)
         : undefined,
     lastActivityAt,
+    unread,
     person,
     summary,
     suggestedAction: w.suggested_action ?? undefined,
@@ -196,19 +197,42 @@ export async function getDashboardData(): Promise<DashboardData> {
     .filter((r) => r.source === 'outlook' && r.source_external_id)
     .map((r) => r.source_external_id as string);
   const lastByConv = new Map<string, string>();
+  // Unread state lives on the messages, not the thread: the latest INBOUND message's
+  // is_read tells the manager whether they've actually opened the newest reply.
+  const unreadByConv = new Map<string, boolean>();
   if (convIds.length > 0) {
-    const { data: threads } = await supabase
-      .from('email_threads')
-      .select('graph_conversation_id, latest_inbound_at, latest_message_at')
-      .in('graph_conversation_id', convIds);
+    const [{ data: threads }, { data: inbound }] = await Promise.all([
+      supabase
+        .from('email_threads')
+        .select('graph_conversation_id, latest_inbound_at, latest_message_at')
+        .in('graph_conversation_id', convIds),
+      supabase
+        .from('email_messages')
+        .select('graph_conversation_id, is_read, received_at')
+        .in('graph_conversation_id', convIds)
+        .eq('direction', 'inbound')
+        .is('deleted_at', null)
+        .order('received_at', { ascending: false }),
+    ]);
     for (const t of threads ?? []) {
       const at = t.latest_inbound_at ?? t.latest_message_at;
       if (t.graph_conversation_id && at) lastByConv.set(t.graph_conversation_id, at);
     }
+    // Rows arrive newest-first, so the first one seen per conversation is the latest
+    // inbound message — its read state is the one that matters.
+    for (const m of inbound ?? []) {
+      if (m.graph_conversation_id && !unreadByConv.has(m.graph_conversation_id)) {
+        unreadByConv.set(m.graph_conversation_id, m.is_read === false);
+      }
+    }
   }
 
   const workItems = rows.map((w) =>
-    toWorkItem(w, w.source_external_id ? lastByConv.get(w.source_external_id) : undefined),
+    toWorkItem(
+      w,
+      w.source_external_id ? lastByConv.get(w.source_external_id) : undefined,
+      w.source_external_id ? unreadByConv.get(w.source_external_id) : undefined,
+    ),
   );
   return { workItems, kpis: buildKpis(workItems), brief: buildBrief(workItems) };
 }

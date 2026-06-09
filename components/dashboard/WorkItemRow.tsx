@@ -65,6 +65,15 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
       <span className="min-w-0">
         {/* Source + person + last-email time — quiet, low-contrast, no heavy box. */}
         <span className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[11px] text-muted">
+          {item.unread && (
+            <span className="inline-flex items-center gap-[4px] font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-accent">
+              <span
+                className="h-[7px] w-[7px] flex-none rounded-full bg-accent"
+                aria-hidden="true"
+              />
+              Unread
+            </span>
+          )}
           <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
             {SOURCE_LABEL[item.source]}
           </span>

@@ -52,6 +52,9 @@ export type WorkItem = {
   threadId?: string;
   /** ISO time of the latest message in the thread (shown in the viewer's tz). */
   lastActivityAt?: string;
+  /** Latest inbound message in the thread is unread in Outlook — shows an "unread"
+   * marker on the radar so the manager can tell at a glance what they haven't read. */
+  unread?: boolean;
   /** Person this item is from / about (sender or counterpart), when known. */
   person?: string;
   /** Short, user-facing line shown under the title. */
