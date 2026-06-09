@@ -14,7 +14,6 @@ import { useToast } from '@/components/ui/Toast';
 const SOON = {
   draft:
     'AI draft replies arrive in Phase 9 — Vesta writes a reply for you to review, edit, and approve. Nothing sends without you.',
-  escalate: 'Looping in Legal or a teammate arrives with delegation (Phase 10).',
   delegate: 'One-click delegation arrives in Phase 8.',
   snooze: 'Snooze & reminders arrive in Phase 8.',
   memory: 'Teaching Vesta memories & rules arrives in Phase 10.',
@@ -370,9 +369,6 @@ function ActionTab({
       <div className="flex flex-wrap gap-[9px]">
         <RailButton primary icon="check" onClick={() => showToast(SOON.draft)}>
           Approve Draft
-        </RailButton>
-        <RailButton icon="shield" onClick={() => showToast(SOON.escalate)}>
-          Ask Legal
         </RailButton>
         <RailButton icon="delegate" onClick={() => showToast(SOON.delegate)}>
           Delegate
