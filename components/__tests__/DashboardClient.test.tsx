@@ -14,6 +14,7 @@ vi.mock('@/components/sync/AutoSync', () => ({ AutoSync: () => null }));
 vi.mock('@/app/actions/work-items', () => ({
   resolveWorkItem: vi.fn(async () => ({ ok: true })),
   snoozeWorkItem: vi.fn(async () => ({ ok: true })),
+  createManualTask: vi.fn(async () => ({ ok: true })),
 }));
 
 function renderDashboard() {

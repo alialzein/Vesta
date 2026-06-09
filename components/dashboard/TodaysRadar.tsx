@@ -10,6 +10,7 @@ export type RadarFilter = WorkItemCategory | 'all';
 
 const FILTERS: { id: RadarFilter; label: string }[] = [
   { id: 'all', label: 'All' },
+  { id: 'task', label: 'Tasks' },
   { id: 'decision', label: 'Decisions' },
   { id: 'waiting', label: 'Blockers' },
   { id: 'followup', label: 'Follow-ups' },

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { KpiMetric, MorningBrief as MorningBriefData, RailTab, WorkItem } from '@/lib/types';
-import { resolveWorkItem, snoozeWorkItem } from '@/app/actions/work-items';
+import { resolveWorkItem, snoozeWorkItem, createManualTask } from '@/app/actions/work-items';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
 import { useToast } from '@/components/ui/Toast';
@@ -14,6 +14,7 @@ import { MorningBrief } from './MorningBrief';
 import { AiCommandCenter } from './AiCommandCenter';
 import { MetricsStrip } from './MetricsStrip';
 import { TodaysRadar, type RadarFilter } from './TodaysRadar';
+import { QuickAddTask } from './QuickAddTask';
 import { HowItWorks } from './HowItWorks';
 import { AiAssistantRail } from './AiAssistantRail';
 import { CollapsedRail } from './CollapsedRail';
@@ -163,6 +164,15 @@ export function DashboardClient({
     void applyItemAction(id, () => snoozeWorkItem(id, untilIso), 'Snoozed.');
   }
 
+  /** Quick-add a manual task; the radar refreshes from the server on success. */
+  function handleAddTask(input: string) {
+    setActionBusy(true);
+    void createManualTask(input).then((res) => {
+      setActionBusy(false);
+      showToast(res.ok ? 'Task added.' : (res.error ?? 'Could not add the task.'));
+    });
+  }
+
   /** Quick actions — demo-only local behavior. */
   function handleCommand(cardId: string) {
     switch (cardId) {
@@ -252,6 +262,8 @@ export function DashboardClient({
                 )}
 
                 <MetricsStrip metrics={kpis} />
+
+                <QuickAddTask onAdd={handleAddTask} busy={actionBusy} />
 
                 <TodaysRadar
                   items={items}

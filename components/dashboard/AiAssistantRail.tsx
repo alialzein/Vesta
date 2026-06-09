@@ -36,6 +36,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   decision: 'Decision',
   promise: 'Promise',
   drafts: 'Draft ready',
+  task: 'Task',
   fyi: 'FYI',
 };
 

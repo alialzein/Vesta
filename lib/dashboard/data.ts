@@ -36,6 +36,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   delegate: 'Can delegate',
   decision: 'Decision',
   promise: 'Promise',
+  task: 'Task',
   fyi: 'FYI',
 };
 
@@ -87,6 +88,7 @@ function chipsFor(category: WorkItemCategory, score: number): Chip[] {
   if (category === 'waiting') chips.push({ label: 'Waiting on you', tone: 'red' });
   else if (category === 'followup') chips.push({ label: 'Follow-up', tone: 'amber' });
   else if (category === 'fyi') chips.push({ label: 'FYI', tone: 'neutral' });
+  else if (category === 'task') chips.push({ label: 'Task', tone: 'blue' });
   else chips.push({ label: CATEGORY_LABEL[category] ?? category, tone: 'blue' });
   if (score >= 80) chips.push({ label: 'High priority', tone: 'red' });
   return chips;
@@ -123,7 +125,9 @@ function toWorkItem(w: WorkItemRow, lastActivityAt?: string, unread?: boolean): 
       w.suggested_action ??
       (category === 'waiting'
         ? `Reply to ${person ?? 'them'} to unblock this.`
-        : 'Review the latest message and reply.'),
+        : category === 'task'
+          ? 'Do this task, then mark it done.'
+          : 'Review the latest message and reply.'),
     suggestedDraft: 'AI draft replies arrive in a later phase — open this thread in Outlook to reply.',
     riskChips: chipsFor(category, score),
     memoryUsed: [],

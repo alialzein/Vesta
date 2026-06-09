@@ -31,6 +31,21 @@ click a **Priorities** row. That opens the full-screen conversation view (every
 message, complete bodies, your replies marked **You**) — see
 [Inbox & Hidden mail](inbox-and-hidden.md#opening-a-full-email--thread).
 
+## Adding your own tasks (quick add)
+
+Not everything starts as an email. Above the Radar there's an **Add a task** box —
+type a plain line and press **Add task**:
+
+> *"Call the vendor tomorrow 3pm"* → a task titled **Call the vendor**, due **tomorrow
+> at 3:00 PM**.
+
+Vesta reads the due date out of your words (no AI needed) — it understands **today**,
+**tomorrow**, **tonight**, **next week**, weekday names (**Friday**), **in 3 days**,
+and clock times (**3pm**, **9:30am**, **15:00**). A date with no time defaults to 9 AM.
+If it can't find a date, it just saves the task with no due date. Tasks appear on the
+Radar under the **Tasks** filter and support the same **Done / Snooze** actions as
+email items.
+
 ## Acting on an item — Done, Dismiss, Snooze
 
 Select an item to open the **AI rail** on the right. Under *Why this matters* you'll
