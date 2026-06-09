@@ -528,6 +528,18 @@ Deliverables:
 - Bot mentions.
 - Selected chats/channels if approved.
 
+## Admin Panel — Wave 1 ✅ (Operator Console)
+
+Status: **built** (operator console at `/admin`). Role-gated on
+`profiles.role = 'admin'` (non-admins 404). Tabs: **Overview/Health**, **Users &
+Accounts** (reset password, make/revoke admin, suspend, hard-delete), **Mailboxes &
+Sync** (force sync, re-process), **Email & Retention** (scan-back/retention/grace
+policy, purge soft-deleted, apply retention, per-user wipe + storage), **AI Control
+Center** (usage ledger, spend by feature/user, model/budget overrides, re-analyze).
+New tables: `app_settings`, `user_settings`, `ai_usage`, `purge_jobs` (+ `is_admin()`,
+`profiles.suspended`). Guide: `docs/guides/admin-panel.md`. Plan + Wave 2 scope:
+`docs/plans/admin-panel-plan.md`.
+
 ## Phase 14 — Multi-user/Company Expansion Later
 
 Goal:

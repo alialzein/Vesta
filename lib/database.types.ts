@@ -27,6 +27,9 @@ export type Database = {
           full_name: string | null;
           timezone: string;
           role: string | null;
+          suspended: boolean;
+          suspended_at: Timestamptz | null;
+          suspended_reason: string | null;
           onboarded_at: Timestamptz | null;
           created_at: Timestamptz;
           updated_at: Timestamptz;
@@ -37,6 +40,9 @@ export type Database = {
           full_name?: string | null;
           timezone?: string;
           role?: string | null;
+          suspended?: boolean;
+          suspended_at?: Timestamptz | null;
+          suspended_reason?: string | null;
           onboarded_at?: Timestamptz | null;
           created_at?: Timestamptz;
           updated_at?: Timestamptz;
@@ -922,9 +928,147 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['account_transfer_events']['Insert']>;
         Relationships: [];
       };
+      app_settings: {
+        Row: {
+          id: boolean;
+          initial_scan_back_days: number;
+          retention_months: number | null;
+          soft_delete_grace_days: number;
+          ai_provider: string | null;
+          ai_model: string | null;
+          ai_model_analysis: string | null;
+          ai_model_draft: string | null;
+          ai_max_per_run: number | null;
+          ai_max_per_day: number | null;
+          ai_price_input: number | null;
+          ai_price_output: number | null;
+          ai_daily_cost_cap_usd: number | null;
+          reply_intent_mode: string | null;
+          draft_send_mode: string | null;
+          feature_flags: Json;
+          updated_at: Timestamptz;
+          updated_by: UUID | null;
+        };
+        Insert: {
+          id?: boolean;
+          initial_scan_back_days?: number;
+          retention_months?: number | null;
+          soft_delete_grace_days?: number;
+          ai_provider?: string | null;
+          ai_model?: string | null;
+          ai_model_analysis?: string | null;
+          ai_model_draft?: string | null;
+          ai_max_per_run?: number | null;
+          ai_max_per_day?: number | null;
+          ai_price_input?: number | null;
+          ai_price_output?: number | null;
+          ai_daily_cost_cap_usd?: number | null;
+          reply_intent_mode?: string | null;
+          draft_send_mode?: string | null;
+          feature_flags?: Json;
+          updated_at?: Timestamptz;
+          updated_by?: UUID | null;
+        };
+        Update: Partial<Database['public']['Tables']['app_settings']['Insert']>;
+        Relationships: [];
+      };
+      user_settings: {
+        Row: {
+          user_id: UUID;
+          initial_scan_back_days: number | null;
+          retention_months: number | null;
+          reply_intent_mode: string | null;
+          draft_send_mode: string | null;
+          ai_daily_cost_cap_usd: number | null;
+          ai_paused: boolean;
+          notes: string | null;
+          updated_at: Timestamptz;
+          updated_by: UUID | null;
+        };
+        Insert: {
+          user_id: UUID;
+          initial_scan_back_days?: number | null;
+          retention_months?: number | null;
+          reply_intent_mode?: string | null;
+          draft_send_mode?: string | null;
+          ai_daily_cost_cap_usd?: number | null;
+          ai_paused?: boolean;
+          notes?: string | null;
+          updated_at?: Timestamptz;
+          updated_by?: UUID | null;
+        };
+        Update: Partial<Database['public']['Tables']['user_settings']['Insert']>;
+        Relationships: [];
+      };
+      ai_usage: {
+        Row: {
+          id: UUID;
+          user_id: UUID | null;
+          feature: string;
+          provider: string | null;
+          model: string | null;
+          token_input: number;
+          token_output: number;
+          request_count: number;
+          cost_estimate_usd: number | null;
+          work_item_id: UUID | null;
+          error: string | null;
+          metadata: Json;
+          created_at: Timestamptz;
+        };
+        Insert: {
+          id?: UUID;
+          user_id?: UUID | null;
+          feature: string;
+          provider?: string | null;
+          model?: string | null;
+          token_input?: number;
+          token_output?: number;
+          request_count?: number;
+          cost_estimate_usd?: number | null;
+          work_item_id?: UUID | null;
+          error?: string | null;
+          metadata?: Json;
+          created_at?: Timestamptz;
+        };
+        Update: Partial<Database['public']['Tables']['ai_usage']['Insert']>;
+        Relationships: [];
+      };
+      purge_jobs: {
+        Row: {
+          id: UUID;
+          kind: string;
+          user_id: UUID | null;
+          status: string;
+          rows_affected: number;
+          params: Json;
+          error: string | null;
+          created_by: UUID | null;
+          started_at: Timestamptz;
+          finished_at: Timestamptz | null;
+        };
+        Insert: {
+          id?: UUID;
+          kind: string;
+          user_id?: UUID | null;
+          status?: string;
+          rows_affected?: number;
+          params?: Json;
+          error?: string | null;
+          created_by?: UUID | null;
+          started_at?: Timestamptz;
+          finished_at?: Timestamptz | null;
+        };
+        Update: Partial<Database['public']['Tables']['purge_jobs']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
+      is_admin: {
+        Args: { uid?: UUID };
+        Returns: boolean;
+      };
       upsert_graph_token: {
         Args: {
           p_integration_id: UUID;

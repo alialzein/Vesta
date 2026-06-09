@@ -7,6 +7,7 @@ import { buildPrompt, bodyForAi } from './context';
 import { parseAnalysis, PROMPT_VERSION } from './schema';
 import { buildReplyIntentPrompt, parseReplyIntent } from './reply-intent';
 import { estimateCostUsd } from './cost';
+import { recordAiUsage } from './usage';
 
 type DbClient = SupabaseClient<Database>;
 type AnalysisInsert = Database['public']['Tables']['ai_analyses']['Insert'];
@@ -157,6 +158,16 @@ export async function analyzeMailboxWorkItems(
           token_output: usage.outputTokens,
           cost_estimate_usd: cost,
         });
+        await recordAiUsage({
+          userId: w.user_id,
+          feature: 'reply_intent',
+          provider: cfg.provider,
+          model: cfg.model,
+          tokenInput: usage.inputTokens,
+          tokenOutput: usage.outputTokens,
+          costUsd: cost,
+          workItemId: w.id,
+        });
         if (intent.expectsReply) {
           await db
             .from('work_items')
@@ -194,6 +205,14 @@ export async function analyzeMailboxWorkItems(
           work_item_id: w.id,
           model: cfg.model,
           prompt_version: PROMPT_VERSION,
+          error: e instanceof Error ? e.message : 'Reply-intent analysis failed',
+        });
+        await recordAiUsage({
+          userId: w.user_id,
+          feature: 'reply_intent',
+          provider: cfg.provider,
+          model: cfg.model,
+          workItemId: w.id,
           error: e instanceof Error ? e.message : 'Reply-intent analysis failed',
         });
       }
@@ -268,6 +287,16 @@ export async function analyzeMailboxWorkItems(
         cost_estimate_usd: cost,
       };
       await db.from('ai_analyses').insert(record);
+      await recordAiUsage({
+        userId: w.user_id,
+        feature: 'analysis',
+        provider: cfg.provider,
+        model: cfg.model,
+        tokenInput: usage.inputTokens,
+        tokenOutput: usage.outputTokens,
+        costUsd: cost,
+        workItemId: w.id,
+      });
 
       await db
         .from('work_items')
@@ -294,6 +323,14 @@ export async function analyzeMailboxWorkItems(
         error: e instanceof Error ? e.message : 'AI analysis failed',
       };
       await db.from('ai_analyses').insert(record);
+      await recordAiUsage({
+        userId: w.user_id,
+        feature: 'analysis',
+        provider: cfg.provider,
+        model: cfg.model,
+        workItemId: w.id,
+        error: e instanceof Error ? e.message : 'AI analysis failed',
+      });
     }
   }
 
