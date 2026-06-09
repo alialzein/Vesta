@@ -710,6 +710,26 @@ async function runMailboxSync(
     if (error) return { ...EMPTY_RESULT, error: `Saving messages failed: ${error.message}` };
   }
 
+  // The insert-only upsert above (ON CONFLICT DO NOTHING) can't apply delta's whole
+  // reason for existing: a message we already store may come back because its flag,
+  // read state, or importance CHANGED in Outlook. Land those volatile Graph-owned
+  // fields here so re-classification (e.g. a newly flagged message in "flagged" mode)
+  // actually sees the new flag. We deliberately leave `triage` (holds the persisted
+  // inference signal) and `excluded_at` to processStoredMail.
+  const volatileUpdates = inbox.map((msg) =>
+    db
+      .from('email_messages')
+      .update({
+        flag: msg.flag ?? null,
+        is_read: msg.isRead ?? null,
+        importance: msg.importance ?? null,
+        categories: msg.categories ?? [],
+      })
+      .eq('mailbox_id', ctx.mailboxId)
+      .eq('graph_message_id', msg.id),
+  );
+  if (volatileUpdates.length > 0) await Promise.all(volatileUpdates);
+
   const { threads, workItems, hidden } = await processStoredMail(db, ctx, config);
 
   // Record the sync cursor + stamp last_sync_at on the integration/mailbox via the
