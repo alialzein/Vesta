@@ -528,17 +528,18 @@ Deliverables:
 - Bot mentions.
 - Selected chats/channels if approved.
 
-## Admin Panel — Wave 1 ✅ (Operator Console)
+## Admin Panel — Wave 1 + Wave 2 ✅ (Operator Console)
 
-Status: **built** (operator console at `/admin`). Role-gated on
-`profiles.role = 'admin'` (non-admins 404). Tabs: **Overview/Health**, **Users &
-Accounts** (reset password, make/revoke admin, suspend, hard-delete), **Mailboxes &
-Sync** (force sync, re-process), **Email & Retention** (scan-back/retention/grace
-policy, purge soft-deleted, apply retention, per-user wipe + storage), **AI Control
-Center** (usage ledger, spend by feature/user, model/budget overrides, re-analyze).
-New tables: `app_settings`, `user_settings`, `ai_usage`, `purge_jobs` (+ `is_admin()`,
-`profiles.suspended`). Guide: `docs/guides/admin-panel.md`. Plan + Wave 2 scope:
-`docs/plans/admin-panel-plan.md`.
+Status: **built** (operator console at `/admin`). Role-gated on the Supabase
+**`app_metadata.is_admin`** claim (non-admins 404). **Wave 1:** Overview/Health, Users &
+Accounts (reset password, make/revoke admin, suspend, hard-delete), Mailboxes & Sync
+(force sync, re-process), Email & Retention (scan-back/retention/grace policy, purge,
+per-user wipe + storage), AI Control Center (usage ledger, spend by feature/user,
+model/budget overrides, re-analyze). **Wave 2:** Triage & Rules (rules/memories toggle &
+delete, feedback stream), Drafts & Sending (oversight + KPIs + send mode), Audit &
+Security (audit-log viewer + filter, secrets status, admins list). New tables:
+`app_settings`, `user_settings`, `ai_usage`, `purge_jobs`. Only **impersonation** is
+still deferred. Guide: `docs/guides/admin-panel.md`. Plan: `docs/plans/admin-panel-plan.md`.
 
 ## Phase 14 — Multi-user/Company Expansion Later
 

@@ -24,11 +24,11 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     ],
   },
   {
-    heading: 'Wave 2',
+    heading: 'Governance',
     items: [
-      { label: 'Triage & Rules', href: '/admin/triage', icon: 'settings', soon: true },
-      { label: 'Drafts & Sending', href: '/admin/drafts', icon: 'drafts', soon: true },
-      { label: 'Audit & Security', href: '/admin/audit', icon: 'shield', soon: true },
+      { label: 'Triage & Rules', href: '/admin/triage', icon: 'settings' },
+      { label: 'Drafts & Sending', href: '/admin/drafts', icon: 'drafts' },
+      { label: 'Audit & Security', href: '/admin/audit', icon: 'shield' },
     ],
   },
 ];

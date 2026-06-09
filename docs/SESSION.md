@@ -4,50 +4,44 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-09 (Admin Panel — Wave 1 — BUILT, on a branch ⏳)
-**Repo state:** Phases 0–9 done. **Admin Panel Wave 1 built on branch
-`feature/admin-panel-wave1`** (PR open) — the `/admin` operator console: Overview,
-Users, Mailboxes/Sync, Email/Retention, AI Control Center. 270 tests green, typecheck
-+ lint + build clean.
-
-> ⚠️ **MIGRATION NOT YET APPLIED.** `supabase/migrations/20260609170001_admin_panel.sql`
-> is written but **not run** — I couldn't reach the DB from the work laptop (direct
-> host is IPv6-only; the pooler region is unknown and I won't brute-force it). **Apply
-> it before using `/admin`** (see "Apply the admin migration" below), then
-> `node scripts/grant-admin.mjs <your-login-email>`.
+**Last updated:** 2026-06-09 (Admin Panel — Wave 1 + Wave 2 — BUILT & merged ✅)
+**Repo state:** Phases 0–9 done. **Admin Panel (full operator console) merged to
+`main`** — all 8 tabs live at `/admin`. Migration applied. Dedicated admin account
+created. 272 tests green, typecheck + lint + build clean. Deployed to Vercel.
 
 Earlier this session: **Phase 9 (Draft Replies) merged AND verified live**. Mailbox
 connection + `Mail.Send` grant live in Supabase (shared across laptops).
 
 ---
 
-## 🔑 Apply the admin migration (do this first on a machine that can reach the DB)
+## 🛠️ Admin Panel (Operator Console) — DONE
 
-The migration adds `app_settings`, `user_settings`, `ai_usage`, `purge_jobs`,
-`is_admin()`, and `profiles.suspended`. Apply it **once** by either:
+`/admin`, gated on the Supabase **`app_metadata.is_admin`** auth claim — NOT
+`profiles.role` (onboarding writes the job title there, which was clobbering admin;
+fixed). Non-admins get a 404. Reuses login + splash + theme; both light/dark; nav
+prefetch + loading skeletons; every mutating action behind a typed confirm + audit-log.
 
-- **Supabase SQL editor** (easiest): paste the contents of
-  `supabase/migrations/20260609170001_admin_panel.sql` and run; **or**
-- **Script** (from a network that can reach your DB):
-  `node scripts/apply-sql.mjs supabase/migrations/20260609170001_admin_panel.sql`
-  — for the IPv4 pooler add
-  `--host aws-0-<region>.pooler.supabase.com --port 5432 --user postgres.<project-ref>`
-  (find `<region>` in Supabase → Project Settings → Database → Connection pooling).
+- **Wave 1:** Overview/Health · Users (reset pw, make/revoke admin via auth API,
+  suspend, hard-delete) · Mailboxes & Sync (force sync, re-process) · Email & Retention
+  (scan-back/retention/grace, purge soft-deleted, apply retention, per-user wipe,
+  storage-by-user) · AI Control Center (usage ledger, spend by feature/user, model +
+  budget overrides, re-analyze, key status).
+- **Wave 2:** Triage & Rules (manager_rules/memories toggle+delete, feedback stream) ·
+  Drafts & Sending (oversight + KPIs + send mode, delete stuck drafts) · Audit &
+  Security (audit-log viewer + action filter, secrets presence status, admins list).
+- **Deferred:** impersonation ("view as user").
+- Code: `lib/admin/*`, `app/(admin)/admin/*`, `components/admin/*`. Migration
+  `supabase/migrations/20260609170001_admin_panel.sql` (applied). AI usage recorded to
+  `ai_usage` from `lib/ai/store.ts`.
 
-Then grant yourself access: `node scripts/grant-admin.mjs <your-login-email>` and open
-`/admin`. (`scripts/apply-sql.mjs` needs the `pg` dev-dependency added this session;
-run `npm install` first.)
+**Admin account:** `ali.alzein.eng@gmail.com` (app_metadata.is_admin=true). Manage
+admins from the Users tab, or `node scripts/grant-admin.mjs <email>` /
+`node scripts/create-admin-user.mjs <email>` (both set the app_metadata claim).
+Admins logging in are auto-forwarded from `/` to `/admin` (escape hatch: `/?app=1`).
 
-## Admin Panel — Wave 1 (branch `feature/admin-panel-wave1`)
-
-`/admin` operator console, role-gated on `profiles.role='admin'` (non-admins get a
-404). Reuses login + splash + theme. Tabs: **Overview/Health**, **Users** (reset pw,
-make/revoke admin, suspend, hard-delete — typed confirm + audit-logged), **Mailboxes &
-Sync** (force sync, re-process), **Email & Retention** (scan-back/retention/grace
-policy, purge soft-deleted, apply retention, per-user wipe, storage-by-user), **AI
-Control Center** (usage ledger by feature/user, model + budget overrides, re-analyze).
-`lib/admin/*` + `app/(admin)/admin/*`. AI usage now recorded to `ai_usage` from
-`lib/ai/store.ts`. Wave 2 (Triage/Rules, Drafts, Audit, impersonation) still planned.
+> ⚠️ Change the admin password (it was shown in chat). The stale role-based
+> `is_admin()` SQL function in the migration is harmless (panel uses the service role);
+> optionally realign it to app_metadata later.
 
 ## Where we are
 

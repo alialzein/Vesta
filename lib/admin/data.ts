@@ -411,3 +411,224 @@ export async function getAiUsageSummary(): Promise<AiUsageSummary> {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Wave 2 — Triage & Rules
+// ---------------------------------------------------------------------------
+async function emailMap(svc: ReturnType<typeof createServiceClient>): Promise<Map<string, string | null>> {
+  const { data } = await svc.from('profiles').select('id, email');
+  return new Map((data ?? []).map((p) => [p.id, p.email]));
+}
+
+export type RuleRow = {
+  id: string;
+  userId: string;
+  email: string | null;
+  name: string | null;
+  ruleType: string | null;
+  enabled: boolean;
+  match: string | null;
+  value: string | null;
+  createdFrom: string | null;
+};
+
+export async function listManagerRules(): Promise<RuleRow[]> {
+  const svc = createServiceClient();
+  const [emails, { data }] = await Promise.all([
+    emailMap(svc),
+    svc
+      .from('manager_rules')
+      .select('id, user_id, name, rule_type, is_enabled, conditions, created_from')
+      .order('created_at', { ascending: false }),
+  ]);
+  return (data ?? []).map((r) => {
+    const c = (r.conditions ?? {}) as { match?: string; value?: string };
+    return {
+      id: r.id,
+      userId: r.user_id,
+      email: emails.get(r.user_id) ?? null,
+      name: r.name,
+      ruleType: r.rule_type,
+      enabled: r.is_enabled,
+      match: c.match ?? null,
+      value: c.value ?? null,
+      createdFrom: r.created_from,
+    };
+  });
+}
+
+export type MemoryRow = {
+  id: string;
+  userId: string;
+  email: string | null;
+  memoryType: string | null;
+  text: string | null;
+  active: boolean;
+  scope: string | null;
+};
+
+export async function listManagerMemories(): Promise<MemoryRow[]> {
+  const svc = createServiceClient();
+  const [emails, { data }] = await Promise.all([
+    emailMap(svc),
+    svc
+      .from('manager_memories')
+      .select('id, user_id, memory_type, memory_text, is_active, scope')
+      .order('created_at', { ascending: false }),
+  ]);
+  return (data ?? []).map((m) => ({
+    id: m.id,
+    userId: m.user_id,
+    email: emails.get(m.user_id) ?? null,
+    memoryType: m.memory_type,
+    text: m.memory_text,
+    active: m.is_active,
+    scope: m.scope,
+  }));
+}
+
+export type FeedbackRow = {
+  id: string;
+  email: string | null;
+  eventType: string | null;
+  text: string | null;
+  at: string;
+};
+
+export async function listFeedbackEvents(limit = 50): Promise<FeedbackRow[]> {
+  const svc = createServiceClient();
+  const [emails, { data }] = await Promise.all([
+    emailMap(svc),
+    svc
+      .from('feedback_events')
+      .select('id, user_id, event_type, feedback_text, created_at')
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  ]);
+  return (data ?? []).map((f) => ({
+    id: f.id,
+    email: emails.get(f.user_id) ?? null,
+    eventType: f.event_type,
+    text: f.feedback_text,
+    at: f.created_at,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Wave 2 — Drafts & Sending
+// ---------------------------------------------------------------------------
+export type DraftRow = {
+  id: string;
+  email: string | null;
+  status: string;
+  subject: string | null;
+  model: string | null;
+  approvedAt: string | null;
+  sentAt: string | null;
+  error: string | null;
+  createdAt: string;
+};
+
+export type DraftsOverview = {
+  byStatus: { status: string; count: number }[];
+  sent: number;
+  errored: number;
+  pending: number;
+  recent: DraftRow[];
+};
+
+export async function getDraftsOverview(): Promise<DraftsOverview> {
+  const svc = createServiceClient();
+  const [emails, { data }] = await Promise.all([
+    emailMap(svc),
+    svc
+      .from('draft_replies')
+      .select('id, user_id, status, subject, model, approved_at, sent_at, error, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100),
+  ]);
+  const rows = data ?? [];
+  const statusMap = new Map<string, number>();
+  for (const d of rows) statusMap.set(d.status, (statusMap.get(d.status) ?? 0) + 1);
+  return {
+    byStatus: [...statusMap.entries()].map(([status, count]) => ({ status, count })),
+    sent: rows.filter((d) => d.sent_at || d.status === 'sent').length,
+    errored: rows.filter((d) => d.error || d.status === 'error').length,
+    pending: rows.filter((d) => !d.sent_at && !d.error && d.status !== 'sent' && d.status !== 'error').length,
+    recent: rows.slice(0, 40).map((d) => ({
+      id: d.id,
+      email: emails.get(d.user_id) ?? null,
+      status: d.status,
+      subject: d.subject,
+      model: d.model,
+      approvedAt: d.approved_at,
+      sentAt: d.sent_at,
+      error: d.error,
+      createdAt: d.created_at,
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Wave 2 — Audit & Security
+// ---------------------------------------------------------------------------
+export type AuditRow = {
+  id: string;
+  at: string;
+  actorType: string;
+  actorEmail: string | null;
+  action: string;
+  entityType: string | null;
+  targetEmail: string | null;
+  metadata: unknown;
+};
+
+export async function listAuditLogs(opts?: { action?: string; limit?: number }): Promise<AuditRow[]> {
+  const svc = createServiceClient();
+  let q = svc
+    .from('audit_logs')
+    .select('id, created_at, actor_type, actor_id, action, entity_type, user_id, metadata')
+    .order('created_at', { ascending: false })
+    .limit(opts?.limit ?? 100);
+  if (opts?.action) q = q.eq('action', opts.action);
+  const [emails, { data }] = await Promise.all([emailMap(svc), q]);
+  return (data ?? []).map((a) => ({
+    id: a.id,
+    at: a.created_at,
+    actorType: a.actor_type,
+    actorEmail: a.actor_id ? emails.get(a.actor_id) ?? null : null,
+    action: a.action,
+    entityType: a.entity_type,
+    targetEmail: a.user_id ? emails.get(a.user_id) ?? null : null,
+    metadata: a.metadata,
+  }));
+}
+
+/** Distinct audit action names (for the filter dropdown). */
+export async function listAuditActions(): Promise<string[]> {
+  const svc = createServiceClient();
+  const { data } = await svc
+    .from('audit_logs')
+    .select('action')
+    .order('created_at', { ascending: false })
+    .limit(500);
+  return [...new Set((data ?? []).map((a) => a.action))].sort();
+}
+
+/**
+ * Which sensitive secrets are configured (presence only — never the value). Pure
+ * env check so the Audit tab can show key-rotation/config status at a glance.
+ */
+export type SecretStatus = { key: string; label: string; configured: boolean };
+
+export function getSecretsStatus(): SecretStatus[] {
+  const has = (k: string) => Boolean((process.env[k] ?? '').trim());
+  return [
+    { key: 'SUPABASE_SERVICE_ROLE_KEY', label: 'Supabase service role', configured: has('SUPABASE_SERVICE_ROLE_KEY') },
+    { key: 'TOKEN_ENCRYPTION_KEY', label: 'Token encryption key', configured: has('TOKEN_ENCRYPTION_KEY') },
+    { key: 'MS_GRAPH_CLIENT_SECRET', label: 'Microsoft Graph secret', configured: has('MS_GRAPH_CLIENT_SECRET') },
+    { key: 'AI_API_KEY', label: 'AI provider key', configured: has('AI_API_KEY') },
+    { key: 'CRON_SECRET', label: 'Cron secret', configured: has('CRON_SECRET') },
+    { key: 'MS_GRAPH_WEBHOOK_URL', label: 'Graph webhook URL', configured: has('MS_GRAPH_WEBHOOK_URL') },
+  ];
+}

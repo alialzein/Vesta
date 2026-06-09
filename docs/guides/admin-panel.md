@@ -89,8 +89,26 @@ Spend and control for everything AI:
 2. Grant yourself admin: `node scripts/grant-admin.mjs <your-login-email>`.
 3. Visit `/admin`.
 
-## Coming in Wave 2
+### 🎛️ Triage & Rules
+The deterministic rules and AI memories that shape each user's triage:
+- **Manager rules** — allow / mute / VIP rules per user; **enable/disable or delete** any.
+- **Manager memories** — soft context the AI uses (tone, role, preferences);
+  **activate/deactivate or delete**.
+- **Feedback & corrections** — what users corrected (teaches Vesta), newest first.
 
-**Triage & Rules**, **Drafts & Sending**, and **Audit & Security** (audit-log viewer,
-key-rotation status), plus **impersonation** ("view as user"). See
-[../plans/admin-panel-plan.md](../plans/admin-panel-plan.md).
+### ✉️ Drafts & Sending
+Oversight of AI reply drafts (nothing is ever auto-sent — users approve every send):
+- KPIs: **sent / pending / errored** + the current **send mode**.
+- Recent drafts with status, model, and any send error; **delete** a stuck/errored draft
+  (never sends). Send mode is changed from the AI Control Center / Users tabs.
+
+### 🔐 Audit & Security
+- **Secrets & configuration** — which sensitive keys are set (presence only, never
+  values), so you can spot a missing/rotatable secret.
+- **Admins** — every account with operator-console access.
+- **Audit log** — every mutating operator action, filterable by action type.
+
+## Still deferred
+
+**Impersonation** ("view as user") — the most privacy-sensitive feature — remains
+deferred behind extra gates. See [../plans/admin-panel-plan.md](../plans/admin-panel-plan.md).
