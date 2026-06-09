@@ -14,7 +14,10 @@ import {
   scoreThread,
   categorizeThread,
   type ThreadMessage,
+  type ThreadState,
 } from '@/lib/engine/threads';
+import { replyLikelyExpectsResponse } from '@/lib/engine/replies';
+import { getReplyIntentMode, type ReplyIntentMode } from '@/lib/ai/config';
 import {
   classifyEmail,
   type TriageConfig,
@@ -158,6 +161,29 @@ function latestInboundOf(msgs: Tagged[]): GraphMessage | undefined {
     ?.msg;
 }
 
+function latestOutboundOf(msgs: Tagged[]): GraphMessage | undefined {
+  return msgs
+    .filter((t) => t.direction === 'outbound')
+    .sort((a, b) =>
+      (whenOf(b.msg, 'outbound') ?? '').localeCompare(whenOf(a.msg, 'outbound') ?? ''),
+    )[0]?.msg;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Priority for a "waiting on them" item: the longer they've gone without replying,
+ *  the more it matters (the opposite of the recency boost for incoming mail). */
+function scoreWaitingOnOther(state: ThreadState, now: number): number {
+  let score = 30;
+  if (state.latestOutboundAt) {
+    const ageDays = (now - new Date(state.latestOutboundAt).getTime()) / DAY_MS;
+    if (ageDays >= 5) score += 25;
+    else if (ageDays >= 3) score += 18;
+    else if (ageDays >= 1) score += 10;
+  }
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 /** Lowercased recipient emails from a Graph recipient list. */
 function recipientEmails(list?: GraphRecipient[]): string[] {
   return (list ?? [])
@@ -242,13 +268,52 @@ export function buildWorkItemDrafts(
   tagged: Tagged[],
   ctx: SyncContext,
   now = Date.now(),
+  opts: { replyIntentMode?: ReplyIntentMode } = {},
 ): WorkItemDraft[] {
+  const replyIntentMode = opts.replyIntentMode ?? 'pregate_ai';
   const drafts: WorkItemDraft[] = [];
   for (const [convId, msgs] of groupByConversation(tagged)) {
     const state = computeThreadState(
       msgs.map<ThreadMessage>(({ msg, direction }) => ({ direction, at: whenOf(msg, direction) })),
     );
-    if (!state.isWaitingOnManager) continue; // only items that need the manager
+
+    if (!state.isWaitingOnManager) {
+      // "Waiting on them": the manager replied last and may be owed a response.
+      if (state.isWaitingOnOther && replyIntentMode !== 'off') {
+        const latestOutbound = latestOutboundOf(msgs);
+        // pregate_ai / heuristic keep only replies that plausibly ask for something;
+        // ai_always keeps every reply (AI prunes the rest later).
+        const keep =
+          replyIntentMode === 'ai_always' ||
+          replyLikelyExpectsResponse(latestOutbound?.bodyPreview ?? null);
+        if (keep) {
+          const other =
+            latestOutbound?.toRecipients?.[0]?.emailAddress?.name ??
+            latestOutbound?.toRecipients?.[0]?.emailAddress?.address ??
+            'them';
+          drafts.push({
+            conversationId: convId,
+            row: {
+              user_id: ctx.userId,
+              integration_id: ctx.integrationId,
+              mailbox_id: ctx.mailboxId,
+              source: 'outlook',
+              source_external_id: convId,
+              title: normalizeSubject(latestOutbound?.subject) ?? '(no subject)',
+              summary: latestOutbound?.bodyPreview ?? null,
+              category: 'waiting_on_them',
+              status: 'open',
+              priority_score: scoreWaitingOnOther(state, now),
+              requires_reply: false,
+              urgency_reason: `Waiting on ${other} to reply.`,
+              due_at: null,
+              metadata: { awaiting: 'other', reply_intent_mode: replyIntentMode },
+            },
+          });
+        }
+      }
+      continue; // not waiting on the manager → no "needs your reply" item
+    }
 
     // The latest inbound message drives title/summary/age.
     const latestInbound = latestInboundOf(msgs);
@@ -535,8 +600,11 @@ async function processStoredMail(
       .upsert(peopleRows, { onConflict: 'user_id,email', ignoreDuplicates: true });
   }
 
-  // Work items for waiting-on-manager threads; delete any that no longer apply.
-  const drafts = buildWorkItemDrafts(visible, ctx);
+  // Work items: threads waiting on the manager + (mode-gated) threads where the
+  // manager replied and is owed a response. Delete any that no longer apply.
+  const drafts = buildWorkItemDrafts(visible, ctx, Date.now(), {
+    replyIntentMode: getReplyIntentMode(),
+  });
   const wantedIds = new Set(drafts.map((d) => d.conversationId));
   const { data: existing } = await supabase
     .from('work_items')

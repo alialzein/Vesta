@@ -154,6 +154,90 @@ describe('buildWorkItemDrafts', () => {
   });
 });
 
+describe('buildWorkItemDrafts — waiting on them (Phase 8)', () => {
+  it('creates a waiting_on_them item when the manager replied asking for something', () => {
+    const drafts = buildWorkItemDrafts(
+      [
+        {
+          msg: msg({
+            id: 'a',
+            conversationId: 'W',
+            subject: 'Budget',
+            from: { emailAddress: { name: 'Maya', address: 'maya@cedars.com' } },
+            receivedDateTime: '2026-06-05T10:00:00Z',
+          }),
+          direction: 'inbound',
+        },
+        {
+          msg: msg({
+            id: 'b',
+            conversationId: 'W',
+            subject: 'Re: Budget',
+            bodyPreview: 'Can you send me the final numbers?',
+            toRecipients: [{ emailAddress: { name: 'Maya', address: 'maya@cedars.com' } }],
+            sentDateTime: '2026-06-06T10:00:00Z',
+          }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+    );
+
+    expect(drafts).toHaveLength(1);
+    const d = drafts[0];
+    expect(d.row.category).toBe('waiting_on_them');
+    expect(d.row.requires_reply).toBe(false);
+    expect(d.row.urgency_reason).toMatch(/waiting on maya/i);
+  });
+
+  it('does NOT create one for a closing reply (thanks)', () => {
+    const drafts = buildWorkItemDrafts(
+      [
+        {
+          msg: msg({
+            id: 'a',
+            conversationId: 'X',
+            from: { emailAddress: { address: 'maya@cedars.com' } },
+            receivedDateTime: '2026-06-05T10:00:00Z',
+          }),
+          direction: 'inbound',
+        },
+        {
+          msg: msg({
+            id: 'b',
+            conversationId: 'X',
+            bodyPreview: 'Thanks!',
+            sentDateTime: '2026-06-06T10:00:00Z',
+          }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+    );
+    expect(drafts).toHaveLength(0);
+  });
+
+  it('off mode creates no waiting_on_them items', () => {
+    const drafts = buildWorkItemDrafts(
+      [
+        {
+          msg: msg({
+            id: 'b',
+            conversationId: 'W',
+            bodyPreview: 'Can you send it over?',
+            sentDateTime: '2026-06-06T10:00:00Z',
+          }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+      Date.now(),
+      { replyIntentMode: 'off' },
+    );
+    expect(drafts).toHaveLength(0);
+  });
+});
+
 describe('classifyForSync', () => {
   const focused: TriageConfig = { mode: 'focused' };
 

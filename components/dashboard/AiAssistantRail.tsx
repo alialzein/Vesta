@@ -37,12 +37,21 @@ const CATEGORY_LABEL: Record<string, string> = {
   promise: 'Promise',
   drafts: 'Draft ready',
   task: 'Task',
+  waiting_on_them: 'Waiting on them',
   fyi: 'FYI',
 };
 
 /** Pick the most meaningful category to show as the item's primary label. */
 function primaryCategory(item: WorkItem): string {
-  const order = ['decision', 'waiting', 'promise', 'followup', 'delegate', 'critical'];
+  const order = [
+    'decision',
+    'waiting',
+    'waiting_on_them',
+    'promise',
+    'followup',
+    'delegate',
+    'critical',
+  ];
   const found = order.find((c) => item.categories.includes(c as WorkItem['categories'][number]));
   return CATEGORY_LABEL[found ?? item.categories[0]] ?? 'Work item';
 }

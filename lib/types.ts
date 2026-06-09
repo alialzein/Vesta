@@ -21,6 +21,7 @@ export type WorkItemCategory =
   | 'promise'
   | 'drafts'
   | 'task'
+  | 'waiting_on_them'
   | 'fyi';
 
 /** Priority bucket drives the colored score chip (red/amber/green). */

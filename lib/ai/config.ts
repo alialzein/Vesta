@@ -45,3 +45,21 @@ export function getAiConfig(): AiConfig | null {
 export function isAiConfigured(): boolean {
   return getAiConfig() !== null;
 }
+
+/**
+ * How "Waiting on them" detection (Phase 8) decides whether the manager's reply
+ * expects a response:
+ *   pregate_ai (default) — a free heuristic skips obvious "thanks/done" replies; AI
+ *                          judges only the plausible asks (best cost/accuracy).
+ *   ai_always            — AI judges every reply (most thorough, most cost).
+ *   heuristic            — heuristic only, no AI call.
+ *   off                  — don't create "waiting on them" items at all.
+ * Env-driven now (AI_REPLY_INTENT_MODE); per-user from the admin panel later.
+ */
+export type ReplyIntentMode = 'pregate_ai' | 'ai_always' | 'heuristic' | 'off';
+
+export function getReplyIntentMode(): ReplyIntentMode {
+  const v = (process.env.AI_REPLY_INTENT_MODE ?? '').trim().toLowerCase();
+  if (v === 'ai_always' || v === 'heuristic' || v === 'off') return v;
+  return 'pregate_ai';
+}

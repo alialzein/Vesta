@@ -67,6 +67,19 @@ entirely, **mute** them in Settings instead.
 These update instantly. If something was a mistake, the action shows a confirmation
 and the item simply reappears on the next sync if it still needs you.
 
+## "Waiting on them" — when you're owed a reply
+
+Normally an item leaves the Radar the moment you reply. But if **your reply asked for
+something** — "Can you send me the figures?", "Please confirm by Friday" — you're now
+waiting on *them*, and Vesta keeps it as a **Waiting on them** item (its own filter
+chip on the Radar) so it doesn't silently disappear. The longer they go without
+replying, the higher it climbs. When they finally reply, it flips back to **Waiting on
+you**.
+
+Vesta only does this for replies that actually expect a response — a quick "thanks" or
+"will do" won't create one. (How aggressively it uses AI to judge this is a setting
+we can tune per account.)
+
 ## The "Unread" marker
 
 If the newest message in a thread is still **unread** in Outlook, its Radar card shows

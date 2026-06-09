@@ -45,7 +45,7 @@ export async function analyzeMailboxWorkItems(
 
   const { data: items } = await db
     .from('work_items')
-    .select('id, user_id, title, source_external_id, last_analyzed_at')
+    .select('id, user_id, title, source_external_id, last_analyzed_at, category')
     .eq('mailbox_id', ctx.mailboxId)
     .eq('source', 'outlook')
     .eq('status', 'open')
@@ -59,6 +59,12 @@ export async function analyzeMailboxWorkItems(
   for (const w of items ?? []) {
     if (budget <= 0) break;
     if (!w.source_external_id) {
+      skipped++;
+      continue;
+    }
+    // "Waiting on them" items are about the manager's OWN reply, not the latest
+    // inbound message this analyzer reads — leave them to their dedicated pass.
+    if (w.category === 'waiting_on_them') {
       skipped++;
       continue;
     }

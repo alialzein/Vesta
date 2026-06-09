@@ -37,6 +37,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   decision: 'Decision',
   promise: 'Promise',
   task: 'Task',
+  waiting_on_them: 'Waiting on them',
   fyi: 'FYI',
 };
 
@@ -66,10 +67,13 @@ function cleanPreview(s: string | null): string {
   return t.replace(/\s+/g, ' ').trim();
 }
 
-/** Pull the counterpart's name out of an urgency reason ("Maya is waiting…"). */
+/** Pull the counterpart's name out of an urgency reason ("Maya is waiting…" or
+ *  "Waiting on Maya to reply"). */
 function personFrom(reason: string | null): string | undefined {
-  const m = reason?.match(/^(.+?)\s+is waiting/i);
-  return m?.[1]?.trim() || undefined;
+  const waiting = reason?.match(/^(.+?)\s+is waiting/i);
+  if (waiting?.[1]) return waiting[1].trim();
+  const owed = reason?.match(/^Waiting on (.+?) to reply/i);
+  return owed?.[1]?.trim() || undefined;
 }
 
 function dueOf(due: string | null, category: WorkItemCategory): { label: string; detail?: string } {
@@ -89,6 +93,8 @@ function chipsFor(category: WorkItemCategory, score: number): Chip[] {
   else if (category === 'followup') chips.push({ label: 'Follow-up', tone: 'amber' });
   else if (category === 'fyi') chips.push({ label: 'FYI', tone: 'neutral' });
   else if (category === 'task') chips.push({ label: 'Task', tone: 'blue' });
+  else if (category === 'waiting_on_them')
+    chips.push({ label: 'Waiting on them', tone: 'amber' });
   else chips.push({ label: CATEGORY_LABEL[category] ?? category, tone: 'blue' });
   if (score >= 80) chips.push({ label: 'High priority', tone: 'red' });
   return chips;
@@ -127,7 +133,9 @@ function toWorkItem(w: WorkItemRow, lastActivityAt?: string, unread?: boolean): 
         ? `Reply to ${person ?? 'them'} to unblock this.`
         : category === 'task'
           ? 'Do this task, then mark it done.'
-          : 'Review the latest message and reply.'),
+          : category === 'waiting_on_them'
+            ? `Follow up with ${person ?? 'them'} if you haven't heard back.`
+            : 'Review the latest message and reply.'),
     suggestedDraft: 'AI draft replies arrive in a later phase — open this thread in Outlook to reply.',
     riskChips: chipsFor(category, score),
     memoryUsed: [],
