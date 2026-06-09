@@ -57,7 +57,8 @@ function matchDate(text: string, now: Date): { date: Date; raw: string; eveningD
   const tonight = text.match(/\btonight\b/i);
   if (tonight) return { date: today, raw: tonight[0], eveningDefault: true };
 
-  const tomorrow = text.match(/\btomorrow\b/i);
+  // Tolerate common misspellings (tommorw, tomorow, tommorrow, 2morrow, …).
+  const tomorrow = text.match(/\b(?:tomorrow|tomorow|tommorow|tommorrow|tommorw|tmrw|2morrow)\b/i);
   if (tomorrow) {
     const d = new Date(today);
     d.setDate(d.getDate() + 1);

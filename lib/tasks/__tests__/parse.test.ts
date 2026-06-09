@@ -62,6 +62,15 @@ describe('parseQuickTask — relative dates', () => {
     expect(d.getDate()).toBe(13);
   });
 
+  it.each(['tomorrow', 'tommorw', 'tomorow', 'tommorrow', '2morrow'])(
+    'tolerates the misspelling "%s"',
+    (word) => {
+      const d = due(`Call Toufik ${word} 2pm`)!;
+      expect(d.getDate()).toBe(11); // 10 June + 1
+      expect(d.getHours()).toBe(14);
+    },
+  );
+
   it('a weekday resolves to its next occurrence', () => {
     // Wed 10 June → the coming Friday is 12 June.
     const d = due('Meet John friday')!;
