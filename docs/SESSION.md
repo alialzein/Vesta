@@ -4,9 +4,25 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (Admin **Wave 5 merged** ✅ — admin panel complete; Supabase URLs configured)
-**Repo state:** `main`, clean. Phases 0–9 done; **Admin Waves 1–5 all merged**
-(latest `26bd54c`). 283 tests green, typecheck + lint + build clean.
+**Last updated:** 2026-06-10 (Admin Waves 1–5 merged ✅; **reset-link fix + guide updates on branch `fix/reset-link-hash-session`**, PR pending)
+**Repo state:** Phases 0–9 done; **Admin Waves 1–5 all merged**. 283 tests green,
+typecheck + lint + build clean.
+
+## 🆕 Open branch: `fix/reset-link-hash-session` (review & merge)
+
+- **Reset-link fix:** the browser Supabase client runs in PKCE mode and refuses to
+  auto-consume the implicit-flow `#access_token` hash that recovery links deliver —
+  so even valid links showed "didn't verify". The update-password page now reads the
+  hash itself and calls `auth.setSession()` directly, and it surfaces `otp_expired`
+  with a specific explanation (Outlook/Hotmail link scanners pre-click one-time
+  links; the admin **Set password** is the fallback). Retest with a FRESH email
+  after merging.
+- **Guides brought current (rule 5a catch-up):** `docs/guides/admin-panel.md` now
+  covers Waves 3–5 (tables/filters, per-user detail page incl. location/history/
+  export/re-onboarding, enforced suspension, set-password, webhook renew, scheduled
+  purge, Overview date filter, live AI levers + ⓘ tooltips, triage recent-10 +
+  user picker, full audit incl. logins); `getting-started.md` gains a
+  "Forgot your password?" section.
 **Supabase URL config done** (Site URL = production; Redirect URLs incl. `/**`
 wildcards for prod + localhost) — reset-password links should now work end to end.
 **The admin-panel plan is fully built** except impersonation (deliberately deferred)

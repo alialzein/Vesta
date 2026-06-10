@@ -24,6 +24,19 @@ Open Vesta and you'll land on the **login screen**. You have three ways to get i
   wizard so Vesta can learn a little about how you work. You can skip it.
 - **Returning?** You'll go straight to your dashboard.
 
+## Forgot your password?
+
+If a **password-reset email** is sent to you (by you or an administrator), the link
+opens a **"Choose a new password"** page — type a new password twice, save, and
+you're signed in.
+
+Two things to know about reset links:
+- They **work once and expire quickly**. If the page says the link was already used,
+  request a fresh email and open it promptly. (Some mail providers — notably
+  Outlook/Hotmail — scan links in emails, which can use the link up before you click
+  it. If that keeps happening, an administrator can set a password for you directly.)
+- A reset link only changes your password — your data and settings are untouched.
+
 ## Staying signed in
 
 Your session is kept fresh automatically, so you won't be logged out mid-task. Use
