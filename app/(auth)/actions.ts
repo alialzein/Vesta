@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
+import { recordLoginEvent } from '@/lib/admin/audit';
 
 export type AuthState = { error?: string; message?: string } | null;
 
@@ -28,11 +29,14 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   }
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: error.message };
   }
+
+  // Audit the sign-in (best-effort; feeds the admin Audit tab + per-user history).
+  if (data.user) await recordLoginEvent(data.user.id, 'password');
 
   redirect(loginTarget(redirectedFrom));
 }

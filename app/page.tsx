@@ -19,15 +19,15 @@ import { getDraftCapabilities } from '@/lib/drafts/capabilities';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { splash?: string; app?: string };
+  searchParams: { splash?: string };
 }) {
   const user = await requireUser();
 
-  // Admins land on the operator console, not the manager dashboard. Gated on the
-  // `app_metadata.is_admin` auth claim (NOT profiles.role — that's the job title,
-  // set by onboarding). `?app=1` is the escape hatch (the console's "Back to app"
-  // link) so an admin can still view the manager app. Checked before any DB query.
-  if (isAdminUser(user) && searchParams?.app !== '1') {
+  // Admins are operators, not app users — they live only in /admin (the
+  // middleware also enforces this on every app route; this is the data-layer
+  // backstop). Gated on the `app_metadata.is_admin` auth claim (NOT
+  // profiles.role — that's the job title, set by onboarding).
+  if (isAdminUser(user)) {
     redirect('/admin');
   }
 

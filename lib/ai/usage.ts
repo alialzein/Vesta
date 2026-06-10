@@ -2,7 +2,14 @@ import 'server-only';
 import { createServiceClient } from '@/lib/supabase/service';
 import type { Json } from '@/lib/database.types';
 
-export type AiFeature = 'analysis' | 'draft' | 'reply_intent' | 'brief' | 'triage' | 'other';
+export type AiFeature =
+  | 'analysis'
+  | 'draft'
+  | 'reply_intent'
+  | 'capture'
+  | 'brief'
+  | 'triage'
+  | 'other';
 
 /**
  * Record one AI call in the unified `ai_usage` ledger. This is the single place

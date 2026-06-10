@@ -316,6 +316,177 @@ export async function listUsers(): Promise<AdminUserRow[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Per-user detail (Wave 3) — everything the operator needs about ONE account.
+// ---------------------------------------------------------------------------
+export type UserDetail = {
+  profile: {
+    id: string;
+    email: string | null;
+    fullName: string | null;
+    role: string | null;
+    timezone: string;
+    suspended: boolean;
+    suspendedReason: string | null;
+    onboardedAt: string | null;
+    createdAt: string;
+  };
+  auth: { lastSignInAt: string | null; isAdmin: boolean; emailConfirmedAt: string | null };
+  mailbox: {
+    connected: boolean;
+    email: string | null;
+    status: string | null;
+    triageMode: string | null;
+    lastSyncAt: string | null;
+    lastError: string | null;
+  };
+  counts: { messages: number; hidden: number; openItems: number; draftsSent: number };
+  settings: { replyIntentMode: string | null; draftSendMode: string | null; aiPaused: boolean; retentionMonths: number | null } | null;
+  drafts: { id: string; status: string; subject: string | null; at: string; error: string | null }[];
+  aiMonth: { calls: number; tokens: number; cost: number };
+  /** Audit trail rows where this user is the target OR the actor (logins, sends, admin actions on them). */
+  audit: { id: string; at: string; action: string; actorType: string; metadata: unknown }[];
+};
+
+export async function getUserDetail(userId: string): Promise<UserDetail | null> {
+  const svc = createServiceClient();
+  const monthIso = startOfMonthIso();
+
+  const [
+    { data: p },
+    authRes,
+    { data: mailbox },
+    { data: cursor },
+    msgAll,
+    msgHidden,
+    itemsOpen,
+    draftsSentRes,
+    { data: settings },
+    { data: drafts },
+    { data: usage },
+    { data: audit },
+  ] = await Promise.all([
+    svc
+      .from('profiles')
+      .select('id, email, full_name, role, timezone, suspended, suspended_reason, onboarded_at, created_at')
+      .eq('id', userId)
+      .maybeSingle(),
+    svc.auth.admin.getUserById(userId),
+    svc
+      .from('mailboxes')
+      .select('mailbox_email, status, triage_mode, last_sync_at, integration_id')
+      .eq('user_id', userId)
+      .eq('provider', 'microsoft')
+      .maybeSingle(),
+    svc
+      .from('sync_cursors')
+      .select('last_success_at, last_error')
+      .eq('user_id', userId)
+      .eq('resource_type', 'messages')
+      .maybeSingle(),
+    svc.from('email_messages').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    svc
+      .from('email_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .not('excluded_at', 'is', null),
+    svc
+      .from('work_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'open'),
+    svc
+      .from('draft_replies')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'sent'),
+    svc.from('user_settings').select('*').eq('user_id', userId).maybeSingle(),
+    svc
+      .from('draft_replies')
+      .select('id, status, subject, created_at, sent_at, error')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    svc
+      .from('ai_usage')
+      .select('token_input, token_output, cost_estimate_usd')
+      .eq('user_id', userId)
+      .gte('created_at', monthIso),
+    svc
+      .from('audit_logs')
+      .select('id, created_at, action, actor_type, metadata, user_id, actor_id')
+      .or(`user_id.eq.${userId},actor_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+      .limit(50),
+  ]);
+
+  if (!p) return null;
+  const authUser = authRes.data?.user;
+
+  return {
+    profile: {
+      id: p.id,
+      email: p.email,
+      fullName: p.full_name,
+      role: p.role,
+      timezone: p.timezone ?? 'UTC',
+      suspended: p.suspended,
+      suspendedReason: p.suspended_reason,
+      onboardedAt: p.onboarded_at,
+      createdAt: p.created_at,
+    },
+    auth: {
+      lastSignInAt: authUser?.last_sign_in_at ?? null,
+      isAdmin: authUser?.app_metadata?.is_admin === true,
+      emailConfirmedAt: authUser?.email_confirmed_at ?? null,
+    },
+    mailbox: {
+      connected: !!mailbox?.integration_id && mailbox.status === 'active',
+      email: mailbox?.mailbox_email ?? null,
+      status: mailbox?.status ?? null,
+      triageMode: mailbox?.triage_mode ?? null,
+      lastSyncAt: cursor?.last_success_at ?? mailbox?.last_sync_at ?? null,
+      lastError: cursor?.last_error ?? null,
+    },
+    counts: {
+      messages: msgAll.count ?? 0,
+      hidden: msgHidden.count ?? 0,
+      openItems: itemsOpen.count ?? 0,
+      draftsSent: draftsSentRes.count ?? 0,
+    },
+    settings: settings
+      ? {
+          replyIntentMode: settings.reply_intent_mode,
+          draftSendMode: settings.draft_send_mode,
+          aiPaused: settings.ai_paused,
+          retentionMonths: settings.retention_months,
+        }
+      : null,
+    drafts: (drafts ?? []).map((d) => ({
+      id: d.id,
+      status: d.status,
+      subject: d.subject,
+      at: d.sent_at ?? d.created_at,
+      error: d.error,
+    })),
+    aiMonth: {
+      calls: (usage ?? []).length,
+      tokens: (usage ?? []).reduce(
+        (s, r) => s + Number(r.token_input ?? 0) + Number(r.token_output ?? 0),
+        0,
+      ),
+      cost: (usage ?? []).reduce((s, r) => s + Number(r.cost_estimate_usd ?? 0), 0),
+    },
+    audit: (audit ?? []).map((a) => ({
+      id: a.id,
+      at: a.created_at,
+      action: a.action,
+      actorType: a.actor_type,
+      metadata: a.metadata,
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // AI Control Center
 // ---------------------------------------------------------------------------
 export type AiUsageSummary = {
@@ -545,7 +716,7 @@ export async function getDraftsOverview(): Promise<DraftsOverview> {
       .from('draft_replies')
       .select('id, user_id, status, subject, model, approved_at, sent_at, error, created_at')
       .order('created_at', { ascending: false })
-      .limit(100),
+      .limit(500),
   ]);
   const rows = data ?? [];
   const statusMap = new Map<string, number>();
@@ -553,9 +724,11 @@ export async function getDraftsOverview(): Promise<DraftsOverview> {
   return {
     byStatus: [...statusMap.entries()].map(([status, count]) => ({ status, count })),
     sent: rows.filter((d) => d.sent_at || d.status === 'sent').length,
-    errored: rows.filter((d) => d.error || d.status === 'error').length,
-    pending: rows.filter((d) => !d.sent_at && !d.error && d.status !== 'sent' && d.status !== 'error').length,
-    recent: rows.slice(0, 40).map((d) => ({
+    errored: rows.filter((d) => d.error || d.status === 'error' || d.status === 'failed').length,
+    pending: rows.filter(
+      (d) => !d.sent_at && !d.error && !['sent', 'error', 'failed', 'discarded'].includes(d.status),
+    ).length,
+    recent: rows.map((d) => ({
       id: d.id,
       email: emails.get(d.user_id) ?? null,
       status: d.status,
@@ -602,17 +775,6 @@ export async function listAuditLogs(opts?: { action?: string; limit?: number }):
     targetEmail: a.user_id ? emails.get(a.user_id) ?? null : null,
     metadata: a.metadata,
   }));
-}
-
-/** Distinct audit action names (for the filter dropdown). */
-export async function listAuditActions(): Promise<string[]> {
-  const svc = createServiceClient();
-  const { data } = await svc
-    .from('audit_logs')
-    .select('action')
-    .order('created_at', { ascending: false })
-    .limit(500);
-  return [...new Set((data ?? []).map((a) => a.action))].sort();
 }
 
 /**

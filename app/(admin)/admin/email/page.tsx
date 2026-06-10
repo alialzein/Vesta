@@ -1,9 +1,9 @@
 import { requireAdmin } from '@/lib/admin/auth';
 import { getAppSettings } from '@/lib/admin/settings';
 import { getStorageByUser } from '@/lib/admin/data';
-import { Section, Table, Th, Td, KpiCard, EmptyState } from '@/components/admin/ui';
+import { Section, KpiCard, EmptyState } from '@/components/admin/ui';
 import { RetentionSettings } from '@/components/admin/tabs/RetentionSettings';
-import { StorageRowActions } from '@/components/admin/tabs/StorageRowActions';
+import { StorageTable } from '@/components/admin/tabs/StorageTable';
 import { fmtInt, fmtDate } from '@/lib/admin/format';
 
 export default async function AdminEmailPage() {
@@ -42,34 +42,7 @@ export default async function AdminEmailPage() {
         {storage.rows.length === 0 ? (
           <EmptyState>No mail stored yet.</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>User</Th>
-                <Th className="text-right">Total</Th>
-                <Th className="text-right">Hidden</Th>
-                <Th className="text-right">Soft-deleted</Th>
-                <Th>Oldest</Th>
-                <Th className="text-right">Actions</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {storage.rows.map((r) => (
-                <tr key={r.userId}>
-                  <Td className="whitespace-nowrap">{r.email ?? r.userId}</Td>
-                  <Td className="text-right">{fmtInt(r.total)}</Td>
-                  <Td className="text-right text-muted">{fmtInt(r.hidden)}</Td>
-                  <Td className="text-right text-muted">{fmtInt(r.softDeleted)}</Td>
-                  <Td className="whitespace-nowrap text-muted">{fmtDate(r.oldest)}</Td>
-                  <Td>
-                    <div className="flex justify-end">
-                      <StorageRowActions userId={r.userId} email={r.email} />
-                    </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+          <StorageTable rows={storage.rows} />
         )}
       </Section>
     </div>

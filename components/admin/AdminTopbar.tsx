@@ -56,14 +56,6 @@ export function AdminTopbar({
             {adminEmail}
           </span>
         )}
-        <Link
-          href="/?app=1"
-          prefetch
-          className="inline-flex items-center gap-1.5 rounded-[10px] border border-line px-2.5 py-[7px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-        >
-          <Icon name="arrow" className="h-[14px] w-[14px] rotate-180" />
-          Back to app
-        </Link>
         <button
           type="button"
           onClick={toggleTheme}

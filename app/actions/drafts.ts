@@ -13,6 +13,8 @@ import { getAiClient } from '@/lib/ai/client';
 import { buildDraftPrompt, parseDraft, DRAFT_PROMPT_VERSION, DRAFT_TONES, type DraftTone } from '@/lib/ai/draft';
 import { bodyForAi } from '@/lib/ai/context';
 import { estimateCostUsd } from '@/lib/ai/cost';
+import { recordAiUsage } from '@/lib/ai/usage';
+import { getConfiguredAiRates } from '@/lib/admin/settings';
 import {
   buildReplyRecipients,
   buildQuotedOriginal,
@@ -339,7 +341,17 @@ export async function generateDraft(
     usage = res.usage;
     draft = parseDraft(res.content, inbound.subject ?? item.title ?? null);
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? `Draft generation failed: ${e.message}` : 'Draft generation failed.' };
+    const msg = e instanceof Error ? e.message : 'Draft generation failed';
+    // Failed calls still land in the ledger so the admin console sees them.
+    await recordAiUsage({
+      userId: user.id,
+      feature: 'draft',
+      provider: cfg.provider,
+      model: cfg.model,
+      workItemId,
+      error: msg.slice(0, 500),
+    });
+    return { ok: false, error: `Draft generation failed: ${msg}` };
   }
 
   // Who it will reach (mirrors Outlook Reply/Reply All), for display + storage.
@@ -389,8 +401,12 @@ export async function generateDraft(
   if (upsert.error || !upsert.draft) return { ok: false, error: upsert.error ?? 'Could not save the draft.' };
   const saved = upsert.draft;
 
-  // Record the AI call for cost/usage tracking (best-effort).
+  // Record the AI call for cost/usage tracking (best-effort). Cost uses the
+  // admin-panel prices when set (env/table otherwise). Written both to
+  // ai_analyses (the per-item history) and the unified ai_usage ledger the
+  // admin AI Control Center reads.
   if (usage && saved) {
+    const cost = estimateCostUsd(cfg.model, usage, await getConfiguredAiRates());
     await db.from('ai_analyses').insert({
       user_id: user.id,
       work_item_id: workItemId,
@@ -400,7 +416,17 @@ export async function generateDraft(
       category: 'draft',
       token_input: usage.inputTokens,
       token_output: usage.outputTokens,
-      cost_estimate_usd: estimateCostUsd(cfg.model, usage),
+      cost_estimate_usd: cost,
+    });
+    await recordAiUsage({
+      userId: user.id,
+      feature: 'draft',
+      provider: cfg.provider,
+      model: cfg.model,
+      tokenInput: usage.inputTokens,
+      tokenOutput: usage.outputTokens,
+      costUsd: cost,
+      workItemId,
     });
   }
 
@@ -659,6 +685,13 @@ export async function sendDraft(
       .from('draft_replies')
       .update({ status: 'failed', error: message.slice(0, 500) })
       .eq('id', draftId);
+    // Failed sends are security/ops-relevant — surface them in the audit trail too.
+    await writeAudit({
+      userId: user.id,
+      action: 'email_send_failed',
+      entityId: draftId,
+      after: { error: message.slice(0, 300), work_item_id: draft.work_item_id },
+    });
     return { ok: false, needsReconnect: is403, error: message };
   }
 }

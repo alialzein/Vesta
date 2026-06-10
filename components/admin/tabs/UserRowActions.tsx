@@ -1,6 +1,7 @@
 'use client';
 
 import { ActionButton } from '@/components/admin/ActionButton';
+import { SetPasswordButton } from '@/components/admin/tabs/SetPasswordButton';
 import {
   adminResetPassword,
   adminSuspendUser,
@@ -25,11 +26,13 @@ export function UserRowActions({
     <div className="flex flex-wrap justify-end gap-1.5">
       <ActionButton
         subtle
-        confirm={`Send a password-reset email to ${email ?? 'this user'}?`}
+        confirm={`Send a password-reset email to ${email ?? 'this user'} (their account email)? The link lets them choose a new password.`}
         run={() => adminResetPassword(userId)}
       >
         Reset password
       </ActionButton>
+
+      <SetPasswordButton userId={userId} email={email} />
 
       <ActionButton
         subtle

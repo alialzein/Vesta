@@ -34,7 +34,7 @@ export default async function AdminOverviewPage() {
           tone={syncTone}
         />
         <KpiCard label="AI spend · today" value={fmtUsd(h.ai.costToday)} hint={`${fmtInt(h.ai.callsToday)} calls · ${fmtInt(h.ai.tokensToday)} tokens`} />
-        <KpiCard label="AI spend · month" value={fmtUsd(h.ai.costMonth)} hint="rolling calendar month" />
+        <KpiCard label="AI spend · month" value={fmtUsd(h.ai.costMonth)} hint="this calendar month — terms explained in AI Control Center" />
       </div>
 
       <Section title="Sync & queue health" hint="Cron/webhook pipeline status.">

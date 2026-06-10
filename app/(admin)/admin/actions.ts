@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/lib/admin/auth';
 import { logAdminAction } from '@/lib/admin/audit';
@@ -224,6 +225,16 @@ export async function adminSuspendUser(
   const admin = await requireAdmin();
   if (userId === admin.id) return fail('You cannot suspend your own account.');
   const svc = createServiceClient();
+
+  // Enforce, don't just record: a Supabase ban blocks NEW sign-ins, and the
+  // `app_metadata.suspended` claim lets the middleware end any EXISTING session
+  // on its next request. profiles.suspended stays as the display/reporting flag.
+  const { error: authErr } = await svc.auth.admin.updateUserById(userId, {
+    ban_duration: suspend ? '87600h' : 'none', // ~10 years vs lifted
+    app_metadata: { suspended: suspend },
+  });
+  if (authErr) return fail(authErr.message);
+
   const { error } = await svc
     .from('profiles')
     .update({
@@ -240,24 +251,74 @@ export async function adminSuspendUser(
     metadata: { reason },
   });
   revalidateAdmin();
-  return ok(suspend ? 'Account suspended.' : 'Account re-enabled.');
+  return ok(
+    suspend
+      ? 'Account suspended — sign-in is blocked and any active session ends on its next request.'
+      : 'Account re-enabled.',
+  );
 }
 
-/** Send a password-reset email to the user (Supabase delivers it). */
+/**
+ * Send a password-reset email to the user's account email (profiles.email — the
+ * address they signed up with). Supabase's mailer delivers it; the link signs
+ * them in and lands on /auth/update-password to choose a new password.
+ */
 export async function adminResetPassword(userId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   const svc = createServiceClient();
   const { data } = await svc.from('profiles').select('email').eq('id', userId).single();
   const email = data?.email;
   if (!email) return fail('No email on file for this user.');
+  const origin = headers().get('origin') ?? '';
   const anon = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
-  const { error } = await anon.auth.resetPasswordForEmail(email);
+  const { error } = await anon.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+  });
   if (error) return fail(error.message);
   await logAdminAction({ actorId: admin.id, action: 'reset_password', targetUserId: userId });
   return ok(`Password-reset email sent to ${email}.`);
+}
+
+/**
+ * Set a user's password directly (for when email reset isn't practical). The new
+ * password is chosen by the operator and never stored or logged — only the fact
+ * that it was changed is audited. Takes effect immediately.
+ */
+export async function adminSetPassword(userId: string, password: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const pwd = password.trim();
+  if (pwd.length < 8) return fail('Password must be at least 8 characters.');
+  const svc = createServiceClient();
+  const { error } = await svc.auth.admin.updateUserById(userId, { password: pwd });
+  if (error) return fail(error.message);
+  await logAdminAction({ actorId: admin.id, action: 'set_password', targetUserId: userId });
+  return ok('Password updated. Share it with the user securely.');
+}
+
+/** Set the user's timezone (profiles.timezone — drives their local-time display). */
+export async function adminSetTimezone(userId: string, timezone: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const tz = timezone.trim();
+  // Validate against the runtime's IANA zone list so a typo can't corrupt times.
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+  } catch {
+    return fail(`"${tz}" is not a valid IANA timezone (e.g. Asia/Beirut, Europe/Berlin).`);
+  }
+  const svc = createServiceClient();
+  const { error } = await svc.from('profiles').update({ timezone: tz }).eq('id', userId);
+  if (error) return fail(error.message);
+  await logAdminAction({
+    actorId: admin.id,
+    action: 'set_timezone',
+    targetUserId: userId,
+    after: { timezone: tz },
+  });
+  revalidateAdmin();
+  return ok(`Timezone set to ${tz}.`);
 }
 
 /** GDPR-style hard delete: removes the auth user; cascades all owned data. */

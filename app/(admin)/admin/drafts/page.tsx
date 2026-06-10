@@ -1,16 +1,9 @@
 import { requireAdmin } from '@/lib/admin/auth';
 import { getDraftsOverview } from '@/lib/admin/data';
 import { getAppSettings } from '@/lib/admin/settings';
-import { Section, Table, Th, Td, KpiCard, Badge, EmptyState } from '@/components/admin/ui';
-import { DraftRowActions } from '@/components/admin/tabs/DraftRowActions';
-import { fmtInt, fmtRel } from '@/lib/admin/format';
-
-function statusTone(s: string): 'good' | 'warn' | 'bad' | 'accent' | 'default' {
-  if (s === 'sent') return 'good';
-  if (s === 'error') return 'bad';
-  if (s === 'approved') return 'accent';
-  return 'default';
-}
+import { Section, KpiCard, EmptyState } from '@/components/admin/ui';
+import { DraftsTable } from '@/components/admin/tabs/DraftsTable';
+import { fmtInt } from '@/lib/admin/format';
 
 export default async function AdminDraftsPage() {
   await requireAdmin();
@@ -36,42 +29,11 @@ export default async function AdminDraftsPage() {
         <KpiCard label="Send mode" value={<span className="text-[18px]">{sendMode}</span>} hint="graph = send via Outlook; draft_only = build a draft" />
       </div>
 
-      <Section title="Recent drafts" hint="Newest first (last 40).">
+      <Section title="Drafts" hint="Last 500 — search by user/subject, filter by status, sort any column.">
         {overview.recent.length === 0 ? (
           <EmptyState>No drafts yet.</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>When</Th>
-                <Th>User</Th>
-                <Th>Subject</Th>
-                <Th>Status</Th>
-                <Th>Model</Th>
-                <Th>Error</Th>
-                <Th className="text-right">Actions</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {overview.recent.map((d) => (
-                <tr key={d.id}>
-                  <Td className="whitespace-nowrap text-muted">{fmtRel(d.sentAt ?? d.createdAt)}</Td>
-                  <Td className="whitespace-nowrap">{d.email ?? '—'}</Td>
-                  <Td className="max-w-[260px]"><span className="break-words">{d.subject ?? '—'}</span></Td>
-                  <Td><Badge tone={statusTone(d.status)}>{d.status}</Badge></Td>
-                  <Td className="font-mono text-[12px] text-muted">{d.model ?? '—'}</Td>
-                  <Td className="max-w-[200px]">
-                    {d.error ? <span className="break-words text-[12px] text-red">{d.error}</span> : <span className="text-muted">—</span>}
-                  </Td>
-                  <Td>
-                    <div className="flex justify-end">
-                      <DraftRowActions draftId={d.id} />
-                    </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+          <DraftsTable drafts={overview.recent} />
         )}
       </Section>
 

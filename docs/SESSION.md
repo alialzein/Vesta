@@ -4,15 +4,39 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-09 (Admin Panel — Wave 1 + Wave 2 — BUILT & merged ✅)
-**Repo state:** Phases 0–9 done. **Admin Panel (full operator console) merged to
-`main`** — all 8 tabs live at `/admin`. Migration applied. Dedicated admin account
-created. 272 tests green, typecheck + lint + build clean. Deployed to Vercel.
+**Last updated:** 2026-06-10 (Admin Panel — **Wave 3** built; branch `feature/admin-wave-3`, PR pending review)
+**Repo state:** Phases 0–9 done; Admin Waves 1+2 merged. **Wave 3 on the branch** —
+279 tests green, typecheck + lint + build clean. **No migration** (code only).
 
-Earlier this session: **Phase 9 (Draft Replies) merged AND verified live**. Mailbox
-connection + `Mail.Send` grant live in Supabase (shared across laptops).
+Earlier: **Phase 9 (Draft Replies) merged AND verified live**. Mailbox connection +
+`Mail.Send` grant live in Supabase (shared across laptops).
 
----
+## 🆕 Admin Wave 3 (branch `feature/admin-wave-3` — review & merge next)
+
+- **AI usage fixed (was all zeros):** the panel reads the `ai_usage` ledger, but only
+  analysis/reply-intent wrote to it → wired **drafts** + **✨ quick-capture** in (success
+  + failure rows); **admin-panel token prices now drive cost estimates**
+  (`estimateCostUsd(model, usage, rates)`; `getConfiguredAiRates()`); **backfill**:
+  `node scripts/backfill-ai-usage.mjs` copies historical `ai_analyses` → `ai_usage`
+  (idempotent, preserves timestamps). Set prices in AI Control Center → Model & budgets.
+- **Admin lockdown:** "Back to app" + `?app=1` removed; middleware keeps admins inside
+  `/admin` (any app route redirects there). Claim-based — no extra DB read.
+- **Suspension now ENFORCED:** Suspend = Supabase ban (`ban_duration`) +
+  `app_metadata.suspended` claim; middleware signs the session out (cookie-safe) →
+  `/login?error=suspended` shows a notice. Previously cosmetic.
+- **Users:** **Set password** (manual, ≥8 chars, never logged) beside the email reset;
+  reset email now lands on a real **`/auth/update-password`** page (was a dead end);
+  **per-user detail page `/admin/users/[id]`** (identity, **timezone editor** →
+  `profiles.timezone`, mailbox/sync, counts, overrides, recent drafts, AI month,
+  **activity history**); **logins recorded** to `audit_logs` (password + OAuth paths).
+- **Tables everywhere:** shared `components/admin/DataTable.tsx` (search, facet
+  filters, sortable headers, pagination) applied to Users / Mailboxes / Email storage /
+  Drafts (500-row window + status/model facets) / Audit (500, action/actor facets,
+  tones) / Triage. **Rules & memories are search-first** (type a user's email ≥2 chars).
+- **AI Control Center:** glossary panel ("what these numbers mean") + an amber banner
+  when token prices are unset ($0.00 explanation).
+- ⚠️ Verify after merge: suspend the dev user → confirm blocked + notice; set prices →
+  generate a draft → AI page shows the call + cost; run the backfill script once.
 
 ## 🛠️ Admin Panel (Operator Console) — DONE
 
