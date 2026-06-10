@@ -108,7 +108,7 @@ export type CommandCard = {
 /** Icon keys allowed for command cards (subset of the icon set). */
 export type CommandIcon = 'sparkle' | 'calendar' | 'delegate' | 'inbox';
 
-/** Top KPI metric card. Each card filters Today's Radar when clicked (later). */
+/** Top KPI metric card. Each card filters Today's Radar when clicked. */
 export type KpiMetric = {
   id: string;
   value: number;
@@ -119,8 +119,8 @@ export type KpiMetric = {
   helper: string;
   /** Drives the icon container accent color. */
   tone: 'red' | 'amber' | 'blue' | 'green';
-  /** Category this card maps onto for future click-to-filter behavior. */
-  filter: WorkItemCategory;
+  /** Radar filter this card applies when clicked ('overdue' = past due_at). */
+  filter: WorkItemCategory | 'overdue' | 'all';
 };
 
 /** A recipient on a draft reply (mirrors the stored jsonb shape). */

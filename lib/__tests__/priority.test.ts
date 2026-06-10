@@ -35,6 +35,12 @@ describe('filterWorkItems', () => {
     expect(filterWorkItems(demoWorkItems, 'fyi')).toEqual([]);
   });
 
+  it('filters to overdue items (past their deadline)', () => {
+    const result = filterWorkItems(demoWorkItems, 'overdue');
+    expect(result.length).toBeGreaterThan(0);
+    expect(result.every((item) => item.overdue === true)).toBe(true);
+  });
+
   it('does not mutate the input array', () => {
     const before = [...demoWorkItems];
     filterWorkItems(demoWorkItems, 'critical');

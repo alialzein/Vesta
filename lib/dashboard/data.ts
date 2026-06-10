@@ -123,13 +123,16 @@ function buildKpis(items: WorkItem[]): KpiMetric[] {
   // "High priority" = the red band (85+) — same vocabulary as the score badge,
   // the row chip, and the rail's band label.
   const high = items.filter((i) => priorityBand(i.priorityScore) === 'red').length;
+  const overdue = items.filter((i) => i.overdue).length;
   const top = items.reduce((m, i) => Math.max(m, i.priorityScore), 0);
+  // First four render as the primary strip tiles (MetricsStrip): Overdue answers
+  // "what am I already late on?" — the manager's first morning question.
   return [
+    { id: 'kpi-overdue', value: overdue, label: 'Overdue', helper: 'Past their deadline', tone: 'red', filter: 'overdue' },
     { id: 'kpi-waiting', value: count('waiting'), label: 'Waiting on You', helper: 'Awaiting your reply', tone: 'amber', filter: 'waiting' },
     { id: 'kpi-high', value: high, label: 'High Priority', helper: 'Score 85+', tone: 'red', filter: 'critical' },
+    { id: 'kpi-open', value: items.length, label: 'Open Items', helper: 'In your queue', tone: 'blue', filter: 'all' },
     { id: 'kpi-followup', value: count('followup'), label: 'Follow-ups', helper: 'Repeated nudges', tone: 'amber', filter: 'followup' },
-    { id: 'kpi-open', value: items.length, label: 'Open Items', helper: 'In your queue', tone: 'blue', filter: 'waiting' },
-    { id: 'kpi-fyi', value: count('fyi'), label: 'FYI', helper: 'Lower priority', tone: 'green', filter: 'fyi' },
     { id: 'kpi-top', value: top, label: 'Top Priority', helper: 'Highest score', tone: 'red', filter: 'critical' },
   ];
 }

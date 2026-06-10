@@ -200,6 +200,27 @@ export function DashboardClient({
     void applyItemAction(id, () => snoozeWorkItem(id, untilIso), 'Snoozed.');
   }
 
+  /** Hover quick-actions on radar cards — same server actions, one click.
+   *  Snooze uses the "tomorrow 9 AM" preset (the rail has the full menu). */
+  function handleQuickAction(item: WorkItem, action: 'done' | 'dismiss' | 'snooze') {
+    if (action === 'snooze') {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+      void applyItemAction(
+        item.id,
+        () => snoozeWorkItem(item.id, tomorrow.toISOString()),
+        'Snoozed until tomorrow 9 AM.',
+      );
+      return;
+    }
+    void applyItemAction(
+      item.id,
+      () => resolveWorkItem(item.id, action),
+      action === 'done' ? 'Marked done.' : 'Dismissed — it returns if they reply.',
+    );
+  }
+
   /** Open the draft composer for the selected item (if it's a repliable thread). */
   function openComposer() {
     if (!selected?.canDraft) {
@@ -209,8 +230,15 @@ export function DashboardClient({
     setComposerOpen(true);
   }
 
-  /** After a reply is sent, the server marks the item done — ease it off the radar. */
+  /** After a reply is sent, the server marks the item done — ease it off the radar.
+   *  EXCEPT "waiting on them": that send was a follow-up nudge and the server keeps
+   *  the item open (they still owe the answer), so the radar keeps tracking it. */
   function handleSent(workItemId: string) {
+    const sentItem = items.find((i) => i.id === workItemId);
+    if (sentItem?.categories.includes('waiting_on_them')) {
+      showToast('Follow-up sent — still tracking until they reply.');
+      return;
+    }
     void animateOut(workItemId).then(() => {
       setItems((prev) => {
         const next = prev.filter((i) => i.id !== workItemId);
@@ -324,7 +352,7 @@ export function DashboardClient({
                   <AiCommandCenter cards={demoCommandCards} onCardAction={handleCommand} />
                 )}
 
-                <MetricsStrip metrics={kpis} />
+                <MetricsStrip metrics={kpis} onSelect={(f) => setRadarFilter(f)} />
 
                 <QuickAddTask onAdd={handleAddTask} onAiAdd={handleAiAddTask} busy={actionBusy} />
 
@@ -335,6 +363,8 @@ export function DashboardClient({
                   filter={radarFilter}
                   onFilterChange={setRadarFilter}
                   leavingIds={leavingIds}
+                  onQuickAction={handleQuickAction}
+                  busy={actionBusy}
                 />
 
                 <HowItWorks />

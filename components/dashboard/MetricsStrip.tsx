@@ -7,8 +7,16 @@ import { Icon, type IconName } from '@/components/ui/Icon';
  * instead of competing with it.
  *
  * The first four metrics are primary; the rest render smaller/secondary.
+ * When `onSelect` is provided, primary tiles are buttons that filter the radar.
  */
 const ICON_BY_ID: Record<string, IconName> = {
+  // Real dashboard KPIs (lib/dashboard/data.ts).
+  'kpi-overdue': 'clock',
+  'kpi-waiting': 'people',
+  'kpi-high': 'trend',
+  'kpi-open': 'inbox',
+  'kpi-followup': 'refresh',
+  // Demo KPIs (lib/demo-data.ts).
   'kpi-decision-debt': 'brain',
   'kpi-people-blocked': 'people',
   'kpi-followup-risk': 'refresh',
@@ -33,7 +41,14 @@ const TONE_BG: Record<KpiMetric['tone'], string> = {
 
 const PRIMARY_COUNT = 4;
 
-export function MetricsStrip({ metrics }: { metrics: KpiMetric[] }) {
+export function MetricsStrip({
+  metrics,
+  onSelect,
+}: {
+  metrics: KpiMetric[];
+  /** Filter Today's Radar to this tile's slice (primary tiles only). */
+  onSelect?: (filter: KpiMetric['filter']) => void;
+}) {
   const primary = metrics.slice(0, PRIMARY_COUNT);
   const secondary = metrics.slice(PRIMARY_COUNT);
 
@@ -42,10 +57,9 @@ export function MetricsStrip({ metrics }: { metrics: KpiMetric[] }) {
       aria-label="Key manager metrics"
       className="flex flex-wrap items-stretch gap-x-1 gap-y-2 rounded-[var(--radius)] border border-line bg-panel p-2 shadow-soft sm:gap-x-2"
     >
-      {primary.map((m, i) => (
-        <div key={m.id} className="flex items-center">
-          {i > 0 && <span className="mx-1 hidden h-7 w-px bg-line sm:block" aria-hidden="true" />}
-          <div className="flex items-center gap-[10px] rounded-[12px] px-[10px] py-[7px] transition hover:bg-panel-2">
+      {primary.map((m, i) => {
+        const inner = (
+          <>
             <span
               className={`grid h-8 w-8 flex-none place-items-center rounded-[10px] ${TONE_BG[m.tone]}`}
             >
@@ -60,9 +74,28 @@ export function MetricsStrip({ metrics }: { metrics: KpiMetric[] }) {
               </span>
               <span className="block text-[11px] font-medium text-muted">{m.label}</span>
             </div>
+          </>
+        );
+        const tileClass =
+          'flex items-center gap-[10px] rounded-[12px] px-[10px] py-[7px] transition hover:bg-panel-2';
+        return (
+          <div key={m.id} className="flex items-center">
+            {i > 0 && <span className="mx-1 hidden h-7 w-px bg-line sm:block" aria-hidden="true" />}
+            {onSelect ? (
+              <button
+                type="button"
+                onClick={() => onSelect(m.filter)}
+                title={`Show: ${m.label}`}
+                className={`${tileClass} cursor-pointer text-left`}
+              >
+                {inner}
+              </button>
+            ) : (
+              <div className={tileClass}>{inner}</div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Secondary metrics — smaller, muted, pushed to the end. */}
       {secondary.length > 0 && (

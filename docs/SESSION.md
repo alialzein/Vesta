@@ -4,15 +4,37 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (radar UI/UX fixes **MERGED** (#41); draft-direction +
-pipeline-audit fixes resolved against main, merging next)
-**Repo state:** `main` = admin Waves 1–5 + radar fixes. `fix/draft-direction` adds
-direction-aware drafts + pipeline fixes; test suites combine after merge.
-**Next: 1) merge `fix/draft-direction` → 2) re-analyze + verify live → 3) radar
-polish (hover quick-actions, sender filter, Overdue KPI) → 4) Phase 10 — Memory &
-Rules.**
+**Last updated:** 2026-06-10 (radar fixes #41 **MERGED** · draft-direction **MERGED**
+to main `73b8267` · re-analyze queued (4 items) · **radar polish built on
+`feat/radar-quick-actions`, PR pending**)
+**Repo state:** `main` = everything through draft-direction; 307 tests green on main.
+Branch `feat/radar-quick-actions` adds the 3 radar polish features (308 tests).
+**Next: 1) merge `feat/radar-quick-actions` → 2) verify live (list below) →
+3) Phase 10 — Memory & Rules. Smaller queued: due_at in manager timezone.**
 
-## 🆕 Branch `fix/draft-direction` — AI pipeline audit fixes (2026-06-10, PR pending)
+## 🆕 Branch `feat/radar-quick-actions` — radar polish (2026-06-10, PR pending)
+
+- **Overdue KPI (real + clickable):** metrics strip leads with **Overdue** (count of
+  `overdue` items, red); ALL primary tiles now filter the radar on click
+  (`MetricsStrip onSelect` → `radarFilter`); KPI order: Overdue · Waiting · High ·
+  Open (followups + top → secondary); FYI tile dropped. New radar filter chip
+  **Overdue** (`filterWorkItems` accepts `'overdue'`); "Open Items" filter = `all`.
+- **Hover quick-actions on cards:** ✓ done · ✕ dismiss · 💤 snooze-til-tomorrow
+  appear on row hover (desktop, `sm:`+); one click, same server actions + slide-out;
+  row restructured to wrapper-div + sibling buttons (no nested-interactive HTML).
+- **Click sender → filter:** clicking a card's avatar/name filters the radar to that
+  person (keyed by personEmail; "From: X ✕" chip clears it; stacks with category
+  filter). stopPropagation span (not a nested button) — keyboard path is the rail.
+- **Rail honesty for waiting_on_them:** buttons/copy say **Draft follow-up** /
+  "AI follow-up nudge"; `handleSent` keeps a nudged waiting_on_them item on the
+  radar (matches the server fix) with a "still tracking" toast.
+- Guide updated (`priorities-and-dashboard.md`: clickable tiles, quick actions,
+  sender filter). 308 tests; typecheck/lint/build clean.
+- ⚠️ Verify live (both themes): Overdue tile + chip filter; hover buttons resolve
+  with slide-out; sender chip filters/clears; waiting_on_them rail says
+  "Draft follow-up" and a sent nudge keeps the card visible.
+
+## ✅ MERGED `fix/draft-direction` — AI pipeline audit fixes (2026-06-10, `73b8267`)
 
 Owner found a backwards draft on a "waiting on them" item ("create new user": the
 draft said "we're looking into it" when ALI owes the manager the update). Full

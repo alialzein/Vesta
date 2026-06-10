@@ -15,10 +15,14 @@ export function priorityBand(score: number): PriorityBand {
 
 /**
  * Filter work items by a Today's Radar tab.
- * `all` returns everything; otherwise match on the item's categories.
- * Mirrors the inline filter logic in the original mockup, made testable.
+ * `all` returns everything; `overdue` matches items past their deadline;
+ * otherwise match on the item's categories.
  */
-export function filterWorkItems(items: WorkItem[], filter: WorkItemCategory | 'all'): WorkItem[] {
+export function filterWorkItems(
+  items: WorkItem[],
+  filter: WorkItemCategory | 'overdue' | 'all',
+): WorkItem[] {
   if (filter === 'all') return items;
+  if (filter === 'overdue') return items.filter((item) => item.overdue);
   return items.filter((item) => item.categories.includes(filter));
 }
