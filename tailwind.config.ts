@@ -16,6 +16,7 @@ const config: Config = {
         'panel-solid': 'var(--panel-solid)',
         'panel-2': 'var(--panel-2)',
         'panel-soft': 'var(--panel-soft)',
+        card: 'var(--card)',
         ink: 'var(--ink)',
         'ink-soft': 'var(--ink-soft)',
         muted: 'var(--muted)',

@@ -106,6 +106,20 @@ export function DashboardClient({
   const [items, setItems] = useState<WorkItem[]>(workItems);
   useEffect(() => setItems(workItems), [workItems]);
   const [actionBusy, setActionBusy] = useState(false);
+  // Rows mid-resolve: they play a short exit transition before leaving the list
+  // (vanishing instantly read as "nothing happened" — 2026-06-10 diagnostic).
+  const [leavingIds, setLeavingIds] = useState<ReadonlySet<string>>(new Set());
+
+  /** Mark a row as leaving, let its exit transition play, then drop it. */
+  async function animateOut(id: string) {
+    setLeavingIds((s) => new Set(s).add(id));
+    await new Promise((r) => setTimeout(r, 220));
+    setLeavingIds((s) => {
+      const next = new Set(s);
+      next.delete(id);
+      return next;
+    });
+  }
 
   const [selected, setSelected] = useState<WorkItem | undefined>(workItems[0]);
   const [view, setView] = useState<NavView>('today');
@@ -144,7 +158,8 @@ export function DashboardClient({
     setRailCollapsed(false);
   }
 
-  /** Optimistically remove an item, run the server action, roll back on failure. */
+  /** Optimistically remove an item (after its exit transition), run the server
+   *  action in parallel, roll back on failure. */
   async function applyItemAction(
     id: string,
     run: () => Promise<{ ok: boolean; error?: string }>,
@@ -153,9 +168,11 @@ export function DashboardClient({
     setActionBusy(true);
     const prev = items;
     const next = items.filter((i) => i.id !== id);
+    const resPromise = run(); // fire immediately — the animation adds no latency
+    await animateOut(id);
     setItems(next);
     if (selected?.id === id) setSelected(next[0]);
-    const res = await run();
+    const res = await resPromise;
     setActionBusy(false);
     if (res.ok) {
       showToast(successMsg);
@@ -192,12 +209,14 @@ export function DashboardClient({
     setComposerOpen(true);
   }
 
-  /** After a reply is sent, the server marks the item done — drop it off the radar. */
+  /** After a reply is sent, the server marks the item done — ease it off the radar. */
   function handleSent(workItemId: string) {
-    setItems((prev) => {
-      const next = prev.filter((i) => i.id !== workItemId);
-      if (selected?.id === workItemId) setSelected(next[0]);
-      return next;
+    void animateOut(workItemId).then(() => {
+      setItems((prev) => {
+        const next = prev.filter((i) => i.id !== workItemId);
+        if (selected?.id === workItemId) setSelected(next[0]);
+        return next;
+      });
     });
   }
 
@@ -315,6 +334,7 @@ export function DashboardClient({
                   onSelect={setSelected}
                   filter={radarFilter}
                   onFilterChange={setRadarFilter}
+                  leavingIds={leavingIds}
                 />
 
                 <HowItWorks />

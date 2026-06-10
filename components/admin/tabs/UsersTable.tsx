@@ -6,25 +6,11 @@ import { useTableControls, TableToolbar, SortTh, Pager } from '@/components/admi
 import { UserRowActions } from '@/components/admin/tabs/UserRowActions';
 import { Icon } from '@/components/ui/Icon';
 import { fmtInt, fmtRel, fmtDate } from '@/lib/admin/format';
+import { avatarHue, initialsOf } from '@/lib/avatar';
 import type { AdminUserRow } from '@/lib/admin/data';
 
 /** Flattened row with the derived facet fields the filters work on. */
 type Row = AdminUserRow & Record<string, unknown> & { access: string; state: string; mailbox: string };
-
-/** Deterministic avatar hue from the user id, so colors are stable per user. */
-function avatarHue(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
-  return h;
-}
-
-function initialsOf(name: string | null, email: string | null): string {
-  const source = name?.trim() || email?.split('@')[0]?.replace(/[._-]+/g, ' ') || '?';
-  const words = source.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return '?';
-  if (words.length === 1) return words[0].charAt(0).toUpperCase();
-  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
-}
 
 export function UsersTable({ users, adminId }: { users: AdminUserRow[]; adminId: string }) {
   const rows: Row[] = users.map((u) => ({

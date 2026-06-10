@@ -146,6 +146,7 @@ export const demoWorkItems: WorkItem[] = [
     categories: ['critical', 'followup', 'waiting', 'decision', 'drafts'],
     source: 'outlook',
     person: 'Maya Khoury',
+    personEmail: 'maya.khoury@cedarsgroup.com',
     summary: 'Maya requested approval before 4 PM. Two follow-ups detected.',
     suggestedAction: 'Approve draft reply',
     priorityScore: 92,
@@ -229,6 +230,7 @@ export const demoWorkItems: WorkItem[] = [
     ],
     dueLabel: 'Overdue',
     dueDetail: '1 day',
+    overdue: true,
     urgencyReason:
       'HR asked for final decision on a candidate. You replied that you would confirm yesterday, but no final answer was sent.',
     nextBestAction: 'Send the approval to Lina to keep your promise and unblock the offer.',
