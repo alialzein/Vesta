@@ -145,6 +145,22 @@ async function todaysSpend(
   }
 }
 
+/**
+ * The effective reply-intent mode for a user (user → global → env), independent
+ * of whether AI is configured — the sync engine's pre-gate needs it even when
+ * getEffectiveAi would return null/blocked.
+ */
+export async function getEffectiveReplyIntentMode(userId: string): Promise<ReplyIntentMode> {
+  try {
+    const [app, user] = await Promise.all([getAppSettings(), getUserSettings(userId)]);
+    const v = ((user?.reply_intent_mode ?? app?.reply_intent_mode ?? '') as string).trim();
+    if (v === 'pregate_ai' || v === 'ai_always' || v === 'heuristic' || v === 'off') return v;
+  } catch {
+    /* fall back to env */
+  }
+  return getReplyIntentMode();
+}
+
 /** The effective draft send mode for a user: user override → global → env. */
 export async function getEffectiveSendMode(userId: string): Promise<'graph' | 'draft_only'> {
   try {

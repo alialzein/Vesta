@@ -8,7 +8,15 @@ import { createServiceClient } from '@/lib/supabase/service';
 import type { Database, Json } from '@/lib/database.types';
 import type { DraftView } from '@/lib/types';
 import { toDraftView, ACTIVE_DRAFT_STATUSES, type DraftRow } from '@/lib/drafts/serialize';
-import { buildDraftPrompt, parseDraft, DRAFT_PROMPT_VERSION, DRAFT_TONES, type DraftTone } from '@/lib/ai/draft';
+import {
+  buildDraftPrompt,
+  parseDraft,
+  DRAFT_PROMPT_VERSION,
+  DRAFT_TONES,
+  type DraftTone,
+  type DraftPurpose,
+  type ThreadContextMsg,
+} from '@/lib/ai/draft';
 import { bodyForAi } from '@/lib/ai/context';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
@@ -98,7 +106,13 @@ function sanitizeRecipients(list: RecipientInput[] | undefined): Recipient[] {
   return dedupeRecipients(valid);
 }
 
-type ReplyItem = { id: string; title: string | null; source: string | null; source_external_id: string | null };
+type ReplyItem = {
+  id: string;
+  title: string | null;
+  category: string | null;
+  source: string | null;
+  source_external_id: string | null;
+};
 type InboundMsg = {
   id: string;
   graph_message_id: string;
@@ -110,20 +124,30 @@ type InboundMsg = {
   body_text: string | null;
   body_html: string | null;
   body_preview: string | null;
+  direction?: string | null;
+  received_at?: string | null;
 };
+
+/** How many recent thread messages (both directions) feed the draft prompt. */
+const THREAD_CONTEXT_MESSAGES = 6;
+/** Per-message cap inside the thread-context block (the latest inbound message
+ *  is still sent in full separately). */
+const THREAD_CONTEXT_CHARS = 500;
 
 /**
  * Resolve the thread we're replying to: the work item must be an Outlook thread,
- * and it must have a latest inbound message to answer. Returns an error string
- * (not throw) so callers return a clean DraftActionResult.
+ * and it must have a latest inbound message to answer. Also returns the recent
+ * messages in BOTH directions — the model needs to see the manager's own replies
+ * (a 'waiting_on_them' thread looked like an unanswered chase without them).
+ * Returns an error string (not throw) so callers return a clean DraftActionResult.
  */
 async function loadReplyContext(
   db: DbClient,
   workItemId: string,
-): Promise<{ error?: string; item?: ReplyItem; inbound?: InboundMsg }> {
+): Promise<{ error?: string; item?: ReplyItem; inbound?: InboundMsg; recent?: InboundMsg[] }> {
   const { data: item } = await db
     .from('work_items')
-    .select('id, title, source, source_external_id')
+    .select('id, title, category, source, source_external_id')
     .eq('id', workItemId)
     .maybeSingle();
   if (!item) return { error: 'Work item not found.' };
@@ -133,16 +157,37 @@ async function loadReplyContext(
   const { data: msgs } = await db
     .from('email_messages')
     .select(
-      'id, graph_message_id, subject, sender_name, sender_email, to_recipients, cc_recipients, body_text, body_html, body_preview',
+      'id, graph_message_id, subject, sender_name, sender_email, to_recipients, cc_recipients, body_text, body_html, body_preview, direction, received_at',
     )
     .eq('graph_conversation_id', item.source_external_id)
-    .eq('direction', 'inbound')
     .is('deleted_at', null)
     .order('received_at', { ascending: false })
-    .limit(1);
-  const inbound = msgs?.[0];
+    .limit(THREAD_CONTEXT_MESSAGES);
+  const recent = (msgs ?? []) as InboundMsg[];
+  // The reply still threads onto the latest INBOUND message (Graph reply target
+  // + recipients), even when the newest message is the manager's own.
+  const inbound = recent.find((m) => m.direction === 'inbound');
   if (!inbound?.graph_message_id) return { error: 'No message found to reply to in this thread.' };
-  return { item: item as ReplyItem, inbound: inbound as InboundMsg };
+  return { item: item as ReplyItem, inbound, recent };
+}
+
+/** Compact "who said what" lines (oldest first) for the draft prompt. */
+function threadContextFor(recent: InboundMsg[]): ThreadContextMsg[] {
+  return recent
+    .slice()
+    .reverse()
+    .map((m) => ({
+      from:
+        m.direction === 'outbound'
+          ? 'the manager'
+          : m.sender_name || m.sender_email || 'them',
+      body:
+        bodyForAi({
+          body_text: m.body_text,
+          body_html: m.body_html,
+          body_preview: m.body_preview,
+        }).slice(0, THREAD_CONTEXT_CHARS) || '(no body available)',
+    }));
 }
 
 /** Normalize a stored recipient list to {name,email}. */
@@ -321,6 +366,10 @@ export async function generateDraft(
 
   const tone = asTone(opts?.tone);
   const replyAll = opts?.replyAll === true;
+  // 'waiting_on_them' = the manager already answered and is owed something →
+  // the draft is a follow-up nudge, not a reply (the old prompt wrote backwards
+  // "we'll get back to you" drafts for these).
+  const purpose: DraftPurpose = item.category === 'waiting_on_them' ? 'follow_up' : 'reply';
   const prompt = buildDraftPrompt({
     subject: inbound.subject ?? item.title ?? null,
     recipientName: inbound.sender_name ?? inbound.sender_email ?? null,
@@ -333,6 +382,8 @@ export async function generateDraft(
     tone,
     toneNotes,
     instruction: opts?.instruction ?? null,
+    purpose,
+    threadContext: threadContextFor(ctx.recent ?? []),
   });
 
   let draft;
@@ -652,24 +703,31 @@ export async function sendDraft(
       });
 
       // Sending answers a "waiting on you" item → mark it done (resurfaces on reply).
+      // EXCEPT "waiting on them": that send is a follow-up NUDGE — the other party
+      // still owes the answer, so the item stays open on the radar (the next sync
+      // re-ages its score and re-confirms intent against the new outbound).
       if (draft.work_item_id) {
         const { data: wi } = await db
           .from('work_items')
-          .select('metadata')
+          .select('category, metadata')
           .eq('id', draft.work_item_id)
           .maybeSingle();
-        await db
-          .from('work_items')
-          .update({
-            status: 'done',
-            completed_at: nowIso,
-            metadata: {
-              ...((wi?.metadata as Record<string, unknown> | null) ?? {}),
-              resolved_at: nowIso,
-              resolved_kind: 'replied',
-            },
-          })
-          .eq('id', draft.work_item_id);
+        const meta = (wi?.metadata as Record<string, unknown> | null) ?? {};
+        if (wi?.category === 'waiting_on_them') {
+          await db
+            .from('work_items')
+            .update({ metadata: { ...meta, last_nudged_at: nowIso } })
+            .eq('id', draft.work_item_id);
+        } else {
+          await db
+            .from('work_items')
+            .update({
+              status: 'done',
+              completed_at: nowIso,
+              metadata: { ...meta, resolved_at: nowIso, resolved_kind: 'replied' },
+            })
+            .eq('id', draft.work_item_id);
+        }
       }
     }
 

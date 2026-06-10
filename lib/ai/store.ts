@@ -236,16 +236,31 @@ export async function analyzeMailboxWorkItems(
       continue;
     }
 
+    // Recent messages in BOTH directions: the latest inbound drives the analysis,
+    // and the rest become compact context (earlier asks, stated deadlines, and the
+    // manager's own replies were invisible to the model before).
     const { data: msgs } = await db
       .from('email_messages')
-      .select('subject, sender_name, body_text, body_html, body_preview, received_at')
+      .select('subject, sender_name, sender_email, direction, body_text, body_html, body_preview, received_at')
       .eq('mailbox_id', ctx.mailboxId)
       .eq('graph_conversation_id', w.source_external_id)
-      .eq('direction', 'inbound')
       .is('deleted_at', null)
       .order('received_at', { ascending: false })
-      .limit(1);
-    const m = msgs?.[0];
+      .limit(6);
+    const recent = msgs ?? [];
+    const m = recent.find((x) => x.direction === 'inbound');
+    const threadContext = recent
+      .slice()
+      .reverse()
+      .map((x) => ({
+        from: x.direction === 'outbound' ? 'the manager' : x.sender_name || x.sender_email || 'them',
+        body:
+          bodyForAi({
+            body_text: x.body_text,
+            body_html: x.body_html,
+            body_preview: x.body_preview,
+          }).slice(0, 400) || '(no body available)',
+      }));
 
     const prompt = buildPrompt({
       subject: m?.subject ?? w.title ?? null,
@@ -259,6 +274,8 @@ export async function analyzeMailboxWorkItems(
       followupCount: thread?.followup_count ?? 0,
       isWaitingOnManager: thread?.is_waiting_on_manager ?? true,
       latestAt,
+      today: new Date().toISOString().slice(0, 10),
+      threadContext,
     });
 
     budget--; // count every attempt (success or failure) against the budget

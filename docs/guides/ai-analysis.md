@@ -20,10 +20,13 @@ fills the **AI Assistant rail**.
 ## What it reads (and what it doesn't)
 
 To stay fast and cheap, the AI is sent only what it needs: the **latest message**
-(formatting stripped, quoted reply-chains removed, and length-capped) plus a few
-**facts about the thread** Vesta already tracks (who's waiting, how many follow-ups,
-how many messages). It does **not** re-read your entire mailbox or whole long
-histories every time — so a 20-message thread costs about the same as a short one.
+(formatting stripped, quoted reply-chains removed, and length-capped), a compact
+recap of the **recent conversation** — the last few messages in *both* directions,
+including your own replies, each trimmed short — plus **today's date** (so
+"tomorrow" or "by Friday" resolve to real deadlines) and a few **facts about the
+thread** Vesta already tracks (who's waiting, how many follow-ups, how many
+messages). It does **not** re-read your entire mailbox or whole long histories
+every time — so a 20-message thread costs about the same as a short one.
 
 ## When it runs
 

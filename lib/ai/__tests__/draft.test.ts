@@ -75,4 +75,52 @@ describe('buildDraftPrompt', () => {
     expect(user).toContain('no exclamation marks');
     expect(user).toContain('Politely decline.');
   });
+
+  it('defaults to a reply (the manager owes the answer)', () => {
+    const { system } = buildDraftPrompt({
+      subject: 'Q3 budget',
+      recipientName: 'Maya',
+      managerName: 'Ali',
+      latestMessage: 'Can you approve the Q3 budget?',
+      tone: 'professional',
+    });
+    expect(system).toMatch(/ready-to-send reply/i);
+    expect(system).not.toMatch(/WAITING ON the recipient/);
+  });
+
+  it('writes a follow-up nudge (not a reply) for waiting_on_them items', () => {
+    const { system, user } = buildDraftPrompt({
+      subject: 'create new user',
+      recipientName: 'Ali Alzein',
+      managerName: 'Vesta Dev',
+      latestMessage: 'any update on the below? we need it the soonest',
+      tone: 'professional',
+      purpose: 'follow_up',
+      threadContext: [
+        { from: 'Ali Alzein', body: 'please confirm to create below user: vesta' },
+        { from: 'the manager', body: 'Confirmed, please let me know when done.' },
+      ],
+    });
+    // The instruction flips direction: nudge them for what they owe.
+    expect(system).toMatch(/WAITING ON the recipient/);
+    expect(system).toMatch(/Do NOT write as if the manager owes a reply/);
+    // The model sees the manager's own reply, so it can't mistake who answered.
+    expect(user).toContain('Conversation so far (oldest first):');
+    expect(user).toContain('the manager: Confirmed, please let me know when done.');
+    expect(user).toMatch(/recipient's last message/);
+  });
+
+  it('includes the thread context for plain replies too', () => {
+    const { user } = buildDraftPrompt({
+      subject: 'Q3 budget',
+      recipientName: 'Maya',
+      managerName: 'Ali',
+      latestMessage: 'Can you approve the Q3 budget?',
+      tone: 'professional',
+      threadContext: [{ from: 'Maya', body: 'Sending the Q3 budget for approval.' }],
+    });
+    expect(user).toContain('Conversation so far (oldest first):');
+    expect(user).toContain('- Maya: Sending the Q3 budget for approval.');
+    expect(user).toContain('Latest message to reply to:');
+  });
 });
