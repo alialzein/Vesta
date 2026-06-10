@@ -68,6 +68,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
             <DetailRow label="Role (job title)" value={d.profile.role ?? '—'} />
             <DetailRow label="Email confirmed" value={d.auth.emailConfirmedAt ? fmtDate(d.auth.emailConfirmedAt) : 'not confirmed'} />
             <DetailRow label="Onboarded" value={d.profile.onboardedAt ? fmtDate(d.profile.onboardedAt) : 'not yet'} />
+            <DetailRow label="Last sign-in from" value={d.auth.lastLoginFrom ?? 'unknown (recorded from now on)'} />
             {d.profile.suspended && (
               <DetailRow label="Suspension reason" value={d.profile.suspendedReason ?? '—'} />
             )}

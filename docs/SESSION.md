@@ -4,10 +4,31 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (Admin **Wave 4** built; branch `feature/admin-wave-4`, PR pending review)
-**Repo state:** Phases 0–9 done; Admin Waves 1–3 merged. **Wave 4 on the branch** —
-283 tests green, typecheck + lint + build clean. **No migration** (code only).
+**Last updated:** 2026-06-10 (Admin **Wave 5** built; branch `feature/admin-wave-5`, PR pending review)
+**Repo state:** Phases 0–9 done; Admin Waves 1–4 merged. **Wave 5 on the branch** —
+283 tests green (one pre-existing OnboardingWizard flake under load only), typecheck +
+lint + build clean. **No migration** (code only).
 Next core phase after merge: **Phase 10 — Memory & Rules**.
+
+## 🆕 Admin Wave 5 (branch `feature/admin-wave-5` — review & merge next)
+
+- **Overview date filter** — Today / 7 days / **This month (default)** / 30 days pills
+  drive the AI spend + usage cards (`getHealthOverview(sinceIso)`); cards are labeled
+  with the range so "today vs month" numbers can't be confused again.
+- **Triage user picker** — searchable combobox (type email/name → pick) replaces the
+  plain dropdown; default view stays "10 newest rules/memories across users".
+- **Login location** — sign-ins now record IP + city/country (Vercel geo headers) +
+  user agent into the login audit row; Users table shows *when + where* the latest
+  sign-in happened; user detail page gets a "Last sign-in from" field. Locally
+  (no Vercel edge) only the IP is available; old logins show "location unknown".
+- **Users & Accounts redesign** — avatar initials (stable per-user color), stacked
+  email/name/role identity cell linking to the detail page, merged status badges,
+  synced-dot mailbox cell, row hover, location under last sign-in.
+- ⚠️ **Supabase URL config (user action, told in chat):** Site URL →
+  `https://vesta-ai-radar.vercel.app`; Redirect URLs → add
+  `https://vesta-ai-radar.vercel.app/**` and `http://localhost:3000/**` (the bare
+  domain without `/**` only matches the homepage, which is why the reset link fell
+  back to the Site URL).
 
 ## 🆕 Admin Wave 4 (branch `feature/admin-wave-4` — review & merge next)
 

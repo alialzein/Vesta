@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { recordLoginEvent } from '@/lib/admin/audit';
+import { recordLoginEvent, loginContextFromHeaders } from '@/lib/admin/audit';
 
 /**
  * Auth callback for email confirmation / OAuth / password-recovery links.
@@ -18,7 +18,13 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       // Audit the sign-in (best-effort; feeds the admin Audit tab).
-      if (data.user) await recordLoginEvent(data.user.id, 'oauth_or_email_link');
+      if (data.user) {
+        await recordLoginEvent(
+          data.user.id,
+          'oauth_or_email_link',
+          loginContextFromHeaders(request.headers),
+        );
+      }
       const res = NextResponse.redirect(`${origin}${next.startsWith('/') ? next : '/'}`);
       // Play the branded splash once on this fresh login (cleared by the dashboard).
       res.cookies.set('vesta_show_splash', '1', { path: '/', maxAge: 300, sameSite: 'lax' });

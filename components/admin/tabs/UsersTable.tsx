@@ -4,11 +4,27 @@ import Link from 'next/link';
 import { Table, Th, Td, Badge, EmptyState } from '@/components/admin/ui';
 import { useTableControls, TableToolbar, SortTh, Pager } from '@/components/admin/DataTable';
 import { UserRowActions } from '@/components/admin/tabs/UserRowActions';
+import { Icon } from '@/components/ui/Icon';
 import { fmtInt, fmtRel, fmtDate } from '@/lib/admin/format';
 import type { AdminUserRow } from '@/lib/admin/data';
 
 /** Flattened row with the derived facet fields the filters work on. */
 type Row = AdminUserRow & Record<string, unknown> & { access: string; state: string; mailbox: string };
+
+/** Deterministic avatar hue from the user id, so colors are stable per user. */
+function avatarHue(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+  return h;
+}
+
+function initialsOf(name: string | null, email: string | null): string {
+  const source = name?.trim() || email?.split('@')[0]?.replace(/[._-]+/g, ' ') || '?';
+  const words = source.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  if (words.length === 1) return words[0].charAt(0).toUpperCase();
+  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+}
 
 export function UsersTable({ users, adminId }: { users: AdminUserRow[]; adminId: string }) {
   const rows: Row[] = users.map((u) => ({
@@ -19,7 +35,7 @@ export function UsersTable({ users, adminId }: { users: AdminUserRow[]; adminId:
   }));
 
   const t = useTableControls<Row>(rows, {
-    searchKeys: ['email', 'fullName', 'role'],
+    searchKeys: ['email', 'fullName', 'role', 'lastLoginFrom'],
     facetKeys: ['access', 'state', 'mailbox'],
     initialSort: { key: 'createdAt', dir: 'desc' },
   });
@@ -29,7 +45,7 @@ export function UsersTable({ users, adminId }: { users: AdminUserRow[]; adminId:
       <TableToolbar
         search={t.search}
         onSearch={t.setSearch}
-        placeholder="Search email or name…"
+        placeholder="Search email, name, or location…"
         total={t.total}
         facets={[
           { key: 'access', label: 'Access', options: t.facetOptions.access ?? [], value: t.facetValues.access ?? '', onChange: (v) => t.setFacet('access', v) },
@@ -45,8 +61,7 @@ export function UsersTable({ users, adminId }: { users: AdminUserRow[]; adminId:
           <thead>
             <tr>
               <SortTh label="User" sortKey="email" sort={t.sort} onToggle={t.toggleSort} />
-              <Th>Access</Th>
-              <Th>State</Th>
+              <Th>Status</Th>
               <Th>Mailbox</Th>
               <SortTh label="Mail" sortKey="messageCount" sort={t.sort} onToggle={t.toggleSort} align="right" />
               <SortTh label="Last sign-in" sortKey="lastSignInAt" sort={t.sort} onToggle={t.toggleSort} />
@@ -56,42 +71,73 @@ export function UsersTable({ users, adminId }: { users: AdminUserRow[]; adminId:
           </thead>
           <tbody>
             {t.rows.map((u) => (
-              <tr key={u.id}>
-                <Td className="whitespace-nowrap">
+              <tr key={u.id} className="group transition-colors hover:bg-panel-2/60">
+                {/* Identity: avatar + email/name, linked to the full history page. */}
+                <Td>
                   <Link
                     href={`/admin/users/${u.id}`}
                     prefetch
-                    className="font-medium text-ink underline-offset-2 hover:text-accent hover:underline"
+                    className="flex min-w-0 items-center gap-3"
                   >
-                    {u.email ?? u.id}
+                    <span
+                      aria-hidden="true"
+                      className="grid h-9 w-9 flex-none place-items-center rounded-full text-[12.5px] font-bold text-white shadow-soft"
+                      style={{
+                        background: `linear-gradient(135deg, hsl(${avatarHue(u.id)} 65% 45%), hsl(${(avatarHue(u.id) + 40) % 360} 65% 35%))`,
+                      }}
+                    >
+                      {initialsOf(u.fullName, u.email)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-ink underline-offset-2 group-hover:text-accent group-hover:underline">
+                        {u.email ?? u.id}
+                      </span>
+                      <span className="block truncate text-[11.5px] text-muted">
+                        {u.fullName ?? '—'}
+                        {u.role && !u.isAdmin ? ` · ${u.role}` : ''}
+                      </span>
+                    </span>
                   </Link>
-                  {u.fullName && <div className="text-[11.5px] text-muted">{u.fullName}</div>}
                 </Td>
+
+                {/* Access + account state in one tidy cell. */}
                 <Td>
-                  {u.isAdmin ? (
-                    <Badge tone="accent">admin</Badge>
-                  ) : (
-                    <span className="text-muted">{u.role || 'user'}</span>
-                  )}
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {u.isAdmin && <Badge tone="accent">admin</Badge>}
+                    {u.suspended ? (
+                      <Badge tone="bad">suspended</Badge>
+                    ) : u.onboardedAt ? (
+                      <Badge tone="good">active</Badge>
+                    ) : (
+                      <Badge tone="warn">onboarding</Badge>
+                    )}
+                  </span>
                 </Td>
-                <Td>
-                  {u.suspended ? (
-                    <Badge tone="bad">suspended</Badge>
-                  ) : u.onboardedAt ? (
-                    <Badge tone="good">active</Badge>
-                  ) : (
-                    <Badge tone="warn">onboarding</Badge>
-                  )}
-                </Td>
+
                 <Td>
                   {u.connected ? (
-                    <span className="text-[12px] text-ink">connected · {fmtRel(u.lastSyncAt)}</span>
+                    <span className="inline-flex items-center gap-1.5 text-[12px] text-ink">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green" aria-hidden="true" />
+                      synced {fmtRel(u.lastSyncAt)}
+                    </span>
                   ) : (
                     <span className="text-muted">—</span>
                   )}
                 </Td>
+
                 <Td className="text-right text-muted">{fmtInt(u.messageCount)}</Td>
-                <Td className="whitespace-nowrap text-muted">{fmtRel(u.lastSignInAt)}</Td>
+
+                {/* When + where the latest sign-in happened. */}
+                <Td className="whitespace-nowrap">
+                  <span className="block text-[12.5px] text-ink-soft">{fmtRel(u.lastSignInAt)}</span>
+                  <span className="flex items-center gap-1 text-[11px] text-muted">
+                    {u.lastLoginFrom && (
+                      <Icon name="home" className="h-[10px] w-[10px]" aria-hidden="true" />
+                    )}
+                    {u.lastLoginFrom ?? 'location unknown'}
+                  </span>
+                </Td>
+
                 <Td className="whitespace-nowrap text-muted">{fmtDate(u.createdAt)}</Td>
                 <Td>
                   <UserRowActions
