@@ -4,13 +4,23 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (Admin **Wave 5** built; branch `feature/admin-wave-5`, PR pending review)
-**Repo state:** Phases 0–9 done; Admin Waves 1–4 merged. **Wave 5 on the branch** —
-283 tests green (one pre-existing OnboardingWizard flake under load only), typecheck +
-lint + build clean. **No migration** (code only).
-Next core phase after merge: **Phase 10 — Memory & Rules**.
+**Last updated:** 2026-06-10 (Admin **Wave 5 merged** ✅ — admin panel complete; Supabase URLs configured)
+**Repo state:** `main`, clean. Phases 0–9 done; **Admin Waves 1–5 all merged**
+(latest `26bd54c`). 283 tests green, typecheck + lint + build clean.
+**Supabase URL config done** (Site URL = production; Redirect URLs incl. `/**`
+wildcards for prod + localhost) — reset-password links should now work end to end.
+**The admin-panel plan is fully built** except impersonation (deliberately deferred)
+and an MFA enrollment flow (optional, on request).
+**Next: Phase 10 — Memory & Rules** (the next core product phase).
 
-## 🆕 Admin Wave 5 (branch `feature/admin-wave-5` — review & merge next)
+### ✅ Verify when convenient (Wave 4+5, on Vercel)
+- Reset password (admin or dev user) → email link → update-password page → new
+  password works. Sign in → Users tab shows last sign-in **location** (city on Vercel).
+- Overview: range pills (default this month); AI page costs now show dollars.
+- Set a tiny daily cost cap ($0.01) → draft generation reports the cap; remove it.
+- Schedule `/api/cron/purge` daily in pg_cron alongside `/api/cron/sync`.
+
+## Admin Wave 5 (merged `26bd54c`)
 
 - **Overview date filter** — Today / 7 days / **This month (default)** / 30 days pills
   drive the AI spend + usage cards (`getHealthOverview(sinceIso)`); cards are labeled
@@ -30,7 +40,7 @@ Next core phase after merge: **Phase 10 — Memory & Rules**.
   domain without `/**` only matches the homepage, which is why the reset link fell
   back to the Site URL).
 
-## 🆕 Admin Wave 4 (branch `feature/admin-wave-4` — review & merge next)
+## Admin Wave 4 (merged `3016c60`)
 
 **Settings are now real levers (the Wave 3 gap):**
 - `lib/ai/runtime.ts` — `getEffectiveAi(userId, task)`: env overlaid with
