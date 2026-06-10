@@ -59,6 +59,9 @@ aggressively AI is used here is a per-account setting (`pregate_ai` default,
 
 The AI also **writes draft replies** for you — open the **Draft** tab (or the
 **Draft reply** button) on any waiting item and Vesta drafts a response in your tone.
+On a **Waiting on them** item the same button says **Draft follow-up** and writes a
+polite nudge for what they owe you instead. It reads the recent conversation in both
+directions — including your own replies — so it always knows which side owes what.
 You review, edit, and **approve** it; nothing sends without you. See
 [Draft replies](draft-replies.md).
 

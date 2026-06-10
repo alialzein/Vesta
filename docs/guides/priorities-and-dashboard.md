@@ -106,6 +106,10 @@ chip on the Radar) so it doesn't silently disappear. The longer they go without
 replying, the higher it climbs. When they finally reply, it flips back to **Waiting on
 you**.
 
+Need to chase? The rail's **Draft follow-up** button writes a short, polite nudge
+asking for what they owe you (see [Draft replies](draft-replies.md)). Sending it
+does **not** clear the item — Vesta keeps tracking it until they actually answer.
+
 Vesta only does this for replies that actually expect a response — a quick "thanks" or
 "will do" won't create one. (How aggressively it uses AI to judge this is a setting
 we can tune per account.)
