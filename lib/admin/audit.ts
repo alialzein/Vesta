@@ -10,6 +10,30 @@ import type { Json } from '@/lib/database.types';
  * `user_id` is set to the affected user when there is one (so a user's own audit
  * view can show it), else to the acting admin. `actor_id` is always the admin.
  */
+/**
+ * Record a successful sign-in as an audit event (action 'login'), so the Audit
+ * tab and the per-user history show real login activity. Best-effort — never
+ * blocks the sign-in itself.
+ */
+export async function recordLoginEvent(
+  userId: string,
+  method: 'password' | 'oauth_or_email_link',
+): Promise<void> {
+  try {
+    const svc = createServiceClient();
+    await svc.from('audit_logs').insert({
+      user_id: userId,
+      actor_type: 'user',
+      actor_id: userId,
+      action: 'login',
+      entity_type: 'session',
+      metadata: { method } as Json,
+    });
+  } catch {
+    /* observability only */
+  }
+}
+
 export async function logAdminAction(opts: {
   actorId: string;
   action: string;

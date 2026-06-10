@@ -1,19 +1,13 @@
 import { requireAdmin } from '@/lib/admin/auth';
-import { listAuditLogs, listAuditActions, getSecretsStatus, listUsers } from '@/lib/admin/data';
-import { Section, Table, Th, Td, Badge, EmptyState, Panel } from '@/components/admin/ui';
-import { AuditFilter } from '@/components/admin/tabs/AuditFilter';
+import { listAuditLogs, getSecretsStatus, listUsers } from '@/lib/admin/data';
+import { Section, Badge, EmptyState, Panel } from '@/components/admin/ui';
+import { AuditTable } from '@/components/admin/tabs/AuditTable';
 import { fmtRel } from '@/lib/admin/format';
 
-export default async function AdminAuditPage({
-  searchParams,
-}: {
-  searchParams: { action?: string };
-}) {
+export default async function AdminAuditPage() {
   await requireAdmin();
-  const action = searchParams?.action ?? '';
-  const [logs, actions, secrets, users] = await Promise.all([
-    listAuditLogs({ action: action || undefined, limit: 150 }),
-    listAuditActions(),
+  const [logs, secrets, users] = await Promise.all([
+    listAuditLogs({ limit: 500 }),
     Promise.resolve(getSecretsStatus()),
     listUsers(),
   ]);
@@ -26,7 +20,8 @@ export default async function AdminAuditPage({
           Audit &amp; Security
         </h1>
         <p className="mt-1 text-[13px] text-muted">
-          Who did what, which secrets are configured, and who holds admin access.
+          Who did what — logins, sent replies, failed sends, and every operator action — plus
+          secrets status and who holds admin access.
         </p>
       </header>
 
@@ -68,42 +63,12 @@ export default async function AdminAuditPage({
 
       <Section
         title="Audit log"
-        hint="Every mutating operator action, newest first."
-        action={<AuditFilter actions={actions} current={action} />}
+        hint="Latest 500 events — logins, email sends/failures, and every mutating operator action. Search and filter freely."
       >
         {logs.length === 0 ? (
-          <EmptyState>No audit entries{action ? ` for “${action}”` : ''} yet.</EmptyState>
+          <EmptyState>No audit entries yet.</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>When</Th>
-                <Th>Actor</Th>
-                <Th>Action</Th>
-                <Th>Target</Th>
-                <Th>Detail</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((l) => (
-                <tr key={l.id}>
-                  <Td className="whitespace-nowrap text-muted">{fmtRel(l.at)}</Td>
-                  <Td className="whitespace-nowrap">
-                    {l.actorEmail ?? l.actorType}
-                  </Td>
-                  <Td><Badge tone="accent">{l.action}</Badge></Td>
-                  <Td className="whitespace-nowrap text-muted">{l.targetEmail ?? l.entityType ?? '—'}</Td>
-                  <Td className="max-w-[280px] text-muted">
-                    <span className="break-words font-mono text-[11px]">
-                      {l.metadata && Object.keys(l.metadata as object).length > 0
-                        ? JSON.stringify(l.metadata)
-                        : '—'}
-                    </span>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
+          <AuditTable logs={logs} />
         )}
       </Section>
     </div>

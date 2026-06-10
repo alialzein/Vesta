@@ -6,11 +6,18 @@ import type { Database } from '@/lib/database.types';
  * Refreshes the Supabase auth session on every request and enforces route
  * protection:
  *   - Unauthenticated users hitting a protected route -> redirect to /login.
- *   - Authenticated users hitting /login or /signup -> redirect to /.
+ *   - Suspended accounts (app_metadata.suspended) -> signed out + /login notice.
+ *   - Admin accounts (app_metadata.is_admin) live ONLY in /admin — any app page
+ *     redirects them to the operator console (the admin account is not a user
+ *     account; it has no mailbox/dashboard).
+ *   - Authenticated users hitting /login or /signup -> redirect to / (or /admin).
+ *
+ * Both gates read auth-token claims (`app_metadata` is server-only; users cannot
+ * edit it), so no extra DB round-trip happens per request.
  *
  * Public (unauthenticated) paths: /login, /signup, /auth/* (the OAuth/email
- * confirmation callback), and Next internals/static assets (excluded by the
- * matcher in middleware.ts).
+ * confirmation callback + update-password), and Next internals/static assets
+ * (excluded by the matcher in middleware.ts).
  */
 const PUBLIC_PATHS = ['/login', '/signup', '/auth'];
 
@@ -57,9 +64,35 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Suspended account: kill the session and explain on the login screen. The
+  // claim is stamped by the admin Suspend action (alongside a Supabase ban that
+  // blocks new sign-ins); this check ends any session that already existed.
+  if (user && user.app_metadata?.suspended === true) {
+    await supabase.auth.signOut();
+    // signOut wrote its cookie-clearing headers onto `response` (via setAll);
+    // copy them onto the redirect or the dead session would keep looping back.
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = '';
+    url.searchParams.set('error', 'suspended');
+    const redirect = NextResponse.redirect(url);
+    for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+    return redirect;
+  }
+
+  const isAdmin = user?.app_metadata?.is_admin === true;
+
+  // Admins are operators, not app users — keep them inside /admin.
+  if (user && isAdmin && !publicPath && !pathname.startsWith('/admin')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/admin';
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = isAdmin ? '/admin' : '/';
     url.search = '';
     return NextResponse.redirect(url);
   }

@@ -106,6 +106,19 @@ export async function resolveAiOverrides(userId: string): Promise<{
   };
 }
 
+/**
+ * The admin-configured token prices (USD per 1M tokens), or null when unset.
+ * Passed into estimateCostUsd so panel pricing actually drives cost estimates
+ * (env AI_PRICE_INPUT/OUTPUT remains the fallback inside the calculator).
+ */
+export async function getConfiguredAiRates(): Promise<{ input: number; output: number } | null> {
+  const app = await getAppSettings();
+  const input = app.ai_price_input === null ? NaN : Number(app.ai_price_input);
+  const output = app.ai_price_output === null ? NaN : Number(app.ai_price_output);
+  if (Number.isFinite(input) && Number.isFinite(output)) return { input, output };
+  return null;
+}
+
 /** Effective retention policy for a user (per-user override beats the global). */
 export async function resolveRetention(
   userId: string,

@@ -6,8 +6,9 @@ import { getAiClient } from './client';
 import { buildPrompt, bodyForAi } from './context';
 import { parseAnalysis, PROMPT_VERSION } from './schema';
 import { buildReplyIntentPrompt, parseReplyIntent } from './reply-intent';
-import { estimateCostUsd } from './cost';
+import { estimateCostUsd, type CostRates } from './cost';
 import { recordAiUsage } from './usage';
+import { getConfiguredAiRates } from '@/lib/admin/settings';
 
 type DbClient = SupabaseClient<Database>;
 type AnalysisInsert = Database['public']['Tables']['ai_analyses']['Insert'];
@@ -68,6 +69,14 @@ export async function analyzeMailboxWorkItems(
   const client = getAiClient();
   if (!cfg || !client) return EMPTY;
   const replyIntentMode = getReplyIntentMode();
+  // Admin-panel token prices (fetched once per run) so cost estimates reflect
+  // the configured rates, not only env/built-in pricing.
+  let rates: CostRates | null = null;
+  try {
+    rates = await getConfiguredAiRates();
+  } catch {
+    /* settings unavailable — env/table pricing still applies */
+  }
 
   // Daily cap — count this user's analyses since local midnight (UTC-based here).
   const dayStart = new Date();
@@ -143,7 +152,7 @@ export async function analyzeMailboxWorkItems(
       try {
         const { content, usage } = await client.complete(intentPrompt);
         const intent = parseReplyIntent(content);
-        const cost = estimateCostUsd(cfg.model, usage);
+        const cost = estimateCostUsd(cfg.model, usage, rates);
         const nowIso = new Date().toISOString();
         await db.from('ai_analyses').insert({
           user_id: w.user_id,
@@ -229,7 +238,7 @@ export async function analyzeMailboxWorkItems(
       .maybeSingle();
 
     const latestAt = thread?.latest_inbound_at ?? thread?.latest_message_at ?? null;
-    // Already analyzed the current state → skip (analyze once per change).
+    // Already analyzed the current state â†’ skip (analyze once per change).
     if (w.last_analyzed_at && latestAt && new Date(w.last_analyzed_at) >= new Date(latestAt)) {
       skipped++;
       continue;
@@ -264,7 +273,7 @@ export async function analyzeMailboxWorkItems(
     try {
       const { content, usage } = await client.complete(prompt);
       const analysis = parseAnalysis(content);
-      const cost = estimateCostUsd(cfg.model, usage);
+      const cost = estimateCostUsd(cfg.model, usage, rates);
       const nowIso = new Date().toISOString();
       // Spread out identical AI scores using deadline / follow-up / recency signals.
       const blendedPriority = Math.max(

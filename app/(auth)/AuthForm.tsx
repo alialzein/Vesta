@@ -87,7 +87,14 @@ function SubmitButton({ mode, disabled }: { mode: 'signin' | 'signup'; disabled?
   );
 }
 
-export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
+export function AuthForm({
+  redirectedFrom,
+  notice,
+}: {
+  redirectedFrom?: string;
+  /** A page-level notice shown above the form (e.g. account suspended). */
+  notice?: string | null;
+}) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const action = mode === 'signin' ? signIn : signUp;
   const [state, formAction] = useFormState<AuthState, FormData>(action, null);
@@ -143,6 +150,16 @@ export function AuthForm({ redirectedFrom }: { redirectedFrom?: string }) {
           </p>
         </div>
       </div>
+
+      {/* Page-level notice (e.g. account suspended) — shown before anything else. */}
+      {notice && (
+        <p
+          role="alert"
+          className="mb-4 rounded-[12px] border border-[color:var(--red)] bg-red-soft px-4 py-3 text-[13px] leading-snug text-red"
+        >
+          {notice}
+        </p>
+      )}
 
       {/* Card — premium AI console panel: top edge highlight + soft glow. */}
       <div className="relative overflow-hidden rounded-[var(--radius)] border border-line bg-panel p-6 shadow-glow backdrop-blur-[16px]">

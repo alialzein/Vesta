@@ -8,6 +8,8 @@ import { getAiConfig } from '@/lib/ai/config';
 import { getAiClient } from '@/lib/ai/client';
 import { buildCapturePrompt, parseCapture } from '@/lib/ai/quick-capture';
 import { estimateCostUsd } from '@/lib/ai/cost';
+import { recordAiUsage } from '@/lib/ai/usage';
+import { getConfiguredAiRates } from '@/lib/admin/settings';
 
 /** Priority by how soon a task is due, so near-term tasks sort up the radar. */
 function priorityForDue(dueAt: string | null): number {
@@ -182,8 +184,10 @@ export async function createTaskWithAi(
     .single();
   if (error) return { ok: false, error: error.message };
 
-  // Record the AI call for cost/usage tracking (best-effort).
+  // Record the AI call for cost/usage tracking (best-effort) — in ai_analyses
+  // (per-item history) and the unified ai_usage ledger the admin console reads.
   if (usage && inserted) {
+    const cost = estimateCostUsd(cfg.model, usage, await getConfiguredAiRates());
     await supabase.from('ai_analyses').insert({
       user_id: user.id,
       work_item_id: inserted.id,
@@ -193,7 +197,17 @@ export async function createTaskWithAi(
       category: 'task',
       token_input: usage.inputTokens,
       token_output: usage.outputTokens,
-      cost_estimate_usd: estimateCostUsd(cfg.model, usage),
+      cost_estimate_usd: cost,
+    });
+    await recordAiUsage({
+      userId: user.id,
+      feature: 'capture',
+      provider: cfg.provider,
+      model: cfg.model,
+      tokenInput: usage.inputTokens,
+      tokenOutput: usage.outputTokens,
+      costUsd: cost,
+      workItemId: inserted.id,
     });
   }
 

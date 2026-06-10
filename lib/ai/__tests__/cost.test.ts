@@ -22,4 +22,20 @@ describe('estimateCostUsd', () => {
     // 1M in × $2 + 1M out × $8 = $10
     expect(estimateCostUsd('gpt-5.4-mini', { inputTokens: 1_000_000, outputTokens: 1_000_000 })).toBeCloseTo(10);
   });
+
+  it('explicit rates (admin panel) beat env and the built-in table', () => {
+    process.env.AI_PRICE_INPUT = '2';
+    process.env.AI_PRICE_OUTPUT = '8';
+    const rates = { input: 1, output: 3 };
+    // 1M × $1 + 1M × $3 = $4 (not the env $10, not Haiku's table $6)
+    expect(
+      estimateCostUsd('claude-haiku-4-5', { inputTokens: 1_000_000, outputTokens: 1_000_000 }, rates),
+    ).toBeCloseTo(4);
+  });
+
+  it('null rates fall back to env/table', () => {
+    expect(
+      estimateCostUsd('claude-haiku-4-5', { inputTokens: 1_000_000, outputTokens: 1_000_000 }, null),
+    ).toBeCloseTo(6);
+  });
 });

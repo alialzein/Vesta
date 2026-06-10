@@ -1,15 +1,11 @@
 import { requireAdmin } from '@/lib/admin/auth';
 import { listMailboxes } from '@/lib/admin/data';
-import { Table, Th, Td, Badge, EmptyState } from '@/components/admin/ui';
-import { MailboxRowActions } from '@/components/admin/tabs/MailboxRowActions';
-import { fmtRel } from '@/lib/admin/format';
-
-const STALE_MS = 30 * 60_000;
+import { EmptyState } from '@/components/admin/ui';
+import { MailboxesTable } from '@/components/admin/tabs/MailboxesTable';
 
 export default async function AdminMailboxesPage() {
   await requireAdmin();
   const rows = await listMailboxes();
-  const now = Date.now();
 
   return (
     <div>
@@ -26,47 +22,7 @@ export default async function AdminMailboxesPage() {
       {rows.length === 0 ? (
         <EmptyState>No mailboxes connected yet.</EmptyState>
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>User</Th>
-              <Th>Mailbox</Th>
-              <Th>Status</Th>
-              <Th>Last sync</Th>
-              <Th>Error</Th>
-              <Th className="text-right">Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((m) => {
-              const stale = !m.lastSyncAt || now - new Date(m.lastSyncAt).getTime() > STALE_MS;
-              const active = m.status === 'active' && m.integrationStatus !== 'error';
-              return (
-                <tr key={m.id}>
-                  <Td className="whitespace-nowrap">{m.email ?? '—'}</Td>
-                  <Td className="whitespace-nowrap text-muted">{m.mailboxEmail ?? '—'}</Td>
-                  <Td>
-                    <Badge tone={active ? 'good' : 'bad'}>{m.status}</Badge>
-                    {m.triageMode && <span className="ml-2 text-[11px] text-muted">{m.triageMode}</span>}
-                  </Td>
-                  <Td className="whitespace-nowrap">
-                    <span className={stale ? 'text-amber' : 'text-ink'}>{fmtRel(m.lastSyncAt)}</span>
-                  </Td>
-                  <Td className="max-w-[260px]">
-                    {m.lastError ? (
-                      <span className="break-words text-[12px] text-red">{m.lastError}</span>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </Td>
-                  <Td>
-                    <MailboxRowActions userId={m.userId} />
-                  </Td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </Table>
+        <MailboxesTable mailboxes={rows} />
       )}
 
       <p className="mt-4 text-[12px] text-muted">
