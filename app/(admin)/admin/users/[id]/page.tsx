@@ -5,6 +5,7 @@ import { getUserDetail } from '@/lib/admin/data';
 import { Section, Panel, KpiCard, Badge, Table, Th, Td, EmptyState } from '@/components/admin/ui';
 import { UserRowActions } from '@/components/admin/tabs/UserRowActions';
 import { TimezoneEditor } from '@/components/admin/tabs/TimezoneEditor';
+import { RetriggerOnboardingButton } from '@/components/admin/tabs/RetriggerOnboardingButton';
 import { fmtInt, fmtRel, fmtDate, fmtDateTime, fmtUsd } from '@/lib/admin/format';
 
 /**
@@ -83,7 +84,7 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
             <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">
               Actions
             </p>
-            <div className="flex justify-start">
+            <div className="flex flex-wrap items-center justify-start gap-1.5">
               <UserRowActions
                 userId={d.profile.id}
                 email={d.profile.email}
@@ -91,6 +92,14 @@ export default async function AdminUserDetailPage({ params }: { params: { id: st
                 suspended={d.profile.suspended}
                 isSelf={d.profile.id === admin.id}
               />
+              <a
+                href={`/admin/users/${d.profile.id}/export`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-line px-3 py-[7px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+                title="Download all of this user's data as JSON (portability / support). Audit-logged."
+              >
+                Export data
+              </a>
+              <RetriggerOnboardingButton userId={d.profile.id} />
             </div>
           </div>
         </Panel>

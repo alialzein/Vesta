@@ -1,14 +1,12 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/database.types';
-import { getAiConfig, getReplyIntentMode } from './config';
-import { getAiClient } from './client';
 import { buildPrompt, bodyForAi } from './context';
 import { parseAnalysis, PROMPT_VERSION } from './schema';
 import { buildReplyIntentPrompt, parseReplyIntent } from './reply-intent';
-import { estimateCostUsd, type CostRates } from './cost';
+import { estimateCostUsd } from './cost';
 import { recordAiUsage } from './usage';
-import { getConfiguredAiRates } from '@/lib/admin/settings';
+import { getEffectiveAi } from './runtime';
 
 type DbClient = SupabaseClient<Database>;
 type AnalysisInsert = Database['public']['Tables']['ai_analyses']['Insert'];
@@ -65,18 +63,12 @@ export async function analyzeMailboxWorkItems(
   db: DbClient,
   ctx: { userId: string; mailboxId: string },
 ): Promise<AnalyzeResult> {
-  const cfg = getAiConfig();
-  const client = getAiClient();
-  if (!cfg || !client) return EMPTY;
-  const replyIntentMode = getReplyIntentMode();
-  // Admin-panel token prices (fetched once per run) so cost estimates reflect
-  // the configured rates, not only env/built-in pricing.
-  let rates: CostRates | null = null;
-  try {
-    rates = await getConfiguredAiRates();
-  } catch {
-    /* settings unavailable — env/table pricing still applies */
-  }
+  // Effective config = env overlaid with the admin panel's settings: per-task
+  // model, caps, prices, reply-intent mode, and per-user pause/cost caps (Wave 4).
+  const eff = await getEffectiveAi(ctx.userId, 'analysis');
+  if (!eff) return EMPTY;
+  if (eff.blocked) return EMPTY; // paused or over a cost cap — heuristics still ran
+  const { cfg, client, rates, replyIntentMode } = eff;
 
   // Daily cap — count this user's analyses since local midnight (UTC-based here).
   const dayStart = new Date();

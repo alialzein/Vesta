@@ -4,12 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { parseQuickTask } from '@/lib/tasks/parse';
-import { getAiConfig } from '@/lib/ai/config';
-import { getAiClient } from '@/lib/ai/client';
 import { buildCapturePrompt, parseCapture } from '@/lib/ai/quick-capture';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
-import { getConfiguredAiRates } from '@/lib/admin/settings';
+import { getEffectiveAi } from '@/lib/ai/runtime';
 
 /** Priority by how soon a task is due, so near-term tasks sort up the radar. */
 function priorityForDue(dueAt: string | null): number {
@@ -138,9 +136,11 @@ export async function createTaskWithAi(
   const text = input.trim();
   if (!text) return { ok: false, error: 'Please enter a task.' };
 
-  const cfg = getAiConfig();
-  const client = getAiClient();
-  if (!cfg || !client) return createManualTask(text); // no AI → deterministic
+  // Effective config (env + admin-panel overrides). No AI, paused, or over a
+  // cost cap → fall back to the deterministic parser, so capture never fails.
+  const eff = await getEffectiveAi(user.id, 'analysis');
+  if (!eff || eff.blocked) return createManualTask(text);
+  const { cfg, client, rates } = eff;
 
   const fallback = parseQuickTask(text);
   let capture;
@@ -187,7 +187,7 @@ export async function createTaskWithAi(
   // Record the AI call for cost/usage tracking (best-effort) — in ai_analyses
   // (per-item history) and the unified ai_usage ledger the admin console reads.
   if (usage && inserted) {
-    const cost = estimateCostUsd(cfg.model, usage, await getConfiguredAiRates());
+    const cost = estimateCostUsd(cfg.model, usage, rates);
     await supabase.from('ai_analyses').insert({
       user_id: user.id,
       work_item_id: inserted.id,

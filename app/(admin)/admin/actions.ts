@@ -15,6 +15,7 @@ import {
 } from '@/lib/admin/settings';
 import { createServiceClient } from '@/lib/supabase/service';
 import { syncOutlookForUser, reprocessMailForUser } from '@/lib/sync/outlook';
+import { ensureSubscription } from '@/lib/sync/subscriptions';
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -57,6 +58,34 @@ export async function adminReprocess(userId: string): Promise<ActionResult> {
     return ok(`Re-processed — ${res.workItems} work item(s), ${res.hidden} hidden.`);
   } catch (e) {
     return fail(e instanceof Error ? e.message : 'Re-process failed.');
+  }
+}
+
+/** Renew (or create) the Graph webhook subscription for one mailbox. */
+export async function adminRenewSubscription(mailboxId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const svc = createServiceClient();
+  const { data: mb } = await svc
+    .from('mailboxes')
+    .select('id, user_id, integration_id, metadata')
+    .eq('id', mailboxId)
+    .maybeSingle();
+  if (!mb?.integration_id) return fail('Mailbox not found or not connected.');
+  try {
+    const result = await ensureSubscription(mb as Parameters<typeof ensureSubscription>[0]);
+    await logAdminAction({
+      actorId: admin.id,
+      action: 'renew_subscription',
+      targetUserId: mb.user_id,
+      metadata: { mailboxId, result },
+    });
+    revalidateAdmin();
+    if (result === 'skipped') {
+      return ok('Subscription is already fresh (or webhooks are not configured on this deployment).');
+    }
+    return ok(result === 'renewed' ? 'Subscription renewed.' : 'Subscription created.');
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : 'Renew failed.');
   }
 }
 
@@ -274,8 +303,13 @@ export async function adminResetPassword(userId: string): Promise<ActionResult> 
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
+  // Land directly on the update-password page. Recovery links use the implicit
+  // flow (tokens arrive in the URL #hash, which only the browser can read), so
+  // the page itself consumes them client-side — routing via /auth/callback would
+  // lose them. NOTE: this URL must be covered by the Supabase Auth
+  // "Redirect URLs" allow-list or Supabase silently falls back to the Site URL.
   const { error } = await anon.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+    redirectTo: `${origin}/auth/update-password`,
   });
   if (error) return fail(error.message);
   await logAdminAction({ actorId: admin.id, action: 'reset_password', targetUserId: userId });
@@ -296,6 +330,17 @@ export async function adminSetPassword(userId: string, password: string): Promis
   if (error) return fail(error.message);
   await logAdminAction({ actorId: admin.id, action: 'set_password', targetUserId: userId });
   return ok('Password updated. Share it with the user securely.');
+}
+
+/** Send the user back through the first-run onboarding wizard on next visit. */
+export async function adminRetriggerOnboarding(userId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const svc = createServiceClient();
+  const { error } = await svc.from('profiles').update({ onboarded_at: null }).eq('id', userId);
+  if (error) return fail(error.message);
+  await logAdminAction({ actorId: admin.id, action: 'retrigger_onboarding', targetUserId: userId });
+  revalidateAdmin();
+  return ok('Onboarding re-triggered — the user sees the welcome wizard on their next visit.');
 }
 
 /** Set the user's timezone (profiles.timezone — drives their local-time display). */

@@ -1,44 +1,10 @@
 import { requireAdmin } from '@/lib/admin/auth';
 import { getAppSettings, getConfiguredAiRates } from '@/lib/admin/settings';
 import { getAiUsageSummary } from '@/lib/admin/data';
-import { Section, Table, Th, Td, KpiCard, EmptyState, Badge, Panel } from '@/components/admin/ui';
+import { Section, Table, Th, Td, KpiCard, EmptyState, Badge } from '@/components/admin/ui';
 import { AiSettings } from '@/components/admin/tabs/AiSettings';
 import { ReanalyzeControls } from '@/components/admin/tabs/ReanalyzeControls';
 import { fmtUsd, fmtInt, fmtRel } from '@/lib/admin/format';
-
-/** Plain-language definitions for every number on this page. */
-const GLOSSARY: { term: string; meaning: string }[] = [
-  {
-    term: 'Call',
-    meaning:
-      'One request to the AI model. Reading one email = one call; writing one draft = one call.',
-  },
-  {
-    term: 'Tokens',
-    meaning:
-      'How models measure text — roughly ¾ of a word each. Every call has input tokens (what we send: the email + instructions) and output tokens (what the model writes back). You pay per token, which is why long emails are trimmed before sending.',
-  },
-  {
-    term: 'Spend · today / month',
-    meaning:
-      'Estimated USD cost of all calls (tokens × your configured price per 1M tokens). "Month" is the current calendar month. $0.00 with calls > 0 means token prices are not set below.',
-  },
-  {
-    term: 'Analysis coverage',
-    meaning:
-      'Of all open work items, how many the AI has analyzed (summary/priority/next action). "Never analyzed" items are waiting for the next sync or exceeded the daily cap.',
-  },
-  {
-    term: 'Feature',
-    meaning:
-      'Which part of Vesta made the call — analysis (reading waiting-on-you threads), draft (writing replies), reply_intent (checking if your reply expects an answer), capture (the ✨ quick-add task parser).',
-  },
-  {
-    term: 'Caps & budgets',
-    meaning:
-      'Max per run / per day bound how many items are analyzed per sync and per user per day, so spend stays predictable even on a flooded mailbox.',
-  },
-];
 
 export default async function AdminAiPage() {
   await requireAdmin();
@@ -79,29 +45,32 @@ export default async function AdminAiPage() {
       )}
 
       <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Spend · today" value={fmtUsd(usage.costToday)} hint="estimated, from the ledger" />
-        <KpiCard label="Spend · month" value={fmtUsd(usage.costMonth)} hint={`${fmtInt(usage.callsMonth)} calls this calendar month`} />
-        <KpiCard label="Tokens · month" value={fmtInt(usage.tokensMonth)} hint="input + output" />
+        <KpiCard
+          label="Spend · today"
+          value={fmtUsd(usage.costToday)}
+          hint="estimated, from the ledger"
+          tooltip="Estimated USD cost of today's AI calls: tokens × your price per 1M tokens. A 'call' is one request to the model (reading one email or writing one draft)."
+        />
+        <KpiCard
+          label="Spend · month"
+          value={fmtUsd(usage.costMonth)}
+          hint={`${fmtInt(usage.callsMonth)} calls this calendar month`}
+          tooltip="Estimated USD cost this calendar month. $0.00 with calls > 0 means token prices aren't set under Model & budgets."
+        />
+        <KpiCard
+          label="Tokens · month"
+          value={fmtInt(usage.tokensMonth)}
+          hint="input + output"
+          tooltip="Tokens are how models measure text (~¾ of a word each). Input = what we send (email + instructions); output = what the model writes back. You pay per token."
+        />
         <KpiCard
           label="Analysis coverage"
           value={`${fmtInt(usage.analysis.analyzed)}/${fmtInt(usage.analysis.total)}`}
           hint={`${fmtInt(usage.analysis.never)} never analyzed`}
           tone={usage.analysis.never > 0 ? 'warn' : 'good'}
+          tooltip="Of all open work items, how many the AI has analyzed (summary/priority/next action). 'Never analyzed' items wait for the next sync or hit the daily cap."
         />
       </div>
-
-      <Section title="What these numbers mean" hint="Quick reference for every term on this page.">
-        <Panel>
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-3 lg:grid-cols-2">
-            {GLOSSARY.map((g) => (
-              <div key={g.term}>
-                <dt className="text-[12.5px] font-semibold text-ink">{g.term}</dt>
-                <dd className="m-0 mt-0.5 text-[12.5px] leading-snug text-muted">{g.meaning}</dd>
-              </div>
-            ))}
-          </dl>
-        </Panel>
-      </Section>
 
       <Section
         title="Model & budgets"

@@ -18,6 +18,8 @@ import {
 } from '@/lib/engine/threads';
 import { replyLikelyExpectsResponse } from '@/lib/engine/replies';
 import { getReplyIntentMode, type ReplyIntentMode } from '@/lib/ai/config';
+import { applyScanBack, scanBackCutoffIso } from '@/lib/sync/scanback';
+import { resolveRetention } from '@/lib/admin/settings';
 import {
   classifyEmail,
   type TriageConfig,
@@ -795,7 +797,22 @@ async function runMailboxSync(
   } catch (e) {
     return { ...EMPTY_RESULT, error: e instanceof Error ? e.message : 'Graph fetch failed.' };
   }
-  const inbox = delta.messages;
+
+  // Initial-import window (admin setting, default 7 days): while the FIRST
+  // enumeration of this mailbox is still running (no delta_link yet), skip
+  // messages older than the scan-back cutoff so a huge history isn't imported.
+  // Steady-state delta runs only carry new changes and are never filtered.
+  let scanCutoffIso: string | null = null;
+  if (!cursor?.delta_link) {
+    try {
+      const { scanBackDays } = await resolveRetention(ctx.userId);
+      scanCutoffIso = scanBackCutoffIso(scanBackDays);
+    } catch {
+      /* settings unavailable — import unfiltered, as before */
+    }
+  }
+  const inbox = applyScanBack(delta.messages, scanCutoffIso);
+  sent = applyScanBack(sent, scanCutoffIso);
 
   // Soft-delete messages Graph reported removed, so they drop out of threads,
   // work_items, and the Inbox/Hidden views on this and future runs.

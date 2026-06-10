@@ -1,6 +1,8 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/auth';
 import { isAiConfigured } from '@/lib/ai/config';
+import { getEffectiveSendMode } from '@/lib/ai/runtime';
 import { hasSendScope } from '@/lib/graph/tokens';
 
 /**
@@ -22,7 +24,9 @@ export type DraftCapabilities = {
 
 export async function getDraftCapabilities(): Promise<DraftCapabilities> {
   const aiEnabled = isAiConfigured();
-  const draftOnly = (process.env.DRAFT_SEND_MODE ?? '').trim().toLowerCase() === 'draft_only';
+  // Send mode resolves per-user → global panel setting → env (Wave 4).
+  const user = await getCurrentUser();
+  const draftOnly = user ? (await getEffectiveSendMode(user.id)) === 'draft_only' : false;
 
   const supabase = createClient();
   const { data: mailbox } = await supabase

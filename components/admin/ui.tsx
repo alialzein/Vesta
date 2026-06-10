@@ -67,14 +67,20 @@ export function KpiCard({
   value,
   hint,
   tone = 'default',
+  tooltip,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
   tone?: KpiTone;
+  /** Plain-language explanation shown on hover (native title). */
+  tooltip?: string;
 }) {
   return (
-    <div className={`rounded-[13px] border bg-panel p-4 shadow-soft ${TONE_RING[tone]}`}>
+    <div
+      className={`rounded-[13px] border bg-panel p-4 shadow-soft ${TONE_RING[tone]} ${tooltip ? 'cursor-help' : ''}`}
+      title={tooltip}
+    >
       <div className="flex items-center gap-2">
         <span className={`h-2 w-2 flex-none rounded-full ${TONE_DOT[tone]}`} aria-hidden="true" />
         <span className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">

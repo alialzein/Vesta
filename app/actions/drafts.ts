@@ -8,13 +8,11 @@ import { createServiceClient } from '@/lib/supabase/service';
 import type { Database, Json } from '@/lib/database.types';
 import type { DraftView } from '@/lib/types';
 import { toDraftView, ACTIVE_DRAFT_STATUSES, type DraftRow } from '@/lib/drafts/serialize';
-import { getAiConfig } from '@/lib/ai/config';
-import { getAiClient } from '@/lib/ai/client';
 import { buildDraftPrompt, parseDraft, DRAFT_PROMPT_VERSION, DRAFT_TONES, type DraftTone } from '@/lib/ai/draft';
 import { bodyForAi } from '@/lib/ai/context';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
-import { getConfiguredAiRates } from '@/lib/admin/settings';
+import { getEffectiveAi, getEffectiveSendMode } from '@/lib/ai/runtime';
 import {
   buildReplyRecipients,
   buildQuotedOriginal,
@@ -55,10 +53,6 @@ function asTone(v: string | null | undefined): DraftTone {
   return DRAFT_TONES.includes(v as DraftTone) ? (v as DraftTone) : 'professional';
 }
 
-/** Whether to actually send, or only build an Outlook draft (no Mail.Send needed). */
-function sendModeIsDraftOnly(): boolean {
-  return (process.env.DRAFT_SEND_MODE ?? '').trim().toLowerCase() === 'draft_only';
-}
 
 type ActiveMailbox = { id: string; integration_id: string; mailbox_email: string | null };
 
@@ -293,11 +287,18 @@ export async function generateDraft(
   opts?: { tone?: string; replyAll?: boolean; instruction?: string },
 ): Promise<DraftActionResult> {
   const user = await requireUser();
-  const cfg = getAiConfig();
-  const client = getAiClient();
-  if (!cfg || !client) {
+  // Effective config: env + admin-panel overrides (draft model, prices, pause/caps).
+  const eff = await getEffectiveAi(user.id, 'draft');
+  if (!eff) {
     return { ok: false, error: 'AI is not configured. You can still write and send a reply yourself.' };
   }
+  if (eff.blocked) {
+    return {
+      ok: false,
+      error: `${eff.blockedReason ?? 'AI is unavailable right now.'} You can still write the reply yourself.`,
+    };
+  }
+  const { cfg, client, rates } = eff;
 
   const db = createClient();
   const ctx = await loadReplyContext(db, workItemId);
@@ -406,7 +407,7 @@ export async function generateDraft(
   // ai_analyses (the per-item history) and the unified ai_usage ledger the
   // admin AI Control Center reads.
   if (usage && saved) {
-    const cost = estimateCostUsd(cfg.model, usage, await getConfiguredAiRates());
+    const cost = estimateCostUsd(cfg.model, usage, rates);
     await db.from('ai_analyses').insert({
       user_id: user.id,
       work_item_id: workItemId,
@@ -597,7 +598,8 @@ export async function sendDraft(
     .eq('id', draftId);
 
   // Require the Mail.Send scope (mailboxes connected before Phase 9 lack it).
-  const draftOnly = sendModeIsDraftOnly();
+  // Send mode comes from the admin panel (per-user → global → env).
+  const draftOnly = (await getEffectiveSendMode(user.id)) === 'draft_only';
   if (!draftOnly && !(await hasSendScope(mailbox.integration_id))) {
     return {
       ok: false,
