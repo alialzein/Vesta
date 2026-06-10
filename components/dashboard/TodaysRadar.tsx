@@ -31,6 +31,8 @@ type TodaysRadarProps = {
    */
   filter?: RadarFilter;
   onFilterChange?: (filter: RadarFilter) => void;
+  /** Items mid-resolve: their rows play the exit transition before leaving. */
+  leavingIds?: ReadonlySet<string>;
 };
 
 export function TodaysRadar({
@@ -39,6 +41,7 @@ export function TodaysRadar({
   onSelect,
   filter: controlledFilter,
   onFilterChange,
+  leavingIds,
 }: TodaysRadarProps) {
   const [internalFilter, setInternalFilter] = useState<RadarFilter>('all');
   const filter = controlledFilter ?? internalFilter;
@@ -87,14 +90,18 @@ export function TodaysRadar({
         </div>
       </div>
 
-      <div className="flex flex-col gap-[7px]">
+      {/* Keyed by filter so switching tabs remounts the list and replays the
+          staggered rise — a soft beat of feedback instead of an instant jump. */}
+      <div key={filter} className="flex flex-col gap-[7px]">
         {visible.length > 0 ? (
-          visible.map((item) => (
+          visible.map((item, i) => (
             <WorkItemRow
               key={item.id}
               item={item}
               selected={item.id === selectedId}
               onSelect={onSelect}
+              index={i}
+              leaving={leavingIds?.has(item.id)}
             />
           ))
         ) : (

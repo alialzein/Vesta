@@ -70,9 +70,11 @@ export function MorningBrief({
                 <span className="animate-vesta-pulse h-[5px] w-[2px] rounded-full bg-accent [animation-delay:-1.5s]" />
               </span>
             </span>
+            {/* "Top priority" — same word the radar badge, row chips, and rail
+                band label use (was "Top risk", a one-off term). */}
             <span className="inline-flex items-center gap-[5px] rounded-full bg-red-soft px-[9px] py-[3px] font-mono text-[11px] font-semibold text-red">
               <Icon name="trend" className="h-[12px] w-[12px]" />
-              Top risk: {brief.topUrgencyScore}
+              Top priority: {brief.topUrgencyScore}
             </span>
           </div>
 

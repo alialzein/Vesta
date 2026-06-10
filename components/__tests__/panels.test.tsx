@@ -25,10 +25,12 @@ describe('MetricsStrip', () => {
 });
 
 describe('MorningBrief', () => {
-  it('renders the headline and a compact top-risk chip (no large ring)', () => {
+  it('renders the headline and a compact top-priority chip (no large ring)', () => {
     render(<MorningBrief brief={demoMorningBrief} onAction={() => {}} />);
     expect(screen.getByText(demoMorningBrief.headline)).toBeInTheDocument();
-    expect(screen.getByText(`Top risk: ${demoMorningBrief.topUrgencyScore}`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`Top priority: ${demoMorningBrief.topUrgencyScore}`),
+    ).toBeInTheDocument();
   });
 
   it('reports the chosen quick action to the parent', async () => {

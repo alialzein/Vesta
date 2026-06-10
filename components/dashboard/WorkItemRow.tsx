@@ -1,5 +1,6 @@
 import type { WorkItem, WorkItemSource } from '@/lib/types';
 import { priorityBand } from '@/lib/priority';
+import { avatarHue, initialsOf } from '@/lib/avatar';
 import { Chip } from '@/components/ui/Chip';
 import { Icon } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
@@ -23,9 +24,14 @@ type WorkItemRowProps = {
   item: WorkItem;
   selected: boolean;
   onSelect: (item: WorkItem) => void;
+  /** Position in the visible list — drives the staggered entry animation. */
+  index?: number;
+  /** Resolve in flight (done/dismiss/snooze/sent): play the exit transition
+   *  before the row leaves the list, instead of vanishing with zero feedback. */
+  leaving?: boolean;
 };
 
-export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
+export function WorkItemRow({ item, selected, onSelect, index = 0, leaving = false }: WorkItemRowProps) {
   const band = priorityBand(item.priorityScore);
 
   return (
@@ -33,16 +39,19 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
       type="button"
       onClick={() => onSelect(item)}
       aria-pressed={selected}
+      // Staggered rise on mount (capped so long lists don't crawl); disabled
+      // under prefers-reduced-motion via the global .animate-rise rule.
+      style={{ animationDelay: `${Math.min(index, 12) * 45}ms` }}
       className={[
-        // One clean surface, not a stack of boxes (Phase 0.5, Section A): softer
-        // background, low-contrast border, a touch more compact. Hover/selected
-        // changes are subtle so the row never feels "boxed in".
-        'group/row relative grid w-full grid-cols-[40px_1fr] items-start gap-[12px] overflow-hidden rounded-[14px] border p-[10px_12px] text-left transition-[transform,background-color,border-color,box-shadow] duration-200 sm:grid-cols-[40px_1fr_116px] sm:items-center',
+        'animate-rise group/row relative grid w-full grid-cols-[40px_1fr] items-start gap-[12px] overflow-hidden rounded-[14px] border p-[10px_12px] text-left transition-[transform,background-color,border-color,box-shadow,opacity] duration-200 sm:grid-cols-[40px_1fr_116px] sm:items-center',
         selected
           ? 'border-line-strong bg-accent-soft shadow-[0_10px_26px_rgba(47,125,235,0.14)]'
-          : // Borderless by default (transparent keeps width stable, no layout
-            // shift) so rows read as one surface; a faint border appears on hover.
-            'border-transparent bg-panel-soft hover:translate-x-[2px] hover:border-line hover:bg-accent-soft',
+          : // Quiet-but-visible card (2026-06-10 radar diagnostic): a permanent
+            // border + a fill stronger than the panel in BOTH themes, so an
+            // unselected ticket still reads as a ticket. Hover/selected stay
+            // the stronger states.
+            'border-line bg-card hover:translate-x-[2px] hover:border-line-strong hover:bg-accent-soft',
+        leaving ? 'pointer-events-none translate-x-[16px] opacity-0' : '',
       ].join(' ')}
     >
       {/* Selected signal: a soft left glow that respects the rounded corner
@@ -63,7 +72,7 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
 
       {/* Body */}
       <span className="min-w-0">
-        {/* Source + person + last-email time — quiet, low-contrast, no heavy box. */}
+        {/* Sender identity + source + last-email time — quiet, low-contrast. */}
         <span className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[11px] text-muted">
           {item.unread && (
             <span className="inline-flex items-center gap-[4px] font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-accent">
@@ -74,17 +83,30 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
               Unread
             </span>
           )}
+          {item.person && (
+            <span className="inline-flex min-w-0 items-center gap-[6px]">
+              {/* Identity anchor: stable-hue initials avatar (same language as
+                  the admin Users table). */}
+              <span
+                aria-hidden="true"
+                className="grid h-[18px] w-[18px] flex-none place-items-center rounded-full text-[8.5px] font-bold text-white"
+                style={{
+                  background: `linear-gradient(135deg, hsl(${avatarHue(item.personEmail ?? item.person)} 65% 45%), hsl(${(avatarHue(item.personEmail ?? item.person) + 40) % 360} 65% 35%))`,
+                }}
+              >
+                {initialsOf(item.person, item.personEmail)}
+              </span>
+              <span className="truncate font-medium text-ink-soft">{item.person}</span>
+            </span>
+          )}
+          {item.person && (
+            <span aria-hidden="true" className="text-line-strong">
+              ·
+            </span>
+          )}
           <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
             {SOURCE_LABEL[item.source]}
           </span>
-          {item.person && (
-            <>
-              <span aria-hidden="true" className="text-line-strong">
-                ·
-              </span>
-              <span className="font-medium text-ink-soft">{item.person}</span>
-            </>
-          )}
           {item.lastActivityAt && (
             <LocalTime
               iso={item.lastActivityAt}
@@ -103,9 +125,17 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
             <Chip key={chip.label} {...chip} />
           ))}
           {item.suggestedAction && (
-            // Inline action pill — lighter than a button so it never competes
-            // with the right rail's primary action.
-            <span className="inline-flex items-center gap-[4px] rounded-full bg-accent-soft px-[8px] py-[2px] text-[11px] font-semibold text-accent">
+            // Suggested-action pill: ghost on unselected rows so it doesn't
+            // repeat a bright accent on every card; lit only on the selected
+            // row (and on hover, as a preview).
+            <span
+              className={[
+                'inline-flex items-center gap-[4px] rounded-full px-[8px] py-[2px] text-[11px] font-semibold transition-colors duration-200',
+                selected
+                  ? 'bg-accent-soft text-accent'
+                  : 'border border-line bg-transparent text-muted group-hover/row:border-transparent group-hover/row:bg-accent-soft group-hover/row:text-accent',
+              ].join(' ')}
+            >
               <Icon name="sparkle" className="h-[11px] w-[11px]" />
               {item.suggestedAction}
             </span>
@@ -113,11 +143,33 @@ export function WorkItemRow({ item, selected, onSelect }: WorkItemRowProps) {
         </span>
       </span>
 
-      {/* Status / due column — compact, right aligned, unboxed. */}
-      <span className="col-start-2 mt-1 text-left font-mono text-[12px] font-semibold text-ink-soft sm:col-start-3 sm:mt-0 sm:text-right">
-        {item.dueLabel}
+      {/* Status / due column — compact, right aligned, unboxed. Overdue is a
+          real state: red label instead of a neutral "Due Jun 9". */}
+      <span
+        className={[
+          'col-start-2 mt-1 text-left font-mono text-[12px] font-semibold sm:col-start-3 sm:mt-0 sm:text-right',
+          item.overdue ? 'text-red' : 'text-ink-soft',
+        ].join(' ')}
+      >
+        {item.overdue ? (
+          <span className="inline-flex items-center gap-[4px]">
+            <Icon name="clock" className="h-[12px] w-[12px]" />
+            {item.dueLabel}
+          </span>
+        ) : (
+          item.dueLabel
+        )}
         {item.dueDetail && (
-          <small className="mt-[2px] block font-medium text-muted">{item.dueDetail}</small>
+          <small
+            className={[
+              'mt-[2px] block font-medium',
+              // No /opacity modifier — the color tokens are raw CSS vars
+              // Tailwind can't alpha-blend (see MorningBrief waveform note).
+              item.overdue ? 'text-red opacity-80' : 'text-muted',
+            ].join(' ')}
+          >
+            {item.dueDetail}
+          </small>
         )}
       </span>
     </button>

@@ -17,6 +17,17 @@ Blockers, Follow-ups, Promises, Can delegate, Drafts).
 > What's on the Radar is **real data from your mailbox**, not a demo. If nothing is
 > waiting on you, you'll see an honest "You're all clear" state — not filler.
 
+### What each Radar card shows
+
+- **Who it's from** — the real sender of the latest message (their name, or a
+  readable version of their email address), with a small colored **initials
+  avatar** so the same person is recognizable at a glance. The AI rail shows the
+  full email address under **From**.
+- **Overdue in red** — if an item's deadline has passed, the card says **Overdue**
+  in red (with the original date), instead of a quiet "Due Jun 9" you could miss.
+- Title, a one-line summary of the newest message, category chips, the priority
+  score, and the suggested action (highlighted on the card you've selected).
+
 ## Priorities ("Waiting on Me")
 
 The **Priorities** view (sidebar: *Waiting on Me*) is the full, ranked list of every
@@ -114,7 +125,9 @@ Each item gets a **priority score (0–100)** from a transparent set of signals:
 - **VIP** — mail from people you marked VIP ranks higher.
 
 Items are then grouped into categories like **Waiting on you**, **Follow-up**, and
-**FYI**, and high scorers (80+) are tagged **High priority**.
+**FYI**. Scores 85+ are the red band and are tagged **High priority** — the same
+threshold everywhere (the score badge color, the card chip, the High Priority
+metric, and the rail's band label), so the words never contradict the colors.
 
 > **AI then refines it.** After a sync, Vesta's AI reads each waiting thread and
 > rewrites the summary, refines the priority, detects a deadline, and produces the
