@@ -1,12 +1,109 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Section, Table, Th, Td, Badge, EmptyState } from '@/components/admin/ui';
 import { useTableControls, TableToolbar, Pager } from '@/components/admin/DataTable';
 import { RuleRowActions } from '@/components/admin/tabs/RuleRowActions';
 import { MemoryRowActions } from '@/components/admin/tabs/MemoryRowActions';
+import { Icon } from '@/components/ui/Icon';
 import { fmtRel } from '@/lib/admin/format';
 import type { RuleRow, MemoryRow } from '@/lib/admin/data';
+
+/**
+ * Searchable user picker (combobox): type to filter the user list, click to
+ * select. Clearing returns to the "latest 10 additions" feed.
+ */
+function UserPicker({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: { userId: string; label: string }[];
+  selected: string;
+  onSelect: (userId: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // Close the popup on an outside click.
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, []);
+
+  const selectedLabel = options.find((o) => o.userId === selected)?.label ?? null;
+  const q = query.trim().toLowerCase();
+  const matches = q
+    ? options.filter((o) => o.label.toLowerCase().includes(q))
+    : options;
+
+  if (selectedLabel) {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-[11px] border border-accent/50 bg-accent-soft px-3 py-[8px] text-[13px] font-semibold text-accent">
+        {selectedLabel}
+        <button
+          type="button"
+          onClick={() => {
+            onSelect('');
+            setQuery('');
+          }}
+          aria-label="Clear selected user"
+          className="grid h-[18px] w-[18px] place-items-center rounded-full transition hover:bg-accent hover:text-white"
+        >
+          <Icon name="close" className="h-[11px] w-[11px]" />
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <div ref={boxRef} className="relative">
+      <span className="relative block">
+        <Icon
+          name="search"
+          className="pointer-events-none absolute left-3 top-1/2 h-[14px] w-[14px] -translate-y-1/2 text-muted"
+        />
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search a user by email or name…"
+          aria-label="Search a user"
+          className="w-[300px] rounded-[11px] border border-line bg-field py-[9px] pl-9 pr-3 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-accent"
+        />
+      </span>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+6px)] z-20 max-h-[260px] w-[300px] overflow-y-auto rounded-[12px] border border-line bg-panel-solid p-1 shadow-panel">
+          {matches.length === 0 ? (
+            <p className="m-0 px-3 py-2 text-[12.5px] text-muted">No users match.</p>
+          ) : (
+            matches.map((o) => (
+              <button
+                key={o.userId}
+                type="button"
+                onClick={() => {
+                  onSelect(o.userId);
+                  setOpen(false);
+                }}
+                className="block w-full rounded-[9px] px-3 py-2 text-left text-[12.5px] font-semibold text-ink-soft transition hover:bg-accent-soft hover:text-accent"
+              >
+                {o.label}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Rules & memories are per-user data and grow with every account. Default view
@@ -82,19 +179,11 @@ export function TriageTables({ rules, memories }: { rules: RuleRow[]; memories: 
           View a user&apos;s rules &amp; memories
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
-            aria-label="Select a user"
-            className="min-w-[280px] rounded-[11px] border border-line bg-field px-3 py-[9px] text-[13px] text-ink outline-none transition focus:border-accent"
-          >
-            <option value="">All users — latest 10 additions</option>
-            {userOptions.map((u) => (
-              <option key={u.userId} value={u.userId}>
-                {u.label}
-              </option>
-            ))}
-          </select>
+          <UserPicker
+            options={userOptions}
+            selected={selectedUser}
+            onSelect={setSelectedUser}
+          />
           <span className="text-[12px] text-muted">
             {rules.length.toLocaleString('en-US')} rule(s) ·{' '}
             {memories.length.toLocaleString('en-US')} memorie(s) across all users

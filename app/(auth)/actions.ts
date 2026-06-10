@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { recordLoginEvent } from '@/lib/admin/audit';
+import { recordLoginEvent, loginContextFromHeaders } from '@/lib/admin/audit';
 
 export type AuthState = { error?: string; message?: string } | null;
 
@@ -36,7 +36,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   }
 
   // Audit the sign-in (best-effort; feeds the admin Audit tab + per-user history).
-  if (data.user) await recordLoginEvent(data.user.id, 'password');
+  if (data.user) await recordLoginEvent(data.user.id, 'password', loginContextFromHeaders(headers()));
 
   redirect(loginTarget(redirectedFrom));
 }

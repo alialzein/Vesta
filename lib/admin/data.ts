@@ -36,12 +36,8 @@ export type HealthOverview = {
   users: { total: number; admins: number; suspended: number; connected: number };
   sync: { mailboxes: number; stale: number; errored: number; lastSuccessAt: string | null };
   webhooks: { pending: number; errored: number };
-  ai: {
-    costToday: number;
-    costMonth: number;
-    callsToday: number;
-    tokensToday: number;
-  };
+  /** AI usage within the requested date range (Overview's range filter). */
+  ai: { cost: number; calls: number; tokens: number };
   errors: ErrorFeedItem[];
 };
 
@@ -64,10 +60,13 @@ function startOfMonthIso(): string {
   return d.toISOString();
 }
 
-export async function getHealthOverview(): Promise<HealthOverview> {
+/**
+ * @param aiSinceIso AI usage is summed from this instant (the Overview range
+ *                   filter; default = start of the current calendar month).
+ */
+export async function getHealthOverview(aiSinceIso?: string): Promise<HealthOverview> {
   const svc = createServiceClient();
-  const todayIso = startOfTodayIso();
-  const monthIso = startOfMonthIso();
+  const sinceIso = aiSinceIso ?? startOfMonthIso();
   const staleCutoff = new Date(Date.now() - STALE_SYNC_MINUTES * 60_000).toISOString();
 
   const [
@@ -76,8 +75,7 @@ export async function getHealthOverview(): Promise<HealthOverview> {
     cursorsRes,
     webhookPendingRes,
     webhookErrRes,
-    usageTodayRes,
-    usageMonthRes,
+    usageRes,
     aiErrRes,
     authListRes,
   ] = await Promise.all([
@@ -91,8 +89,7 @@ export async function getHealthOverview(): Promise<HealthOverview> {
       .not('error', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5),
-    svc.from('ai_usage').select('cost_estimate_usd, token_input, token_output').gte('created_at', todayIso),
-    svc.from('ai_usage').select('cost_estimate_usd, token_input, token_output').gte('created_at', monthIso),
+    svc.from('ai_usage').select('cost_estimate_usd, token_input, token_output').gte('created_at', sinceIso),
     svc
       .from('ai_analyses')
       .select('error, created_at, user_id')
@@ -114,13 +111,12 @@ export async function getHealthOverview(): Promise<HealthOverview> {
     .at(-1) as string | null | undefined;
 
   const rates = await getConfiguredAiRates();
-  const usageToday = usageTodayRes.data ?? [];
-  const costToday = usageToday.reduce((s, r) => s + rowCostUsd(r, rates), 0);
-  const tokensToday = usageToday.reduce(
+  const usage = usageRes.data ?? [];
+  const aiCost = usage.reduce((s, r) => s + rowCostUsd(r, rates), 0);
+  const aiTokens = usage.reduce(
     (s, r) => s + Number(r.token_input ?? 0) + Number(r.token_output ?? 0),
     0,
   );
-  const costMonth = (usageMonthRes.data ?? []).reduce((s, r) => s + rowCostUsd(r, rates), 0);
 
   const errors: ErrorFeedItem[] = [
     ...cursors
@@ -164,7 +160,7 @@ export async function getHealthOverview(): Promise<HealthOverview> {
       pending: webhookPendingRes.count ?? 0,
       errored: webhookErrRes.data?.length ?? 0,
     },
-    ai: { costToday, costMonth, callsToday: usageToday.length, tokensToday },
+    ai: { cost: aiCost, calls: usage.length, tokens: aiTokens },
     errors,
   };
 }
@@ -292,19 +288,37 @@ export type AdminUserRow = {
   onboardedAt: string | null;
   createdAt: string;
   lastSignInAt: string | null;
+  /** Where the latest recorded sign-in came from ("City, CC" / IP), if known. */
+  lastLoginFrom: string | null;
   connected: boolean;
   lastSyncAt: string | null;
   messageCount: number;
 };
 
+/** "City, CC" → fall back to country → IP → null. */
+function loginPlace(meta: unknown): string | null {
+  const m = (meta ?? {}) as { city?: string | null; country?: string | null; ip?: string | null };
+  if (m.city && m.country) return `${m.city}, ${m.country}`;
+  if (m.city) return m.city;
+  if (m.country) return m.country;
+  return m.ip ?? null;
+}
+
 export async function listUsers(): Promise<AdminUserRow[]> {
   const svc = createServiceClient();
-  const [{ data: profiles }, { data: mailboxes }, { data: cursors }, authList] = await Promise.all([
-    svc.from('profiles').select('id, email, full_name, role, suspended, onboarded_at, created_at'),
-    svc.from('mailboxes').select('user_id, last_sync_at').eq('status', 'active'),
-    svc.from('sync_cursors').select('user_id, last_success_at, resource_type'),
-    svc.auth.admin.listUsers({ perPage: 1000 }),
-  ]);
+  const [{ data: profiles }, { data: mailboxes }, { data: cursors }, authList, { data: logins }] =
+    await Promise.all([
+      svc.from('profiles').select('id, email, full_name, role, suspended, onboarded_at, created_at'),
+      svc.from('mailboxes').select('user_id, last_sync_at').eq('status', 'active'),
+      svc.from('sync_cursors').select('user_id, last_success_at, resource_type'),
+      svc.auth.admin.listUsers({ perPage: 1000 }),
+      svc
+        .from('audit_logs')
+        .select('user_id, metadata, created_at')
+        .eq('action', 'login')
+        .order('created_at', { ascending: false })
+        .limit(500),
+    ]);
 
   const connectedUsers = new Map((mailboxes ?? []).map((m) => [m.user_id, m.last_sync_at]));
   const lastSyncByUser = new Map<string, string | null>();
@@ -312,6 +326,11 @@ export async function listUsers(): Promise<AdminUserRow[]> {
     if (c.resource_type === 'messages') lastSyncByUser.set(c.user_id, c.last_success_at);
   }
   const authById = new Map((authList.data?.users ?? []).map((u) => [u.id, u]));
+  // Newest-first, so the first login seen per user is their latest.
+  const loginByUser = new Map<string, string | null>();
+  for (const l of logins ?? []) {
+    if (l.user_id && !loginByUser.has(l.user_id)) loginByUser.set(l.user_id, loginPlace(l.metadata));
+  }
 
   // Message counts per user (one grouped pass).
   const { data: msgs } = await svc.from('email_messages').select('user_id');
@@ -331,6 +350,7 @@ export async function listUsers(): Promise<AdminUserRow[]> {
         onboardedAt: p.onboarded_at,
         createdAt: p.created_at,
         lastSignInAt: auth?.last_sign_in_at ?? null,
+        lastLoginFrom: loginByUser.get(p.id) ?? null,
         connected: connectedUsers.has(p.id),
         lastSyncAt: lastSyncByUser.get(p.id) ?? connectedUsers.get(p.id) ?? null,
         messageCount: countByUser.get(p.id) ?? 0,
@@ -354,7 +374,13 @@ export type UserDetail = {
     onboardedAt: string | null;
     createdAt: string;
   };
-  auth: { lastSignInAt: string | null; isAdmin: boolean; emailConfirmedAt: string | null };
+  auth: {
+    lastSignInAt: string | null;
+    isAdmin: boolean;
+    emailConfirmedAt: string | null;
+    /** Where the latest recorded sign-in came from ("City, CC" / IP), if known. */
+    lastLoginFrom: string | null;
+  };
   mailbox: {
     connected: boolean;
     email: string | null;
@@ -463,6 +489,9 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
       lastSignInAt: authUser?.last_sign_in_at ?? null,
       isAdmin: authUser?.app_metadata?.is_admin === true,
       emailConfirmedAt: authUser?.email_confirmed_at ?? null,
+      lastLoginFrom: loginPlace(
+        (audit ?? []).find((a) => a.action === 'login')?.metadata ?? null,
+      ),
     },
     mailbox: {
       connected: !!mailbox?.integration_id && mailbox.status === 'active',
