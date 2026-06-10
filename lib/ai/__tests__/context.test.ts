@@ -49,4 +49,38 @@ describe('buildPrompt', () => {
     expect(user).toContain('Reminders the sender has sent: 2');
     expect(user).toContain('Please approve by Friday.');
   });
+
+  it('includes today, and the both-direction conversation block when given', () => {
+    const { user } = buildPrompt({
+      subject: 'create new user',
+      latestMessage: 'any update on the below?',
+      senderName: 'Ali Alzein',
+      messageCount: 3,
+      followupCount: 1,
+      isWaitingOnManager: false,
+      latestAt: '2026-06-09T10:04:00Z',
+      today: '2026-06-10',
+      threadContext: [
+        { from: 'Ali Alzein', body: 'please confirm to create the user: vesta' },
+        { from: 'the manager', body: 'Confirmed, please let me know when done.' },
+      ],
+    });
+    expect(user).toContain("Today's date: 2026-06-10");
+    expect(user).toContain('Conversation so far (oldest first):');
+    expect(user).toContain('- the manager: Confirmed, please let me know when done.');
+  });
+
+  it('omits the date/conversation lines when not provided (env without them)', () => {
+    const { user } = buildPrompt({
+      subject: 's',
+      latestMessage: 'm',
+      senderName: null,
+      messageCount: 1,
+      followupCount: 0,
+      isWaitingOnManager: true,
+      latestAt: null,
+    });
+    expect(user).not.toContain("Today's date");
+    expect(user).not.toContain('Conversation so far');
+  });
 });

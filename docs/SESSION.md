@@ -4,11 +4,44 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (admin panel + docs complete; **dashboard UI/UX diagnostic
-done — fix plan below, not yet implemented**)
-**Repo state:** `main`, clean. Phases 0–9 done; **Admin Waves 1–5 + reset-link fix +
-guide catch-up all merged**. 283 tests green, typecheck + lint + build clean.
-**Next: 1) Dashboard radar UI/UX fixes (P0+P1 below) → 2) Phase 10 — Memory & Rules.**
+**Last updated:** 2026-06-10 (TWO branches built & pushed, both awaiting owner
+review/merge: `fix/dashboard-radar-uiux` and `fix/draft-direction`)
+**Repo state:** `main` = admin Waves 1–5 + reset-link fix (283 tests). Branches add
+radar UI/UX fixes (302 tests) and draft-direction + pipeline-audit fixes (288 tests).
+**Next: 1) owner merges both PRs → 2) verify live → 3) Phase 10 — Memory & Rules.**
+
+## 🆕 Branch `fix/draft-direction` — AI pipeline audit fixes (2026-06-10, PR pending)
+
+Owner found a backwards draft on a "waiting on them" item ("create new user": the
+draft said "we're looking into it" when ALI owes the manager the update). Full
+pipeline audit done (sync → engine → analysis → store → dashboard → drafts → send).
+Fixed on this branch:
+
+1. **Draft direction** — `buildDraftPrompt` gains `purpose: 'reply'|'follow_up'`
+   (waiting_on_them ⇒ follow-up NUDGE instruction) + a both-direction
+   `threadContext` block (the model never saw the manager's own replies before —
+   root cause). `DRAFT_PROMPT_VERSION='draft-v2'`. (`lib/ai/draft.ts`,
+   `app/actions/drafts.ts` loadReplyContext now pulls category + last 6 msgs.)
+2. **Nudge ≠ done** — `sendDraft` no longer marks waiting_on_them items done; a
+   follow-up send keeps them on the radar (metadata.last_nudged_at) until the
+   other side replies.
+3. **Admin reply-intent mode now gates the engine** — `processStoredMail` used
+   env-only `getReplyIntentMode()`; now `getEffectiveReplyIntentMode(userId)`
+   (user → global → env, new in `lib/ai/runtime.ts`).
+4. **Waiting-on-them scores un-frozen** — aging priority is engine-owned even
+   after reply-intent AI runs (was frozen at creation; guide promised it climbs).
+5. **Analysis sees the conversation + today's date** — `buildPrompt` gains
+   `today` + both-direction `threadContext` (earlier asks/deadlines + the
+   manager's replies were invisible); `PROMPT_VERSION='v2'`. (`lib/ai/context.ts`,
+   `lib/ai/store.ts`.)
+- Guides updated: `draft-replies.md`, `ai-analysis.md`. 288 tests green.
+- **Noted, not built (post-merge polish):** rail copy "Draft follow-up" for
+  waiting_on_them (AiAssistantRail is touched by the radar branch — avoid
+  conflicts); due_at at 9:00 **UTC** could use profiles.timezone; reply-intent
+  pre-gate reads only bodyPreview (~255 chars).
+- ⚠️ Verify live after merge: a waiting_on_them item → Draft → should be a
+  follow-up nudge; send it → item STAYS on radar; re-analyze items
+  (`node scripts/reanalyze-work-items.mjs`) so PROMPT_VERSION v2 applies.
 
 ## 🎯 NEXT UP — Dashboard radar UI/UX fixes (diagnostic 2026-06-10, approved findings)
 

@@ -17,7 +17,8 @@ import {
   type ThreadState,
 } from '@/lib/engine/threads';
 import { replyLikelyExpectsResponse } from '@/lib/engine/replies';
-import { getReplyIntentMode, type ReplyIntentMode } from '@/lib/ai/config';
+import { type ReplyIntentMode } from '@/lib/ai/config';
+import { getEffectiveReplyIntentMode } from '@/lib/ai/runtime';
 import { applyScanBack, scanBackCutoffIso } from '@/lib/sync/scanback';
 import { resolveRetention } from '@/lib/admin/settings';
 import {
@@ -604,8 +605,10 @@ async function processStoredMail(
 
   // Work items: threads waiting on the manager + (mode-gated) threads where the
   // manager replied and is owed a response. Delete any that no longer apply.
+  // Mode is the EFFECTIVE one (admin per-user → global → env) so the panel's
+  // reply-intent setting gates the engine too, not just the AI confirm step.
   const drafts = buildWorkItemDrafts(visible, ctx, Date.now(), {
-    replyIntentMode: getReplyIntentMode(),
+    replyIntentMode: await getEffectiveReplyIntentMode(ctx.userId),
   });
   const wantedIds = new Set(drafts.map((d) => d.conversationId));
   const { data: existing } = await supabase
@@ -679,6 +682,14 @@ async function processStoredMail(
         update.category = row.category;
         update.priority_score = row.priority_score;
         update.urgency_reason = row.urgency_reason;
+      } else if (
+        row.category === 'waiting_on_them' &&
+        categoryByExternal.get(conversationId) === 'waiting_on_them'
+      ) {
+        // The aging score of "waiting on them" is ENGINE-owned even after AI ran:
+        // reply-intent confirms/summarizes but never writes a priority, so without
+        // this the score froze at creation time instead of climbing as they stall.
+        update.priority_score = row.priority_score;
       }
       // A change in WHO is waiting — into or out of "waiting on them" — is an engine
       // fact (the manager replied, or the other party replied) that the AI must NOT

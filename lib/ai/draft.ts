@@ -10,7 +10,23 @@
  *   subject · body_text · tone · warnings · requires_human_review.
  */
 
-export const DRAFT_PROMPT_VERSION = 'draft-v1';
+export const DRAFT_PROMPT_VERSION = 'draft-v2';
+
+/**
+ * What the draft is FOR — drives the writing instruction:
+ * - 'reply': the manager owes the sender an answer (waiting/decision/… items).
+ * - 'follow_up': the manager already answered and is OWED something
+ *   ('waiting_on_them' items) — the draft nudges the recipient, it never
+ *   writes as if the manager must respond.
+ */
+export type DraftPurpose = 'reply' | 'follow_up';
+
+/** One compact thread message for context ("who said what", oldest first). */
+export type ThreadContextMsg = {
+  /** "the manager" for outbound, else the sender's display name/email. */
+  from: string;
+  body: string;
+};
 
 /** Tones the manager can steer with (also accepted back from the model). */
 export const DRAFT_TONES = ['professional', 'warm', 'concise', 'formal', 'friendly'] as const;
@@ -43,6 +59,12 @@ export type DraftInput = {
   toneNotes?: string[];
   /** Optional free-form instruction from the manager ("decline politely", "ask for the deck"). */
   instruction?: string | null;
+  /** Reply (default) or follow-up nudge — see DraftPurpose. */
+  purpose?: DraftPurpose;
+  /** Recent thread messages (both directions, oldest first, already cleaned +
+   *  capped) so the model knows what was already said — including the
+   *  manager's own replies, which the latest inbound message alone misses. */
+  threadContext?: ThreadContextMsg[];
 };
 
 export const DRAFT_JSON_HINT = `{
@@ -54,9 +76,12 @@ export const DRAFT_JSON_HINT = `{
 }`;
 
 export function buildDraftPrompt(input: DraftInput): { system: string; user: string } {
+  const isFollowUp = input.purpose === 'follow_up';
   const system = [
     "You are Vesta, an executive assistant drafting an email reply on behalf of a manager.",
-    'Write a safe, ready-to-send reply to the latest message in the thread, in the manager\'s voice.',
+    isFollowUp
+      ? 'The manager already replied in this thread and is now WAITING ON the recipient. Write a brief, polite follow-up that nudges the recipient for the update, answer, or confirmation they owe the manager. Reference what the manager asked for. Do NOT write as if the manager owes a reply, do NOT promise the manager will "look into" anything, and do NOT re-answer the recipient\'s earlier question.'
+      : "Write a safe, ready-to-send reply to the latest message in the thread, in the manager's voice.",
     'Rules:',
     '- Never invent facts, figures, names, dates, commitments, or attachments that are not in the thread. If something needed is missing, write a safe holding reply or ask one concise clarifying question instead of guessing.',
     '- Do not overpromise or commit the manager to anything specific (amounts, deadlines, approvals) unless the thread already states it.',
@@ -72,16 +97,25 @@ export function buildDraftPrompt(input: DraftInput): { system: string; user: str
       ? `The manager's tone & preferences: ${input.toneNotes.join('; ')}`
       : '';
 
+  // "Who said what" so the model never mistakes which side owes what — the
+  // latest inbound message alone hid the manager's own replies (the source of
+  // backwards waiting_on_them drafts).
+  const contextBlock =
+    input.threadContext && input.threadContext.length > 0
+      ? ['Conversation so far (oldest first):', ...input.threadContext.map((m) => `- ${m.from}: ${m.body}`)].join('\n')
+      : '';
+
   const user = [
     `Reply tone requested: ${input.tone}`,
     toneLine,
     input.instruction ? `Manager's instruction for this reply: ${input.instruction}` : '',
-    '',
     `Subject: ${input.subject ?? '(none)'}`,
-    `Replying to: ${input.recipientName ?? '(unknown)'}`,
+    `Writing to: ${input.recipientName ?? '(unknown)'}`,
     `Sign off as: ${input.managerName ?? '(the manager)'}`,
-    '',
-    'Latest message to reply to:',
+    contextBlock,
+    isFollowUp
+      ? "The recipient's last message (the follow-up will thread onto it):"
+      : 'Latest message to reply to:',
     input.latestMessage || '(no body available)',
   ]
     .filter(Boolean)

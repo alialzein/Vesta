@@ -7,7 +7,8 @@
  */
 import { AI_CATEGORIES, type AiAnalysis, type AiCategory } from './types';
 
-export const PROMPT_VERSION = 'v1';
+// v2: prompt gains today's date + a compact both-direction conversation block.
+export const PROMPT_VERSION = 'v2';
 
 /** The shape we ask the model to return (embedded in the prompt). */
 export const ANALYSIS_JSON_HINT = `{

@@ -9,14 +9,21 @@ tone, ready to review. You stay in control the whole way: you read it, edit it, 
 1. **Open the composer.** On the dashboard, select a work item, then click
    **Draft reply** (in the AI Assistant rail's **Action** or **Draft** tab). The
    composer slides in from the right.
-2. **Vesta writes a draft.** It reads the latest message in the thread and writes a
-   reply in your voice. You'll see it appear in a few seconds.
+2. **Vesta writes a draft.** It reads the recent conversation — both their messages
+   **and your own replies** — and writes in your voice. You'll see it appear in a
+   few seconds. It knows which side of the conversation you're on:
+   - For an item **waiting on you**, it writes a **reply** that answers them.
+   - For a **Waiting on them** item (you already answered and they owe you an
+     update), it writes a short, polite **follow-up nudge** asking for what they
+     owe — it won't pretend you still owe them a response.
 3. **Review & edit.** Change anything you like — the wording, the subject, who it
    goes to. Not happy with the whole thing? Pick a different **tone** or type a quick
    instruction ("politely decline", "ask for the deck") and hit **Regenerate**.
 4. **Approve & Send.** When it's right, click **Approve & Send**. Vesta sends it as a
    proper reply in the original Outlook conversation (with the quoted history), and
-   the item drops off your radar.
+   the item drops off your radar. (One exception: sending a **follow-up nudge** on a
+   *Waiting on them* item keeps it on the radar — they still owe you the answer, and
+   Vesta keeps tracking it until they reply.)
 
 ## What you can change
 

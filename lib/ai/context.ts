@@ -7,6 +7,7 @@
  * a 2-message one — while still giving real context.
  */
 import { ANALYSIS_JSON_HINT } from './schema';
+import type { ThreadContextMsg } from './draft';
 
 export const BODY_CAP = 1800;
 
@@ -19,6 +20,13 @@ export type AnalysisInput = {
   followupCount: number;
   isWaitingOnManager: boolean;
   latestAt: string | null;
+  /** Today (YYYY-MM-DD) so "tomorrow"/"by Friday" resolve to real dates and the
+   *  model can tell an already-passed deadline from an upcoming one. */
+  today?: string | null;
+  /** Recent thread messages (both directions, oldest first, cleaned + capped) —
+   *  the latest inbound alone hid earlier asks, stated deadlines, and the
+   *  manager's own replies. */
+  threadContext?: ThreadContextMsg[];
 };
 
 /** Strip HTML to readable text (no tags, decoded common entities). */
@@ -85,16 +93,22 @@ export function buildPrompt(input: AnalysisInput): { system: string; user: strin
     `Return exactly this JSON shape:\n${ANALYSIS_JSON_HINT}`,
   ].join('\n');
 
+  const contextBlock =
+    input.threadContext && input.threadContext.length > 0
+      ? ['Conversation so far (oldest first):', ...input.threadContext.map((m) => `- ${m.from}: ${m.body}`)].join('\n')
+      : '';
+
   const user = [
     `Subject: ${input.subject ?? '(none)'}`,
     `From: ${input.senderName ?? '(unknown)'}`,
+    input.today ? `Today's date: ${input.today}` : '',
     `Messages in thread: ${input.messageCount}`,
     `Reminders the sender has sent: ${input.followupCount}`,
     input.isWaitingOnManager
       ? 'The latest message is from the sender; the manager has not replied to it yet.'
       : '',
     input.latestAt ? `Latest message time: ${input.latestAt}` : '',
-    '',
+    contextBlock,
     'Latest message:',
     input.latestMessage || '(no body available)',
   ]
