@@ -22,38 +22,59 @@ export default function UpdatePasswordPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [ready, setReady] = useState<'checking' | 'ok' | 'no-session'>('checking');
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    let done = false;
+    let cancelled = false;
 
-    // The hash is processed asynchronously — listen for the session landing.
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (done) return;
-      if (session && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-        done = true;
-        setReady('ok');
+    async function establishSession() {
+      const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+      // Supabase reports a dead link in the hash (e.g. otp_expired when the link
+      // was already used — Outlook/Hotmail link scanners often pre-click it).
+      if (params.get('error') || params.get('error_code')) {
+        if (cancelled) return;
+        setLinkError(
+          params.get('error_code') === 'otp_expired'
+            ? 'This link was already used or has expired. Email security scanners (common with Outlook/Hotmail) sometimes consume reset links before you click them — request a fresh email and open it promptly, or ask your admin to set a password directly.'
+            : (params.get('error_description') ?? 'The reset link could not be verified.'),
+        );
+        setReady('no-session');
+        return;
       }
-    });
 
-    // Also check directly (covers an already-established session), and give the
-    // hash parsing a moment before declaring the link dead.
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!done && data.session) {
-        done = true;
-        setReady('ok');
+      // Recovery links deliver the session as implicit-flow hash tokens. Our
+      // browser client runs in PKCE mode and won't auto-consume those, so we
+      // read the hash and establish the session explicitly.
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      if (accessToken && refreshToken) {
+        const { data, error: err } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (cancelled) return;
+        if (!err && data.session) {
+          // Tokens consumed — drop them from the address bar.
+          window.history.replaceState(null, '', window.location.pathname);
+          setReady('ok');
+          return;
+        }
       }
-    });
-    const timer = setTimeout(() => {
-      if (!done) setReady('no-session');
-    }, 2500);
 
+      // No hash tokens — maybe the session already exists (e.g. a reload).
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
+      setReady(data.session ? 'ok' : 'no-session');
+    }
+
+    void establishSession();
     return () => {
-      sub.subscription.unsubscribe();
-      clearTimeout(timer);
+      cancelled = true;
     };
   }, [supabase]);
 
@@ -105,8 +126,8 @@ export default function UpdatePasswordPage() {
           <div className="rounded-[var(--radius)] border border-line bg-panel p-6 text-center shadow-glow">
             <p className="m-0 text-[14px] font-semibold text-ink">This link didn&apos;t verify</p>
             <p className="mt-2 text-[13px] leading-snug text-muted">
-              It may have expired or already been used. Request a new password-reset email and try
-              again — reset links work once and expire after a short time.
+              {linkError ??
+                'It may have expired or already been used. Request a new password-reset email and try again — reset links work once and expire after a short time.'}
             </p>
             <Link
               href="/login"
