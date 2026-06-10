@@ -4,15 +4,14 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (radar fixes #41 **MERGED** · draft-direction **MERGED**
-to main `73b8267` · re-analyze queued (4 items) · **radar polish built on
-`feat/radar-quick-actions`, PR pending**)
-**Repo state:** `main` = everything through draft-direction; 307 tests green on main.
-Branch `feat/radar-quick-actions` adds the 3 radar polish features (308 tests).
-**Next: 1) merge `feat/radar-quick-actions` → 2) verify live (list below) →
-3) Phase 10 — Memory & Rules. Smaller queued: due_at in manager timezone.**
+**Last updated:** 2026-06-10 (ALL MERGED: radar fixes #41 · draft-direction `73b8267`
+· radar polish #43 `7312020`. Re-analyze queued (4 items). **Guides brought current**
+with every new feature in the same day.)
+**Repo state:** `main`, clean — 308 tests green, typecheck/lint/build clean.
+**Next: 1) owner verifies live (list below) → 2) Phase 10 — Memory & Rules.
+Smaller queued: due_at in manager timezone (now 9 AM UTC, ~3h off for Lebanon).**
 
-## 🆕 Branch `feat/radar-quick-actions` — radar polish (2026-06-10, PR pending)
+## ✅ MERGED `feat/radar-quick-actions` — radar polish (2026-06-10, #43)
 
 - **Overdue KPI (real + clickable):** metrics strip leads with **Overdue** (count of
   `overdue` items, red); ALL primary tiles now filter the radar on click
@@ -28,8 +27,12 @@ Branch `feat/radar-quick-actions` adds the 3 radar polish features (308 tests).
 - **Rail honesty for waiting_on_them:** buttons/copy say **Draft follow-up** /
   "AI follow-up nudge"; `handleSent` keeps a nudged waiting_on_them item on the
   radar (matches the server fix) with a "still tracking" toast.
-- Guide updated (`priorities-and-dashboard.md`: clickable tiles, quick actions,
-  sender filter). 308 tests; typecheck/lint/build clean.
+- 308 tests; typecheck/lint/build clean.
+- **Guides current (post-merge pass):** `priorities-and-dashboard.md` (clickable
+  metric tiles incl. Overdue, card anatomy + sender filter, hover quick-actions,
+  follow-up nudge in "Waiting on them"); `draft-replies.md` (Draft follow-up button,
+  nudge keeps item tracked, both-direction context); `ai-analysis.md` (conversation
+  + today's date in the prompt, follow-up drafting); `README.md` index lines.
 - ⚠️ Verify live (both themes): Overdue tile + chip filter; hover buttons resolve
   with slide-out; sender chip filters/clears; waiting_on_them rail says
   "Draft follow-up" and a sent nudge keeps the card visible.

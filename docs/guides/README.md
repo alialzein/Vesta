@@ -21,9 +21,9 @@ manual. Each guide is self-contained and matches the product as it actually ship
 | [How email stays in sync](email-sync.md) | How Vesta keeps up with new and deleted mail automatically |
 | [How Vesta filters your email](email-filtering.md) | **The two gates** — what's hidden, what's in your Inbox, what reaches your dashboard |
 | [Inbox & Hidden mail](inbox-and-hidden.md) | Reading synced mail and reviewing what Vesta filtered out |
-| [Your dashboard & Priorities](priorities-and-dashboard.md) | Today's Radar, "Waiting on you", and how items are ranked |
+| [Your dashboard & Priorities](priorities-and-dashboard.md) | Today's Radar, "Waiting on you", overdue & senders, quick actions, and how items are ranked |
 | [How Vesta's AI reads your email](ai-analysis.md) | What the AI produces (summary, priority, deadline, next action), what it reads, cost & privacy |
-| [Draft replies](draft-replies.md) | Let Vesta write a reply, edit it, and approve & send — nothing sends without you |
+| [Draft replies](draft-replies.md) | Let Vesta write a reply — or a follow-up nudge — edit it, and approve & send; nothing sends without you |
 | [Settings & appearance](settings-and-themes.md) | Managing your mailbox connection, filter mode, and light/dark theme |
 | [Admin panel (operator)](admin-panel.md) | ⚙️ **Operator-only** — the `/admin` console: users, mailboxes/sync, email retention, and AI cost control |
 

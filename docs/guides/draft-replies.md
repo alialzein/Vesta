@@ -7,8 +7,9 @@ tone, ready to review. You stay in control the whole way: you read it, edit it, 
 ## How it works, in four steps
 
 1. **Open the composer.** On the dashboard, select a work item, then click
-   **Draft reply** (in the AI Assistant rail's **Action** or **Draft** tab). The
-   composer slides in from the right.
+   **Draft reply** (in the AI Assistant rail's **Action** or **Draft** tab). On a
+   **Waiting on them** item the button says **Draft follow-up** instead — same
+   composer, different job. The composer slides in from the right.
 2. **Vesta writes a draft.** It reads the recent conversation — both their messages
    **and your own replies** — and writes in your voice. You'll see it appear in a
    few seconds. It knows which side of the conversation you're on:
