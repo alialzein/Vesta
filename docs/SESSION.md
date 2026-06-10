@@ -4,12 +4,44 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (ALL MERGED: radar fixes #41 · draft-direction `73b8267`
-· radar polish #43 `7312020`. Re-analyze queued (4 items). **Guides brought current**
-with every new feature in the same day.)
-**Repo state:** `main`, clean — 308 tests green, typecheck/lint/build clean.
-**Next: 1) owner verifies live (list below) → 2) Phase 10 — Memory & Rules.
-Smaller queued: due_at in manager timezone (now 9 AM UTC, ~3h off for Lebanon).**
+**Last updated:** 2026-06-10 (radar #41 + draft-direction + radar polish #43 + docs
+#44 + **3D scroll landing page — ALL MERGED to main**.)
+**Repo state:** `main` clean — 313 tests green, typecheck/lint/build clean.
+**Next: 1) owner eyeballs the landing live in BOTH themes + phone (list below; use a
+signed-out/incognito window — signed-in users skip /welcome) → 2) Phase 10 — Memory
+& Rules. Smaller queued: due_at in manager timezone.**
+
+## ✅ MERGED — public 3D scroll landing at `/welcome` (2026-06-10)
+
+VECTR-style scroll story, fully Vesta-themed: an isometric Three.js world where a
+**glowing path carries an email through the real pipeline** — Outlook tower → noise
+gate (grey packets diverted into a Hidden vault) → radar platform (rotating sweep +
+rising score pylons) → send antenna (ripples on approval). GSAP ScrollTrigger
+(scrub) drives camera dolly + path reveal + a VECTR-style numbered step rail
+(01 One connection · 02 Noise never reaches you · 03 A radar, not an inbox ·
+04 Reply with one approval). Then classic sections: features grid (6 real shipped
+features), "Built on approval, not autopilot" safety strip, 3-step start, CTA,
+footer.
+
+- **Route:** `/welcome` (public). Middleware: signed-out `/` → `/welcome` (deep
+  links still → /login?redirectedFrom); signed-in users hitting /welcome bounce to
+  the app/admin. `isPublicPath` updated + tested.
+- **Files:** `components/landing/VestaScene.tsx` (Three.js, ~theme-reactive
+  palettes, DPR cap 1.75, IntersectionObserver+visibility pause, full dispose),
+  `components/landing/LandingPage.tsx` (own scroll container — app body is
+  overflow:hidden; CSS-sticky canvas, GSAP scrub, data-reveal section animations),
+  `app/welcome/page.tsx`. Deps added: `three`, `gsap` (+`@types/three`); three.js
+  is a lazy chunk — only /welcome pays for it (148 kB first load, dashboard
+  unchanged).
+- **Both themes** (scene re-tints live on toggle; all DOM uses tokens), **mobile**
+  (wider ortho frustum on narrow screens, compact step rail), **reduced motion**
+  (static fully-revealed scene, no scrub/reveals).
+- **Verified:** 313 tests; typecheck/lint/build clean; dev server: `/` (signed out)
+  307→/welcome, /welcome 200 with hero+steps, /login 200; no compile/runtime errors
+  in the dev log. ⚠️ WebGL itself can't be exercised from the CLI — owner should
+  eyeball: scene renders in BOTH themes, scroll story syncs with the step rail,
+  packets divert at the gate, pylons rise, antenna ripples; phone check.
+- Guide: getting-started.md "The front door" + README index line.
 
 ## ✅ MERGED `feat/radar-quick-actions` — radar polish (2026-06-10, #43)
 

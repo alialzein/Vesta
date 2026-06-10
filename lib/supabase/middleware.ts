@@ -15,11 +15,11 @@ import type { Database } from '@/lib/database.types';
  * Both gates read auth-token claims (`app_metadata` is server-only; users cannot
  * edit it), so no extra DB round-trip happens per request.
  *
- * Public (unauthenticated) paths: /login, /signup, /auth/* (the OAuth/email
- * confirmation callback + update-password), and Next internals/static assets
- * (excluded by the matcher in middleware.ts).
+ * Public (unauthenticated) paths: /welcome (the marketing landing), /login,
+ * /signup, /auth/* (the OAuth/email confirmation callback + update-password),
+ * and Next internals/static assets (excluded by the matcher in middleware.ts).
  */
-const PUBLIC_PATHS = ['/login', '/signup', '/auth'];
+const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/auth'];
 
 /** True for routes reachable without a session (login/signup + auth callback). */
 export function isPublicPath(pathname: string): boolean {
@@ -59,6 +59,14 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !publicPath) {
     const url = request.nextUrl.clone();
+    // A signed-out visit to the root is a first impression, not a lost deep
+    // link — show the marketing landing. Deep links still go to login and
+    // bounce back to where they were headed.
+    if (pathname === '/') {
+      url.pathname = '/welcome';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
     url.pathname = '/login';
     url.searchParams.set('redirectedFrom', pathname);
     return NextResponse.redirect(url);
@@ -90,7 +98,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  // Signed-in users never see the auth screens or the marketing landing.
+  if (user && (pathname === '/login' || pathname === '/signup' || pathname === '/welcome')) {
     const url = request.nextUrl.clone();
     url.pathname = isAdmin ? '/admin' : '/';
     url.search = '';

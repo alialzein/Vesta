@@ -1,0 +1,469 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useTheme } from '@/lib/theme';
+import { Icon, type IconName } from '@/components/ui/Icon';
+import type { VestaSceneHandle } from './VestaScene';
+
+// WebGL only exists in the browser — load the scene client-side, with a calm
+// theme-tinted placeholder while the chunk arrives.
+const VestaScene = dynamic(() => import('./VestaScene').then((m) => m.VestaScene), {
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-bg" aria-hidden="true" />,
+});
+
+/**
+ * Public marketing landing (signed-out visitors). A scroll-driven 3D story —
+ * "the journey of one email through Vesta" — followed by classic landing
+ * sections. Scrolling is owned by an inner container (the app body is
+ * overflow:hidden), the canvas is CSS-sticky inside a tall story section, and
+ * GSAP ScrollTrigger (scrub) maps scroll → scene progress + the active step.
+ * Both themes; honors prefers-reduced-motion (static scene, no pinning tricks).
+ */
+
+const STORY_VH = 460; // height of the pinned story, in viewport-heights
+
+type Step = { n: string; title: string; body: string };
+
+const STEPS: Step[] = [
+  {
+    n: '01',
+    title: 'One connection',
+    body: 'Sign in and connect Outlook once. Vesta syncs new mail silently in the background — no imports, no rituals, nothing to maintain.',
+  },
+  {
+    n: '02',
+    title: 'Noise never reaches you',
+    body: 'Newsletters, bots, and broadcasts are diverted into a reviewable Hidden tray before they cost you a glance. Only real correspondence moves on.',
+  },
+  {
+    n: '03',
+    title: 'A radar, not an inbox',
+    body: 'Everything that needs you is scored 0–100 and ranked — who is waiting, what is overdue, what to do next — with the AI’s reasoning in plain words.',
+  },
+  {
+    n: '04',
+    title: 'Reply with one approval',
+    body: 'Vesta drafts replies and follow-up nudges in your tone. Nothing sends until you approve — and it keeps tracking whoever still owes you an answer.',
+  },
+];
+
+/** Map story progress (0..1) to the active step index (-1 = hero). */
+function stepAt(p: number): number {
+  if (p < 0.08) return -1;
+  if (p < 0.34) return 0;
+  if (p < 0.6) return 1;
+  if (p < 0.84) return 2;
+  return 3;
+}
+
+const FEATURES: { icon: IconName; title: string; body: string }[] = [
+  {
+    icon: 'activity',
+    title: 'Today’s Radar',
+    body: 'A ranked list of the few things that actually need you — not another inbox. Overdue is red, senders have faces, one click resolves.',
+  },
+  {
+    icon: 'sparkle',
+    title: 'Reasons you can read',
+    body: 'Every priority comes with the AI’s plain-language why — summary, deadline, next best action. No black boxes.',
+  },
+  {
+    icon: 'edit',
+    title: 'Drafts in your tone',
+    body: 'Replies and follow-up chases written for you, threaded into the real Outlook conversation. You edit, you approve, then it sends.',
+  },
+  {
+    icon: 'refresh',
+    title: '“Waiting on them” tracking',
+    body: 'When your reply asks for something, Vesta keeps the thread on the radar until they answer — the longer the silence, the higher it climbs.',
+  },
+  {
+    icon: 'shield',
+    title: 'Noise, quarantined',
+    body: 'Two filtering gates keep newsletters, bots, and broadcasts away from your attention — reviewable any time in the Hidden tray.',
+  },
+  {
+    icon: 'plus',
+    title: 'Tasks in plain words',
+    body: '“Call the vendor tomorrow 3pm” becomes a scheduled radar item. The ✨ button reads even messier notes.',
+  },
+];
+
+const SAFETY: { icon: IconName; text: string }[] = [
+  { icon: 'shield', text: 'Nothing is ever sent without your explicit approval.' },
+  { icon: 'check', text: 'Every send and admin action lands in an audit log.' },
+  { icon: 'brain', text: 'AI reasoning is always user-visible — never hidden.' },
+  { icon: 'people', text: 'Your mailbox data is scoped to you alone.' },
+];
+
+export function LandingPage() {
+  const { theme, toggleTheme } = useTheme();
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const storyRef = useRef<HTMLDivElement | null>(null);
+  const heroRef = useRef<HTMLDivElement | null>(null);
+  const sceneRef = useRef<VestaSceneHandle | null>(null);
+  const [activeStep, setActiveStep] = useState(-1);
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(mq.matches);
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const story = storyRef.current;
+    if (!scroller || !story) return;
+    gsap.registerPlugin(ScrollTrigger);
+
+    const triggers: ScrollTrigger[] = [];
+
+    // The story: scroll position inside the tall section drives the 3D scene
+    // and the active step. The canvas pins itself via CSS position:sticky.
+    triggers.push(
+      ScrollTrigger.create({
+        trigger: story,
+        scroller,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: true,
+        onUpdate(self) {
+          sceneRef.current?.setProgress(self.progress);
+          setActiveStep(stepAt(self.progress));
+          if (heroRef.current) {
+            // The hero headline yields to the story as scrolling begins.
+            const fade = Math.min(1, self.progress / 0.07);
+            heroRef.current.style.opacity = String(1 - fade);
+            heroRef.current.style.transform = `translateY(${fade * -28}px)`;
+            heroRef.current.style.pointerEvents = fade > 0.6 ? 'none' : 'auto';
+          }
+        },
+      }),
+    );
+
+    // Content sections rise in as they enter the viewport.
+    if (!reduced) {
+      gsap.utils.toArray<HTMLElement>('[data-reveal]').forEach((el) => {
+        const tween = gsap.fromTo(
+          el,
+          { opacity: 0, y: 28 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.7,
+            ease: 'power2.out',
+            scrollTrigger: { trigger: el, scroller, start: 'top 88%' },
+          },
+        );
+        if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
+      });
+    }
+
+    return () => triggers.forEach((t) => t.kill());
+  }, [reduced]);
+
+  function scrollToStory() {
+    scrollerRef.current?.scrollTo({
+      top: window.innerHeight * 0.9,
+      behavior: reduced ? 'auto' : 'smooth',
+    });
+  }
+
+  return (
+    <div
+      ref={scrollerRef}
+      className="v-scroll relative h-screen overflow-y-auto overflow-x-hidden bg-bg text-ink"
+    >
+      {/* ------------------------------ nav ------------------------------ */}
+      <header className="sticky top-0 z-50 border-b border-line bg-bg/80 backdrop-blur-md">
+        <nav className="mx-auto flex h-[64px] max-w-[1200px] items-center gap-4 px-5">
+          <span className="font-display text-[20px] font-semibold tracking-tight">Vesta</span>
+          <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted sm:inline">
+            Your work, in order
+          </span>
+          <span className="ml-auto" />
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="grid h-9 w-9 place-items-center rounded-full border border-line bg-panel text-ink-soft transition hover:border-accent hover:text-accent"
+          >
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} className="h-[16px] w-[16px]" />
+          </button>
+          <Link
+            href="/login"
+            prefetch
+            className="rounded-full border border-line bg-panel px-4 py-[8px] text-[13px] font-semibold text-ink transition hover:border-accent hover:text-accent"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/login"
+            prefetch
+            className="hidden rounded-full bg-gradient-to-br from-accent to-accent-2 px-4 py-[8px] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110 sm:inline-flex"
+          >
+            Get started
+          </Link>
+        </nav>
+      </header>
+
+      {/* ------------------------- 3D scroll story ------------------------ */}
+      <section
+        ref={storyRef}
+        aria-label="How Vesta works"
+        style={{ height: reduced ? 'auto' : `${STORY_VH}vh` }}
+        className="relative"
+      >
+        <div className="sticky top-0 h-screen w-full overflow-hidden">
+          <VestaScene
+            ref={sceneRef}
+            theme={theme}
+            reducedMotion={reduced}
+            className="absolute inset-0 h-full w-full"
+          />
+
+          {/* Hero overlay — yields to the story on first scroll. */}
+          <div
+            ref={heroRef}
+            className="pointer-events-auto absolute inset-x-0 top-[16vh] z-10 mx-auto max-w-[760px] px-6 text-center"
+          >
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.3em] text-accent">
+              Vesta — AI chief of staff
+            </p>
+            <h1 className="mt-4 font-display text-[40px] font-semibold leading-[1.04] tracking-tight sm:text-[64px]">
+              Your work, in order.
+            </h1>
+            <p className="mx-auto mt-5 max-w-[560px] text-[15px] leading-relaxed text-ink-soft sm:text-[17px]">
+              Vesta reads your inbox, filters the noise, and hands you a ranked radar of the few
+              things that actually need you — with reasons you can read.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/login"
+                prefetch
+                className="rounded-full bg-gradient-to-br from-accent to-accent-2 px-6 py-[12px] text-[14px] font-semibold text-white shadow-[0_10px_28px_rgba(47,125,235,0.38)] transition hover:brightness-110"
+              >
+                Get started
+              </Link>
+              <button
+                type="button"
+                onClick={scrollToStory}
+                className="rounded-full border border-line-strong bg-panel px-6 py-[12px] text-[14px] font-semibold text-ink transition hover:border-accent hover:text-accent"
+              >
+                See how it works
+              </button>
+            </div>
+          </div>
+
+          {/* Step rail — bottom-left, VECTR-style numbered story. */}
+          <div className="absolute bottom-[4vh] left-4 z-10 max-w-[460px] pr-4 sm:left-8 sm:pr-0">
+            <ol className="m-0 list-none p-0">
+              {STEPS.map((s, i) => {
+                const active = i === activeStep;
+                return (
+                  <li key={s.n} className="mb-1">
+                    <div
+                      className={[
+                        'flex items-baseline gap-4 transition-all duration-300',
+                        active ? '' : 'opacity-60',
+                      ].join(' ')}
+                    >
+                      <span
+                        className={[
+                          'grid h-9 w-9 flex-none place-items-center rounded-[10px] font-mono text-[12px] font-bold transition-colors duration-300',
+                          active
+                            ? 'bg-accent text-white shadow-[0_6px_18px_rgba(47,125,235,0.35)]'
+                            : 'border border-line bg-panel text-muted',
+                        ].join(' ')}
+                      >
+                        {s.n}
+                      </span>
+                      <div className="min-w-0">
+                        <h3
+                          className={[
+                            'm-0 font-display tracking-tight transition-all duration-300',
+                            active
+                              ? 'text-[22px] font-semibold text-ink sm:text-[26px]'
+                              : 'text-[14px] font-medium text-ink-soft',
+                          ].join(' ')}
+                        >
+                          {s.title}
+                        </h3>
+                        <div
+                          className={[
+                            'grid transition-[grid-template-rows,opacity] duration-300',
+                            active ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+                          ].join(' ')}
+                        >
+                          <p className="m-0 mt-2 overflow-hidden border-l-2 border-accent pl-4 text-[13px] leading-relaxed text-ink-soft sm:text-[14px]">
+                            {s.body}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          {/* Scroll hint while on the hero. */}
+          <div
+            className={[
+              'absolute bottom-[3vh] left-1/2 z-10 -translate-x-1/2 transition-opacity duration-500',
+              activeStep === -1 && !reduced ? 'opacity-100' : 'pointer-events-none opacity-0',
+            ].join(' ')}
+            aria-hidden="true"
+          >
+            <span className="flex flex-col items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
+              Scroll
+              <span className="block h-8 w-px overflow-hidden bg-line">
+                <span className="block h-3 w-px animate-vesta-shimmer bg-accent" />
+              </span>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ----------------------------- features ---------------------------- */}
+      <section className="relative border-t border-line bg-bg px-5 py-20 sm:py-28">
+        <div className="mx-auto max-w-[1100px]">
+          <div data-reveal className="max-w-[640px]">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-accent">
+              The command center
+            </p>
+            <h2 className="mt-3 font-display text-[30px] font-semibold leading-tight tracking-tight sm:text-[40px]">
+              Everything that needs you.
+              <br />
+              Nothing that doesn&apos;t.
+            </h2>
+          </div>
+          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <article
+                key={f.title}
+                data-reveal
+                className="rounded-[var(--radius)] border border-line bg-panel p-6 shadow-soft transition hover:-translate-y-1 hover:border-line-strong"
+              >
+                <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-accent-soft text-accent">
+                  <Icon name={f.icon} className="h-[18px] w-[18px]" />
+                </span>
+                <h3 className="mt-4 font-display text-[18px] font-semibold tracking-tight">
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{f.body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------ safety ----------------------------- */}
+      <section className="border-t border-line bg-panel px-5 py-16">
+        <div className="mx-auto max-w-[1100px]">
+          <div data-reveal className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <h2 className="m-0 max-w-[420px] font-display text-[26px] font-semibold leading-tight tracking-tight sm:text-[32px]">
+              Built on approval,
+              <br />
+              not autopilot.
+            </h2>
+            <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
+              {SAFETY.map((s) => (
+                <li key={s.text} className="flex items-start gap-3">
+                  <span className="mt-[2px] grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-green-soft text-green">
+                    <Icon name={s.icon} className="h-[14px] w-[14px]" />
+                  </span>
+                  <span className="text-[13.5px] leading-snug text-ink-soft">{s.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------- how to start ------------------------- */}
+      <section className="border-t border-line bg-bg px-5 py-20 sm:py-28">
+        <div className="mx-auto max-w-[1100px]">
+          <div data-reveal className="max-w-[640px]">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-accent">
+              Two minutes to calm
+            </p>
+            <h2 className="mt-3 font-display text-[30px] font-semibold leading-tight tracking-tight sm:text-[40px]">
+              Three steps. No setup project.
+            </h2>
+          </div>
+          <ol className="mt-12 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-3">
+            {[
+              ['Create your account', 'Email or Microsoft/Google single sign-on — your theme and choices stick.'],
+              ['Connect Outlook', 'One consent screen. Vesta starts reading recent mail and keeps itself in sync.'],
+              ['Meet your radar', 'Open the dashboard to a ranked, explained list of what needs you today.'],
+            ].map(([title, body], i) => (
+              <li
+                key={title}
+                data-reveal
+                className="relative rounded-[var(--radius)] border border-line bg-panel p-6 shadow-soft"
+              >
+                <span className="font-mono text-[12px] font-bold text-accent">{`0${i + 1}`}</span>
+                <h3 className="mt-2 font-display text-[18px] font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ------------------------------- CTA ------------------------------- */}
+      <section className="border-t border-line bg-bg px-5 pb-24 pt-8">
+        <div
+          data-reveal
+          className="relative mx-auto max-w-[1100px] overflow-hidden rounded-[var(--radius-lg)] border border-line-strong bg-panel p-10 text-center shadow-glow sm:p-16"
+        >
+          <span
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_240px_at_50%_-10%,var(--accent-soft),transparent_70%)]"
+            aria-hidden="true"
+          />
+          <h2 className="relative m-0 font-display text-[30px] font-semibold leading-tight tracking-tight sm:text-[44px]">
+            Take back your mornings.
+          </h2>
+          <p className="relative mx-auto mt-4 max-w-[460px] text-[14.5px] leading-relaxed text-ink-soft">
+            Stop excavating your inbox. Start your day from a radar that already knows what
+            matters — and why.
+          </p>
+          <div className="relative mt-8">
+            <Link
+              href="/login"
+              prefetch
+              className="inline-flex rounded-full bg-gradient-to-br from-accent to-accent-2 px-8 py-[13px] text-[15px] font-semibold text-white shadow-[0_12px_32px_rgba(47,125,235,0.4)] transition hover:brightness-110"
+            >
+              Get started — it&apos;s your inbox, organized
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------ footer ------------------------------ */}
+      <footer className="border-t border-line bg-panel px-5 py-8">
+        <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-4 text-[12.5px] text-muted">
+          <span className="font-display text-[15px] font-semibold tracking-tight text-ink">
+            Vesta
+          </span>
+          <span>Your work, in order.</span>
+          <span className="ml-auto flex items-center gap-4">
+            <Link href="/login" prefetch className="transition hover:text-accent">
+              Sign in
+            </Link>
+            <span>© {new Date().getFullYear()} Vesta</span>
+          </span>
+        </div>
+      </footer>
+    </div>
+  );
+}

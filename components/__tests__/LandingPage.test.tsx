@@ -1,0 +1,93 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { forwardRef } from 'react';
+import { ThemeProvider } from '@/lib/theme';
+
+/**
+ * The landing page itself is DOM + copy; the WebGL scene and GSAP scrolling are
+ * browser-only, so they're mocked here (jsdom has no WebGL/ScrollTrigger).
+ */
+vi.mock('@/components/landing/VestaScene', () => ({
+  VestaScene: forwardRef<HTMLDivElement, { className?: string }>(function MockScene(
+    { className },
+    ref,
+  ) {
+    return <div ref={ref} data-testid="vesta-scene" className={className} />;
+  }),
+}));
+
+vi.mock('gsap', () => ({
+  gsap: {
+    registerPlugin: vi.fn(),
+    utils: { toArray: () => [] },
+    fromTo: vi.fn(() => ({ scrollTrigger: null })),
+  },
+}));
+
+vi.mock('gsap/ScrollTrigger', () => ({
+  ScrollTrigger: { create: vi.fn(() => ({ kill: vi.fn() })) },
+}));
+
+// jsdom has no matchMedia; the page reads prefers-reduced-motion through it.
+window.matchMedia =
+  window.matchMedia ||
+  ((query: string) =>
+    ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      onchange: null,
+      dispatchEvent: vi.fn(),
+    }) as unknown as MediaQueryList);
+
+import { LandingPage } from '@/components/landing/LandingPage';
+
+function renderLanding() {
+  return render(
+    <ThemeProvider>
+      <LandingPage />
+    </ThemeProvider>,
+  );
+}
+
+describe('LandingPage', () => {
+  it('renders the hero, tagline, and primary CTAs into /login', () => {
+    renderLanding();
+    expect(screen.getByRole('heading', { name: 'Your work, in order.' })).toBeInTheDocument();
+    const cta = screen.getAllByRole('link', { name: /Get started/i });
+    expect(cta.length).toBeGreaterThan(0);
+    for (const link of cta) expect(link).toHaveAttribute('href', '/login');
+    const signIns = screen.getAllByRole('link', { name: 'Sign in' }); // nav + footer
+    expect(signIns.length).toBeGreaterThan(0);
+    for (const link of signIns) expect(link).toHaveAttribute('href', '/login');
+  });
+
+  it('tells the four-step story of an email through Vesta', () => {
+    renderLanding();
+    for (const title of [
+      'One connection',
+      'Noise never reaches you',
+      'A radar, not an inbox',
+      'Reply with one approval',
+    ]) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+  });
+
+  it('shows the feature grid and the approval-first safety strip', () => {
+    renderLanding();
+    expect(screen.getByText('Today’s Radar')).toBeInTheDocument();
+    expect(screen.getByText('Drafts in your tone')).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is ever sent without your explicit approval/)).toBeInTheDocument();
+  });
+
+  it('has a working theme toggle button', () => {
+    renderLanding();
+    expect(
+      screen.getByRole('button', { name: /Switch to (light|dark) mode/i }),
+    ).toBeInTheDocument();
+  });
+});

@@ -15,7 +15,7 @@ manual. Each guide is self-contained and matches the product as it actually ship
 
 | Guide | What it covers |
 |-------|----------------|
-| [Getting started](getting-started.md) | Creating your account and signing in (email or Microsoft/Google) |
+| [Getting started](getting-started.md) | The animated welcome page, creating your account, and signing in (email or Microsoft/Google) |
 | [First-run setup](onboarding.md) | The short welcome wizard that teaches Vesta about you |
 | [Connecting Outlook](connect-outlook.md) | Linking your mailbox so Vesta can read your email |
 | [How email stays in sync](email-sync.md) | How Vesta keeps up with new and deleted mail automatically |
