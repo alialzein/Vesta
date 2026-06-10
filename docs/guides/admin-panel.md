@@ -11,67 +11,110 @@ one person their own data).
 
 ## Getting in
 
-- You sign in through the **normal Vesta login** (same page, same splash).
+- You sign in through the **normal Vesta login** (same page, same splash) and land
+  straight in the console. An admin account is an **operator account** — it has no
+  manager dashboard; every app page redirects you back to `/admin`.
 - The console only opens if your account is marked **admin**. Everyone else who tries
   `/admin` gets a plain **404** — they can't even tell it exists.
 - To make someone an admin: open **Users & Accounts → "Make admin"** (or, the very
   first time, run `node scripts/grant-admin.mjs <email>` once — see below).
 
-## The tabs (Wave 1)
+## Working the tables
 
-The left rail has the live tabs plus three greyed-out **"Soon"** tabs (Wave 2).
+Every list in the console works the same way: a **search box**, **filter dropdowns**,
+**clickable column headers** to sort, and **pagination** when a list gets long. Hover
+any ⓘ dot or KPI card for a plain-language explanation of the term.
+
+## The tabs
 
 ### 🩺 Overview
 The system pulse at a glance:
 - **Users**, active **mailboxes**, and last sync time.
-- **AI spend** today and this month.
-- **Sync & queue health** — stale mailboxes, sync errors, webhook backlog/errors.
+- **AI spend & usage** for a selectable date range — **Today / 7 days / This month
+  (default) / 30 days** pills at the top right; every card is labeled with the range.
+- **Sync & queue health** — stale mailboxes, sync errors, webhook backlog/errors
+  (live numbers, not range-filtered).
 - **Recent errors** — the latest sync / webhook / AI failures, newest first.
 
 If everything is green, the pipeline is healthy. Stale mailboxes or a growing webhook
 queue point at the cron or the webhook URL.
 
 ### 👥 Users & Accounts
-Every account, with per-user actions:
-- **Reset password** — emails the user a Supabase reset link.
+Every account with an avatar, status badges, mailbox sync state, mail volume, and
+**when + where they last signed in** (city/country on the deployed app; sign-ins are
+recorded from Wave 5 onward). **Click a user** to open their full detail page.
+
+Per-user actions (row or detail page):
+- **Reset password** — emails the user a one-time reset link; it lands on a
+  "Choose a new password" page. Links expire and work once — some email providers'
+  link scanners (notably Outlook/Hotmail) can consume them early; if that happens,
+  use Set password instead.
+- **Set password** — type or generate a password and apply it instantly (for users
+  who can't receive email). It's never stored or logged; share it securely.
 - **Make / Revoke admin** — grants or removes operator-console access.
-- **Suspend / Re-enable** — blocks or restores a user.
+- **Suspend / Re-enable** — *really* blocks the account: new sign-ins are refused
+  and any session they already have ends on its next request, with a clear
+  "account suspended" notice at login.
 - **Delete** — permanently removes the user **and all their data** (mail, work items,
   drafts). You must **type their email to confirm**. This cannot be undone.
 
-You can't suspend or delete **your own** account (a safety guard).
+You can't suspend, delete, or de-admin **your own** account (safety guards).
+
+**The user detail page** (click any user) adds:
+- Identity, email-confirmation and onboarding status, and **last sign-in location**.
+- A **timezone editor** (drives how times display for that user).
+- Mailbox & sync health, per-user setting overrides, recent drafts, month AI spend.
+- **Activity history** — logins (with method/IP/location), sent replies, and every
+  admin action taken on the account.
+- **Export data** — download everything the user owns as a JSON file (portability /
+  support requests). Audit-logged.
+- **Re-trigger onboarding** — sends them through the first-run wizard on their next
+  visit (their data is untouched).
 
 ### 📬 Mailboxes & Sync
-Every connected mailbox: status, last sync, and any error. Per row:
+Every connected mailbox: health (healthy / stale / error), last sync, the **webhook
+subscription state** (active / expiring / expired / none, with its expiry countdown),
+and any error. Per row:
 - **Force sync** — pull new mail now.
 - **Re-process** — re-run triage over already-stored mail (no fetch).
+- **Renew webhook** — refresh the Graph subscription (they expire every ~3 days; the
+  cron renews them, this is the manual override).
 
-A red "error" column usually means tokens expired — the user reconnects Outlook.
+A red "error" usually means tokens expired — the user reconnects Outlook.
 
 ### 🗄️ Email & Retention
 Stored mail grows forever unless you purge it. This tab owns the policy:
 - **Initial scan-back (days)** — how far back to import when a mailbox first connects
-  (default **7**). Keeps day-one storage sane.
+  (default **7**). Enforced during the first sync — older mail is never stored.
 - **Retention (months)** — purge mail older than this. **Blank = keep forever.**
 - **Soft-delete grace (days)** — how long to keep mail the user deleted in Outlook
   before permanently removing it (default **30**).
-- **Purge soft-deleted now** / **Apply retention now** — run the cleanup immediately
-  for everyone.
+- **Purge soft-deleted now** / **Apply retention now** — run the cleanup immediately.
+  For hands-off cleanup, schedule **`/api/cron/purge`** daily (same `CRON_SECRET`
+  pattern as the sync cron) — it applies both policies automatically and records
+  every run.
 - **Storage by user** — message counts (total / hidden / soft-deleted) and the oldest
   message, so you can spot a runaway mailbox. **Wipe mail** clears one user's synced
   mail (their Outlook connection stays, so the next sync re-imports the recent window).
 
 ### 🧠 AI Control Center
-Spend and control for everything AI:
+Spend and control for everything AI. **These settings are live levers** — the AI
+pipeline reads them on every run (no deploy needed); blank = use env.
 - **Live runtime** banner shows the provider/model actually in use and whether the API
   **key is configured** (keys live in env/Vercel — never stored or shown here).
-- **Model & budgets** — override the provider/model (overall, or per-task for analysis
-  vs drafts), set per-run / per-day analysis caps, token prices (for cost estimates),
-  a daily cost cap, the reply-intent mode, and the draft send mode. Blank = use env.
+- **Model & budgets** — provider/model overrides (overall, or per-task for analysis vs
+  drafts), per-run / per-day analysis caps, **token prices** (set these or all costs
+  show $0.00 — an amber banner reminds you), a **global daily cost cap**, the
+  reply-intent mode, and the draft send mode. Hover any field's ⓘ for what to enter.
+- **Per-user controls** (Users tab / detail page): pause AI for one user, per-user
+  daily cost cap, per-user reply-intent and send modes. When a user is paused or over
+  a cap, analysis quietly skips, ✨ quick-capture falls back to the no-AI parser, and
+  the draft composer tells them why.
 - **Re-analyze all** — after a prompt or model change, queue every open item to be
   re-analyzed on the next sync (this costs tokens).
-- **Spend by feature / by user** and a **recent calls** ledger — fills as analysis,
-  drafts, and reply-intent run.
+- **Spend by feature / by user** and a **recent calls** ledger. Rows recorded before
+  prices were set still show dollars — costs are estimated from their tokens × the
+  current prices. (`node scripts/backfill-ai-usage.mjs` imports pre-ledger history.)
 
 ## Safety model
 
@@ -90,8 +133,10 @@ Spend and control for everything AI:
 3. Visit `/admin`.
 
 ### 🎛️ Triage & Rules
-The deterministic rules and AI memories that shape each user's triage:
-- **Manager rules** — allow / mute / VIP rules per user; **enable/disable or delete** any.
+The deterministic rules and AI memories that shape each user's triage. Opens with the
+**10 most recently added** rules/memories across all users; use the **searchable user
+picker** (type an email or name, pick from the list) to manage one user's full set:
+- **Manager rules** — allow / mute / VIP rules; **enable/disable or delete** any.
 - **Manager memories** — soft context the AI uses (tone, role, preferences);
   **activate/deactivate or delete**.
 - **Feedback & corrections** — what users corrected (teaches Vesta), newest first.
@@ -99,14 +144,17 @@ The deterministic rules and AI memories that shape each user's triage:
 ### ✉️ Drafts & Sending
 Oversight of AI reply drafts (nothing is ever auto-sent — users approve every send):
 - KPIs: **sent / pending / errored** + the current **send mode**.
-- Recent drafts with status, model, and any send error; **delete** a stuck/errored draft
-  (never sends). Send mode is changed from the AI Control Center / Users tabs.
+- The draft list (last 500) with search, status/model filters, and any send error;
+  **delete** a stuck/errored draft (never sends). Send mode is changed from the AI
+  Control Center (global) or per user.
 
 ### 🔐 Audit & Security
 - **Secrets & configuration** — which sensitive keys are set (presence only, never
   values), so you can spot a missing/rotatable secret.
 - **Admins** — every account with operator-console access.
-- **Audit log** — every mutating operator action, filterable by action type.
+- **Audit log** — the full trail (last 500): **logins** (with method and location),
+  **sent replies and failed sends**, and every mutating operator action — searchable,
+  with action/actor filters and color-coded severity.
 
 ## Still deferred
 
