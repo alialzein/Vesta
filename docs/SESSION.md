@@ -4,13 +4,15 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (landing **v3 journey** pushed on `feat/landing-journey`
-— awaiting owner preview + explicit "merge".)
-**Repo state:** `main` clean; `feat/landing-journey` ahead — 314 tests green,
-typecheck/lint clean, Playwright-verified screenshots both themes + mobile.
-**Next: 1) owner previews /welcome on the branch (incognito/signed-out) and says
-"merge" or asks for tuning → 2) Phase 10 — Memory & Rules. Smaller queued: due_at
-in manager timezone.**
+**Last updated:** 2026-06-11 (landing **v3 journey + round-3 polish MERGED to
+main** — owner approved after live preview).
+**Repo state:** `main` clean — 315 tests green, typecheck/lint clean,
+Playwright-verified screenshots both themes + mobile (`node
+scripts/landing-shots.mjs` regenerates them against a running dev server).
+**Next: 1) after Vercel deploys main, owner spot-checks production /welcome
+(incognito; scroll to the VESTA finale) — the 4 re-queued work items also
+re-analyze with v2 prompts after deploy + next sync → 2) Phase 10 — Memory &
+Rules. Smaller queued: due_at in manager timezone.**
 
 ## 🔁 Landing v3 — journey FIXED + workflow stations (2026-06-10, round 2)
 
