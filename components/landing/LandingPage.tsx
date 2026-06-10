@@ -109,6 +109,7 @@ export function LandingPage() {
   const storyRef = useRef<HTMLDivElement | null>(null);
   const heroRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<VestaSceneHandle | null>(null);
+  const progressRef = useRef(0); // latest story progress, replayed when the scene loads
   const [activeStep, setActiveStep] = useState(-1);
   const [reduced, setReduced] = useState(false);
 
@@ -138,6 +139,7 @@ export function LandingPage() {
         end: 'bottom bottom',
         scrub: true,
         onUpdate(self) {
+          progressRef.current = self.progress;
           sceneRef.current?.setProgress(self.progress);
           setActiveStep(stepAt(self.progress));
           if (heroRef.current) {
@@ -226,7 +228,12 @@ export function LandingPage() {
       >
         <div className="sticky top-0 h-screen w-full overflow-hidden">
           <VestaScene
-            ref={sceneRef}
+            onReady={(handle) => {
+              // The scene chunk loads async — sync it to wherever the user
+              // has already scrolled. (Callback, not ref: next/dynamic drops refs.)
+              sceneRef.current = handle;
+              handle.setProgress(progressRef.current);
+            }}
             theme={theme}
             reducedMotion={reduced}
             className="absolute inset-0 h-full w-full"

@@ -1,28 +1,29 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import type { Theme } from '@/lib/theme';
 
 /**
  * Landing-page 3D world (Three.js) — "the journey of one email through Vesta".
  *
- * A LARGE isometric world split into four districts, far enough apart that each
- * scroll step arrives somewhere new (VECTR-style camera travel, Vesta story):
+ * An isometric world of four stations that literally tell the product story:
  *
- *   mail district (Outlook tower) ─▶ triage checkpoint (noise gate + Hidden
- *   vault + container yard) ─▶ radar campus (rings, sweep, score pylons, HQ)
- *   ─▶ signal field (send antenna + mast array).
+ *   01 the ENVELOPE monument (mail arrives) ─▶ 02 the SCANNER GATE (noise is
+ *   diverted down a grey spur into the open Hidden tray) ─▶ 03 the RADAR DIAL
+ *   (colored priority blips + a ranked score bar-chart — the dashboard itself)
+ *   ─▶ 04 the SEND ANTENNA (a paper plane launches: the approved reply).
  *
  * The glowing path draws itself slightly AHEAD of the camera and the camera
- * rides the path (scroll = travel), so the scene continuously adjusts. The
- * pointer is alive too: hovering anywhere blooms a dotted ripple that fades,
- * and the camera parallaxes a touch toward the cursor. Districts "wake up"
- * (dot-halo brightens, props rise) as their step approaches.
+ * rides the path (scroll = travel), so the scene continuously changes — the
+ * VECTR feel. Buildings line the whole corridor and dotted ground patches
+ * light up as the path passes, so the journey never crosses empty space.
+ * The pointer is alive too: hovering anywhere blooms a dotted ripple, and the
+ * camera parallaxes a touch toward the cursor.
  *
- * Scroll drives everything via `setProgress(0..1)`. Theme-aware (both
- * palettes re-tint live), DPR-capped, pauses offscreen, honors
- * prefers-reduced-motion (static fully-revealed overview).
+ * Scroll drives everything via the handle given to `onReady` (a callback, not
+ * a ref — `next/dynamic` drops refs). Theme-aware (both palettes re-tint
+ * live), DPR-capped, pauses offscreen, honors prefers-reduced-motion.
  */
 
 export type VestaSceneHandle = {
@@ -35,6 +36,13 @@ type Props = {
   /** Render the final state with no motion (prefers-reduced-motion). */
   reducedMotion?: boolean;
   className?: string;
+  /**
+   * Hands the scroll-control handle to the parent once the scene is live.
+   * A callback (not a ref) because `next/dynamic` does NOT forward refs —
+   * a `ref` on the dynamic component silently stays null and the camera
+   * would never move.
+   */
+  onReady?: (handle: VestaSceneHandle) => void;
 };
 
 /* ------------------------------- palettes -------------------------------- */
@@ -44,6 +52,7 @@ type Palette = {
   ground: number;
   building: number;
   buildingSoft: number;
+  paper: number;
   accent: number;
   accent2: number;
   grey: number;
@@ -52,67 +61,76 @@ type Palette = {
   shadowOpacity: number;
   ambient: number;
   directional: number;
+  fogNear: number;
   fogFar: number;
 };
 
 const PALETTES: Record<Theme, Palette> = {
   dark: {
     bg: 0x0a0f17,
-    ground: 0x0e1622,
-    building: 0x182334,
-    buildingSoft: 0x121b29,
+    ground: 0x101a29,
+    building: 0x24344e,
+    buildingSoft: 0x1a2638,
+    paper: 0xd9e5f4,
     accent: 0x5ba8f5,
     accent2: 0x67e8d8,
-    grey: 0x47536a,
-    ringOpacity: 0.16,
+    grey: 0x4b5870,
+    ringOpacity: 0.28,
     dotOpacity: 0.5,
-    shadowOpacity: 0.32,
-    ambient: 0.85,
+    shadowOpacity: 0.3,
+    ambient: 1.0,
     directional: 0.9,
-    fogFar: 120,
+    fogNear: 60,
+    fogFar: 150,
   },
   light: {
     bg: 0xeef5ff,
     ground: 0xf6faff,
     building: 0xffffff,
-    buildingSoft: 0xe7f0fc,
+    buildingSoft: 0xe3edf9,
+    paper: 0xffffff,
     accent: 0x2f7deb,
     accent2: 0x36b8e8,
     grey: 0xb9c6d8,
-    ringOpacity: 0.5,
+    ringOpacity: 0.55,
     dotOpacity: 0.55,
     shadowOpacity: 0.16,
     ambient: 1.05,
     directional: 0.75,
-    fogFar: 150,
+    fogNear: 70,
+    fogFar: 180,
   },
 };
 
+// Status colors (same in both themes — they match the app's priority tokens).
+const STATUS = { red: 0xe5484d, amber: 0xeb9d2a, green: 0x3fa066 } as const;
+
 /* ------------------------------ world layout ------------------------------ */
 
-// Districts are spread far apart so each step is a real arrival, not a glance.
-const TOWER = new THREE.Vector3(-34, 0, -26);
-const GATE = new THREE.Vector3(-11, 0, -8);
-const RADAR = new THREE.Vector3(13, 0, 9);
-const ANTENNA = new THREE.Vector3(38, 0, 28);
+// Stations are spaced so each scroll step is a real arrival — but close
+// enough that the corridor between them stays populated.
+const TOWER = new THREE.Vector3(-24, 0, -18);
+const GATE = new THREE.Vector3(-8, 0, -6);
+const RADAR = new THREE.Vector3(9, 0, 7);
+const ANTENNA = new THREE.Vector3(27, 0, 20);
 
 const PATH_Y = 0.22;
 
 function mainCurve(): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3(
     [
-      new THREE.Vector3(TOWER.x + 1.2, PATH_Y, TOWER.z + 1.8),
-      new THREE.Vector3(-27, PATH_Y, -22),
-      new THREE.Vector3(-23, PATH_Y, -13),
-      new THREE.Vector3(GATE.x - 2.2, PATH_Y, GATE.z - 2.4),
-      new THREE.Vector3(GATE.x + 2.2, PATH_Y, GATE.z + 2.0),
-      new THREE.Vector3(-2, PATH_Y, -1),
-      new THREE.Vector3(5, PATH_Y, 5.5),
-      new THREE.Vector3(RADAR.x - 2.4, PATH_Y, RADAR.z - 1.2),
-      new THREE.Vector3(RADAR.x + 2.8, PATH_Y, RADAR.z + 2.4),
-      new THREE.Vector3(24, PATH_Y, 16),
-      new THREE.Vector3(30, PATH_Y, 23.5),
-      new THREE.Vector3(ANTENNA.x - 1.0, PATH_Y, ANTENNA.z - 1.2),
+      new THREE.Vector3(TOWER.x + 1.4, PATH_Y, TOWER.z + 1.6),
+      new THREE.Vector3(-19, PATH_Y, -15.5),
+      new THREE.Vector3(-16, PATH_Y, -9.5),
+      new THREE.Vector3(GATE.x - 2.0, PATH_Y, GATE.z - 1.8),
+      new THREE.Vector3(GATE.x + 1.6, PATH_Y, GATE.z + 1.4),
+      new THREE.Vector3(-1.5, PATH_Y, -0.5),
+      new THREE.Vector3(3.5, PATH_Y, 3.8),
+      new THREE.Vector3(RADAR.x - 2.0, PATH_Y, RADAR.z - 0.8),
+      new THREE.Vector3(RADAR.x + 2.2, PATH_Y, RADAR.z + 1.8),
+      new THREE.Vector3(17, PATH_Y, 11.5),
+      new THREE.Vector3(21.5, PATH_Y, 16.5),
+      new THREE.Vector3(ANTENNA.x - 0.8, PATH_Y, ANTENNA.z - 1.0),
     ],
     false,
     'catmullrom',
@@ -120,12 +138,12 @@ function mainCurve(): THREE.CatmullRomCurve3 {
   );
 }
 
-/** Grey spur: noise diverted off the gate into the Hidden vault. */
+/** Grey spur: noise diverted off the gate into the open Hidden tray. */
 function spurCurve(): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3([
-    new THREE.Vector3(GATE.x + 0.4, PATH_Y, GATE.z - 0.4),
-    new THREE.Vector3(GATE.x + 3.4, PATH_Y, GATE.z - 4.4),
-    new THREE.Vector3(GATE.x + 5.2, PATH_Y - 0.05, GATE.z - 7.6),
+    new THREE.Vector3(GATE.x + 0.3, PATH_Y, GATE.z - 0.3),
+    new THREE.Vector3(GATE.x + 2.4, PATH_Y, GATE.z - 3.0),
+    new THREE.Vector3(GATE.x + 3.8, PATH_Y - 0.02, GATE.z - 5.4),
   ]);
 }
 
@@ -141,7 +159,24 @@ function windowT(p: number, from: number, to: number): number {
 
 /** Activation of a station whose path-fraction is `frac` (1 = camera there). */
 function stationActivation(pathT: number, frac: number): number {
-  return smooth(1 - Math.abs(pathT - frac) / 0.22);
+  return smooth(1 - Math.abs(pathT - frac) / 0.3);
+}
+
+/** Path fraction (arc-length t) where the curve passes closest to `target`. */
+function closestT(curve: THREE.CatmullRomCurve3, target: THREE.Vector3): number {
+  const pt = new THREE.Vector3();
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i <= 400; i++) {
+    const t = i / 400;
+    curve.getPointAt(t, pt);
+    const d = pt.distanceToSquared(target);
+    if (d < bestD) {
+      bestD = d;
+      best = t;
+    }
+  }
+  return best;
 }
 
 /* ------------------------------ textures ---------------------------------- */
@@ -238,20 +273,21 @@ function box(
 
 /* ---------------------------------- scene --------------------------------- */
 
-export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScene(
-  { theme, reducedMotion = false, className },
-  ref,
-) {
+export function VestaScene({ theme, reducedMotion = false, className, onReady }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const progressRef = useRef(0);
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
 
-  useImperativeHandle(ref, () => ({
-    setProgress(p: number) {
-      progressRef.current = Math.min(1, Math.max(0, p));
-    },
-  }));
+  useEffect(() => {
+    onReadyRef.current?.({
+      setProgress(p: number) {
+        progressRef.current = Math.min(1, Math.max(0, p));
+      },
+    });
+  }, []);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -271,19 +307,25 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -200, 400);
     const ISO = new THREE.Vector3(1, 0.92, 1).normalize();
     let camZoom = 1;
+    let vw = 1;
+    let vh = 1;
 
-    function frustum() {
-      const w = host.clientWidth || 1;
-      const h = host.clientHeight || 1;
-      renderer.setSize(w, h, false);
-      const aspect = w / h;
-      // Narrow screens get a wider view so districts still fit.
+    function applyProjection() {
+      const aspect = vw / vh;
+      // Narrow screens get a wider view so the stations still fit.
       const view = (aspect < 0.9 ? 15 : 11.5) / camZoom;
       camera.left = -view * aspect;
       camera.right = view * aspect;
       camera.top = view;
       camera.bottom = -view;
       camera.updateProjectionMatrix();
+    }
+
+    function resize() {
+      vw = host.clientWidth || 1;
+      vh = host.clientHeight || 1;
+      renderer.setSize(vw, vh, false);
+      applyProjection();
     }
 
     /* lights ----------------------------------------------------------------- */
@@ -298,16 +340,21 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
     const matGround = new THREE.MeshLambertMaterial();
     const matBuilding = new THREE.MeshLambertMaterial();
     const matBuildingSoft = new THREE.MeshLambertMaterial();
+    const matPaper = new THREE.MeshLambertMaterial();
     const matAccent = new THREE.MeshBasicMaterial();
     const matAccent2 = new THREE.MeshBasicMaterial();
     const matGrey = new THREE.MeshLambertMaterial();
-    const matPathBase = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.14 });
+    const matRed = new THREE.MeshBasicMaterial({ color: STATUS.red });
+    const matAmber = new THREE.MeshBasicMaterial({ color: STATUS.amber });
+    const matGreen = new THREE.MeshBasicMaterial({ color: STATUS.green });
+    const matPlane = new THREE.MeshLambertMaterial({ transparent: true });
+    const matPathBase = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.18 });
     const matPathGlow = new THREE.MeshBasicMaterial({ transparent: true, opacity: 1 });
     const matSpur = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 });
     const matRing = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide });
     const matSweep = new THREE.MeshBasicMaterial({
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.2,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
@@ -338,9 +385,14 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
       scene.add(m);
     }
 
-    /** Dotted halo under a station — brightens as its step approaches. */
-    const dotFields: { mesh: THREE.Mesh; mat: THREE.MeshBasicMaterial; frac: number }[] = [];
-    function dotField(center: THREE.Vector3, radius: number, frac: number) {
+    /** Dotted halo — brightens as the path passes its fraction of the route. */
+    const dotFields: {
+      mesh: THREE.Mesh;
+      mat: THREE.MeshBasicMaterial;
+      frac: number;
+      weight: number;
+    }[] = [];
+    function dotField(center: THREE.Vector3, radius: number, frac: number, weight = 1) {
       const mat = new THREE.MeshBasicMaterial({
         map: dotTex,
         transparent: true,
@@ -351,120 +403,171 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
       m.rotation.x = -Math.PI / 2;
       m.position.set(center.x, 0.02, center.z);
       scene.add(m);
-      dotFields.push({ mesh: m, mat, frac });
+      dotFields.push({ mesh: m, mat, frac, weight });
     }
 
+    /* the route (built early so districts can hug it) --------------------------- */
+    const curve = mainCurve();
+    const FRAC = {
+      tower: closestT(curve, TOWER),
+      gate: closestT(curve, GATE),
+      radar: closestT(curve, RADAR),
+      antenna: closestT(curve, ANTENNA),
+    };
+
     /* districts ------------------------------------------------------------------ */
-    /** Props that rise as their district wakes (scale.y 0.55 → 1). */
+    /** Props that rise as their district wakes (scale.y 0.8 → 1). */
     const risers: { mesh: THREE.Mesh; frac: number; h: number }[] = [];
     function riser(mesh: THREE.Mesh, frac: number, h: number) {
-      mesh.userData.baseY = mesh.position.y;
       risers.push({ mesh, frac, h });
       scene.add(mesh);
     }
 
-    // Path fractions where each station sits (matched to mainCurve below).
-    const FRAC = { tower: 0.02, gate: 0.33, radar: 0.62, antenna: 0.97 };
-
-    // 01 — mail district: a small downtown around the Outlook tower.
-    const towerGroup = new THREE.Group();
-    towerGroup.add(box(2.8, 6.2, 2.8, matBuilding, 0, 3.1, 0));
-    towerGroup.add(box(2.0, 1.2, 2.0, matBuildingSoft, 0, 6.8, 0));
-    towerGroup.add(box(2.9, 0.18, 2.9, matAccent, 0, 1.05, 0)); // glowing mail band
-    towerGroup.position.copy(TOWER);
-    scene.add(towerGroup);
+    // 01 — the envelope monument: mail arrives. A paper envelope with a glowing
+    // accent flap floats over a plinth, ringed by a small mail-district downtown.
+    const envelope = new THREE.Group();
+    envelope.add(box(4.2, 0.5, 3.2, matBuildingSoft, 0, 0.25, 0)); // plinth
+    const envBody = new THREE.Group();
+    envBody.add(box(3.0, 1.9, 0.22, matPaper, 0, 1.55, 0));
+    const flapL = box(1.86, 0.1, 0.06, matAccent, -0.75, 1.975, 0.15);
+    flapL.rotation.z = -0.611;
+    const flapR = box(1.86, 0.1, 0.06, matAccent, 0.75, 1.975, 0.15);
+    flapR.rotation.z = 0.611;
+    envBody.add(flapL, flapR);
+    envBody.rotation.y = Math.PI / 4; // face the camera
+    envelope.add(envBody);
+    envelope.position.copy(TOWER);
+    scene.add(envelope);
     dropShadow(TOWER.x, TOWER.z, 9);
-    dotField(TOWER, 7.5, FRAC.tower);
-    const downtown: [number, number, number, number, number][] = [
-      [-4.2, 2.6, 1.8, 4.2, 1.8],
-      [3.6, -1.8, 1.6, 3.0, 1.6],
-      [-2.8, -3.4, 1.4, 2.2, 1.4],
-      [4.4, 2.8, 1.3, 1.8, 1.3],
-      [0.6, -5.2, 1.6, 2.6, 1.6],
+    dotField(TOWER, 7, FRAC.tower);
+    // Floating letter sheets drifting toward the path (mail materializing).
+    const sheets: { mesh: THREE.Mesh; phase: number }[] = [];
+    const sheetSpots: [number, number, number][] = [
+      [-2.6, 2.2, 1.6],
+      [2.8, 2.8, -1.2],
+      [1.6, 3.4, 2.4],
     ];
-    for (const [dx, dz, w, h, d] of downtown) {
+    for (const [dx, baseY, dz] of sheetSpots) {
+      const s = box(0.9, 0.05, 0.66, matPaper, TOWER.x + dx, baseY, TOWER.z + dz);
+      s.rotation.y = dx; // varied, deterministic
+      scene.add(s);
+      sheets.push({ mesh: s, phase: dx * 2 });
+    }
+    const downtown: [number, number, number, number, number][] = [
+      [-4.4, 2.4, 1.8, 4.0, 1.8],
+      [3.8, -2.0, 1.6, 3.0, 1.6],
+      [-3.0, -3.2, 1.4, 2.2, 1.4],
+      [4.6, 2.6, 1.3, 1.8, 1.3],
+      [0.4, -5.0, 1.6, 2.6, 1.6],
+    ];
+    downtown.forEach(([dx, dz, w, h, d], i) => {
       riser(
-        box(w, h, d, Math.random() > 0.5 ? matBuilding : matBuildingSoft, TOWER.x + dx, h / 2, TOWER.z + dz),
+        box(w, h, d, i % 2 ? matBuilding : matBuildingSoft, TOWER.x + dx, h / 2, TOWER.z + dz),
         FRAC.tower,
         h,
       );
       dropShadow(TOWER.x + dx, TOWER.z + dz, Math.max(w, d) * 2.6);
-    }
+    });
 
-    // 02 — triage checkpoint: gate + scanner, container yard, Hidden vault.
+    // 02 — the scanner gate: triage. The path runs under a gate whose scanning
+    // bar sweeps; noise leaves down the grey spur into the open Hidden tray.
     const gateGroup = new THREE.Group();
     gateGroup.add(box(0.6, 3.6, 0.6, matBuilding, -1.5, 1.8, 0));
     gateGroup.add(box(0.6, 3.6, 0.6, matBuilding, 1.5, 1.8, 0));
     gateGroup.add(box(3.6, 0.55, 0.6, matBuilding, 0, 3.85, 0));
     const scanner = box(2.9, 0.12, 0.45, matAccent2, 0, 3.45, 0);
     gateGroup.add(scanner);
-    gateGroup.rotation.y = Math.PI / 4;
+    gateGroup.rotation.y = Math.PI / 4; // straddles the diagonal path
     gateGroup.position.copy(GATE);
     scene.add(gateGroup);
     dropShadow(GATE.x, GATE.z, 7);
-    dotField(GATE, 8, FRAC.gate);
-    // Container yard (the holding pen for filtered noise).
+    dotField(GATE, 7.5, FRAC.gate);
+    // The Hidden tray: an open-top bin the grey packets sink into (reviewable,
+    // not deleted — that's the product promise).
+    const tray = new THREE.Group();
+    tray.add(box(2.4, 0.14, 2.4, matGrey, 0, 0.07, 0));
+    tray.add(box(2.4, 0.8, 0.14, matGrey, 0, 0.4, -1.13));
+    tray.add(box(2.4, 0.8, 0.14, matGrey, 0, 0.4, 1.13));
+    tray.add(box(0.14, 0.8, 2.4, matGrey, -1.13, 0.4, 0));
+    tray.add(box(0.14, 0.8, 2.4, matGrey, 1.13, 0.4, 0));
+    tray.position.set(GATE.x + 3.9, 0, GATE.z - 5.7);
+    scene.add(tray);
+    dropShadow(tray.position.x, tray.position.z, 5);
+    // Container yard: noise already filed away.
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 2; j++) {
         riser(
-          box(1.5, 0.9, 0.9, matGrey, GATE.x + 4.6 + i * 1.8, 0.45, GATE.z - 5.8 + j * 1.3),
+          box(1.4, 0.85, 0.85, matGrey, GATE.x + 5.0 + i * 1.5, 0.42, GATE.z - 3.5 - j * 1.2),
           FRAC.gate,
-          0.9,
+          0.85,
         );
       }
     }
-    const vault = new THREE.Group();
-    vault.add(box(2.6, 1.0, 2.6, matGrey, 0, 0.5, 0));
-    vault.add(box(2.0, 0.2, 2.0, matBuildingSoft, 0, 1.1, 0));
-    vault.position.set(GATE.x + 5.2, 0, GATE.z - 7.8);
-    scene.add(vault);
-    dropShadow(vault.position.x, vault.position.z, 5);
 
-    // 03 — radar campus: platform, rings, sweep, pylons + Vesta HQ slab.
+    // 03 — the radar dial: the dashboard itself. Concentric rings, a live
+    // sweep, colored priority blips, and a ranked score bar-chart beside it.
     const radarGroup = new THREE.Group();
-    const platform = new THREE.Mesh(new THREE.CylinderGeometry(4.0, 4.2, 0.4, 56), matBuildingSoft);
+    const platform = new THREE.Mesh(new THREE.CylinderGeometry(5.0, 5.2, 0.4, 56), matBuildingSoft);
     platform.position.y = 0.2;
     radarGroup.add(platform);
-    for (const r of [1.6, 2.6, 3.6]) {
-      const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.035, r, 72), matRing);
+    for (const r of [1.8, 3.0, 4.2]) {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.05, r, 72), matRing);
       ring.rotation.x = -Math.PI / 2;
       ring.position.y = 0.42;
       radarGroup.add(ring);
     }
-    const sweep = new THREE.Mesh(new THREE.CircleGeometry(3.7, 28, 0, Math.PI / 3.1), matSweep);
+    const sweep = new THREE.Mesh(new THREE.CircleGeometry(4.6, 30, 0, Math.PI / 3.1), matSweep);
     sweep.rotation.x = -Math.PI / 2;
     sweep.position.y = 0.43;
     radarGroup.add(sweep);
-    const pylons: THREE.Mesh[] = [];
-    const pylonSpecs: { x: number; z: number; h: number; mat: THREE.Material }[] = [
-      { x: -1.3, z: 0.5, h: 2.8, mat: matAccent },
-      { x: 0.6, z: -1.5, h: 1.9, mat: matAccent2 },
-      { x: 1.7, z: 1.1, h: 1.2, mat: matBuilding },
+    // Work-item blips at priority colors (red = overdue, amber = due, …).
+    const blips: { mesh: THREE.Mesh; phase: number }[] = [];
+    const blipSpecs: [number, number, THREE.Material, number][] = [
+      [1.5, 0.5, matRed, 0.34],
+      [2.7, 1.7, matAmber, 0.3],
+      [3.5, 3.5, matGreen, 0.26],
+      [2.3, 4.4, matAccent, 0.28],
+      [4.0, 5.6, matAmber, 0.24],
+      [1.1, 2.8, matAccent2, 0.24],
+      [4.4, 1.0, matRed, 0.28],
     ];
-    for (const s of pylonSpecs) {
-      const p = new THREE.Mesh(new THREE.BoxGeometry(0.6, s.h, 0.6), s.mat);
-      p.position.set(s.x, 0.4, s.z);
-      p.scale.y = 0.001;
-      p.userData.h = s.h;
-      radarGroup.add(p);
-      pylons.push(p);
-    }
+    blipSpecs.forEach(([r, a, mat, size], i) => {
+      const b = new THREE.Mesh(new THREE.OctahedronGeometry(size), mat);
+      b.position.set(Math.cos(a) * r, 0.7, Math.sin(a) * r);
+      radarGroup.add(b);
+      blips.push({ mesh: b, phase: i * 1.3 });
+    });
     radarGroup.position.copy(RADAR);
     scene.add(radarGroup);
-    dropShadow(RADAR.x, RADAR.z, 11);
-    dotField(RADAR, 9, FRAC.radar);
-    // HQ slab with a glowing accent band (the command center itself).
+    dropShadow(RADAR.x, RADAR.z, 13);
+    dotField(RADAR, 8.5, FRAC.radar);
+    // Ranked score bars (the 0–100 priority scores, highest first).
+    const barBase = box(3.4, 0.3, 1.4, matBuildingSoft, RADAR.x + 5.6, 0.15, RADAR.z - 2.6);
+    scene.add(barBase);
+    const barSpecs: [THREE.Material, number][] = [
+      [matRed, 2.7],
+      [matAmber, 1.9],
+      [matGreen, 1.2],
+    ];
+    barSpecs.forEach(([mat, h], i) => {
+      riser(
+        box(0.7, h, 0.7, mat, RADAR.x + 4.6 + i * 1.05, 0.3 + h / 2, RADAR.z - 2.6),
+        FRAC.radar,
+        h,
+      );
+    });
+    dropShadow(RADAR.x + 5.6, RADAR.z - 2.6, 6);
+    // Vesta HQ slab with a glowing accent band (the command center).
     const hq = new THREE.Group();
     hq.add(box(3.4, 2.4, 2.2, matBuilding, 0, 1.2, 0));
     hq.add(box(1.6, 1.0, 1.6, matBuildingSoft, 0, 2.9, 0));
     hq.add(box(3.5, 0.16, 2.3, matAccent, 0, 1.9, 0));
-    hq.position.set(RADAR.x - 6.4, 0, RADAR.z + 4.2);
+    hq.position.set(RADAR.x - 5.4, 0, RADAR.z + 3.6);
     scene.add(hq);
     dropShadow(hq.position.x, hq.position.z, 8);
-    riser(box(1.6, 2.0, 1.6, matBuildingSoft, RADAR.x + 6.2, 1.0, RADAR.z - 3.4), FRAC.radar, 2.0);
-    riser(box(1.3, 1.4, 1.3, matBuilding, RADAR.x + 7.8, 0.7, RADAR.z - 1.2), FRAC.radar, 1.4);
 
-    // 04 — signal field: main antenna + a small mast array.
+    // 04 — the send antenna: the approved reply goes out. A paper plane
+    // launches along an arc while broadcast rings expand.
     const antennaGroup = new THREE.Group();
     antennaGroup.add(box(1.8, 0.8, 1.8, matBuilding, 0, 0.4, 0));
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 4.4, 10), matBuilding);
@@ -473,23 +576,32 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
     const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), matAccent2);
     beacon.position.y = 5.4;
     antennaGroup.add(beacon);
-    const ripples: THREE.Mesh[] = [];
+    const stationRipples: THREE.Mesh[] = [];
     for (let i = 0; i < 2; i++) {
       const r = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.62, 56), matRippleStation);
       r.rotation.x = -Math.PI / 2;
       r.position.y = 0.46;
       antennaGroup.add(r);
-      ripples.push(r);
+      stationRipples.push(r);
     }
     antennaGroup.position.copy(ANTENNA);
     scene.add(antennaGroup);
     dropShadow(ANTENNA.x, ANTENNA.z, 6);
-    dotField(ANTENNA, 8, FRAC.antenna);
+    dotField(ANTENNA, 7.5, FRAC.antenna);
+    // The paper plane (cone nose-forward) + its flight arc.
+    const plane = new THREE.Mesh(new THREE.ConeGeometry(0.34, 1.0, 4), matPlane);
+    plane.visible = false;
+    scene.add(plane);
+    const flight = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(ANTENNA.x, 5.4, ANTENNA.z),
+      new THREE.Vector3(ANTENNA.x + 5, 8.2, ANTENNA.z + 3.6),
+      new THREE.Vector3(ANTENNA.x + 12, 10.5, ANTENNA.z + 8.5),
+    );
     const mastSpots: [number, number, number][] = [
-      [-4.5, 3.2, 2.6],
-      [-2.2, 5.4, 3.2],
-      [4.8, -2.6, 2.2],
-      [6.4, 1.8, 2.9],
+      [-4.2, 3.0, 2.6],
+      [-2.0, 5.0, 3.2],
+      [4.6, -2.4, 2.2],
+      [6.0, 1.8, 2.9],
     ];
     for (const [dx, dz, h] of mastSpots) {
       const m = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.11, h, 8), matBuilding);
@@ -501,26 +613,51 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
       dropShadow(ANTENNA.x + dx, ANTENNA.z + dz, 2.6);
     }
 
-    // En-route filler so the journey between districts never feels empty.
-    const filler: [number, number, number, number, number][] = [
-      [-20, -4, 1.5, 2.0, 1.5],
-      [-16, -16, 1.7, 2.8, 1.7],
-      [-5, 4, 1.4, 1.8, 1.4],
-      [2, -8, 1.6, 2.4, 1.6],
-      [7, 13, 1.5, 2.1, 1.5],
-      [20, 4, 1.7, 2.6, 1.7],
-      [27, 12, 1.4, 1.7, 1.4],
-      [31, 33, 1.5, 2.2, 1.5],
-      [-28, -32, 1.8, 3.0, 1.8],
-      [44, 22, 1.6, 2.3, 1.6],
-    ];
-    for (const [x, z, w, h, d] of filler) {
-      scene.add(box(w, h, d, Math.random() > 0.5 ? matBuilding : matBuildingSoft, x, h / 2, z));
-      dropShadow(x, z, Math.max(w, d) * 2.5);
+    // Corridor city: blocks hug the whole route (deterministic placement), so
+    // the camera always travels over content — never an empty void.
+    {
+      const pt = new THREE.Vector3();
+      const tangent = new THREE.Vector3();
+      const normal = new THREE.Vector3();
+      const up = new THREE.Vector3(0, 1, 0);
+      const stationFracs = Object.values(FRAC);
+      for (let i = 0; i < 22; i++) {
+        const t = 0.03 + (i / 21) * 0.94;
+        if (stationFracs.some((f) => Math.abs(t - f) < 0.07)) continue; // keep arrivals clear
+        curve.getPointAt(t, pt);
+        curve.getTangentAt(t, tangent);
+        normal.crossVectors(up, tangent).normalize();
+        const side = i % 2 ? 1 : -1;
+        const lateral = 4.5 + ((i * 37) % 23) / 23 * 3.5;
+        const h = 0.9 + ((i * 53) % 17) / 17 * 2.0;
+        const w = 1.2 + ((i * 29) % 11) / 11 * 0.8;
+        const x = pt.x + normal.x * side * lateral;
+        const z = pt.z + normal.z * side * lateral;
+        scene.add(box(w, h, w, i % 3 ? matBuildingSoft : matBuilding, x, h / 2, z));
+        dropShadow(x, z, w * 2.5);
+      }
+      // Dotted ground patches along the route — they light up as the path
+      // passes (frac = their position), so the land wakes under the journey.
+      for (const t of [0.16, 0.45, 0.76]) {
+        curve.getPointAt(t, pt);
+        dotField(new THREE.Vector3(pt.x, 0, pt.z), 4.5, t, 0.55);
+      }
+      // A few far landmarks for depth.
+      const far: [number, number, number, number][] = [
+        [-30, -28, 2.0, 3.2],
+        [-14, 6, 1.6, 2.2],
+        [2, -14, 1.7, 2.6],
+        [22, 2, 1.6, 2.4],
+        [36, 30, 1.8, 2.8],
+        [14, 22, 1.5, 2.0],
+      ];
+      for (const [x, z, w, h] of far) {
+        scene.add(box(w, h, w, matBuildingSoft, x, h / 2, z));
+        dropShadow(x, z, w * 2.5);
+      }
     }
 
     /* the glowing path ------------------------------------------------------------ */
-    const curve = mainCurve();
     const TUBULAR = 420;
     const RADIAL = 8;
     // Faint full-length hint underneath…
@@ -559,7 +696,7 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
     const headGlow = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: headTex, transparent: true, depthWrite: false }),
     );
-    headGlow.scale.setScalar(3.4);
+    headGlow.scale.setScalar(3.8);
     scene.add(headGlow);
 
     const spur = spurCurve();
@@ -638,10 +775,12 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
     function applyTheme(t: Theme) {
       const p = PALETTES[t];
       scene.background = new THREE.Color(p.bg);
-      scene.fog = new THREE.Fog(p.bg, 55, p.fogFar);
+      scene.fog = new THREE.Fog(p.bg, p.fogNear, p.fogFar);
       matGround.color.set(p.ground);
       matBuilding.color.set(p.building);
       matBuildingSoft.color.set(p.buildingSoft);
+      matPaper.color.set(p.paper);
+      matPlane.color.set(p.paper);
       matAccent.color.set(p.accent);
       matAccent2.color.set(p.accent2);
       matGrey.color.set(p.grey);
@@ -671,7 +810,7 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
     const camTarget = new THREE.Vector3(0, 0, 0);
     const followPt = new THREE.Vector3();
     const tmp = new THREE.Vector3();
-    const OVERVIEW_TARGET = new THREE.Vector3(2, 0, 1);
+    const OVERVIEW_TARGET = new THREE.Vector3(0, 0, 0);
 
     function render() {
       const dt = Math.min(clock.getDelta(), 0.05);
@@ -686,26 +825,35 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
       shown += (target - shown) * Math.min(1, dt * 7);
       const p = reducedMotion ? 1 : shown;
 
-      // Travel: the camera RIDES the path; the glow draws slightly ahead so the
-      // path always leads and the scene keeps changing (the VECTR feel).
-      const pathT = windowT(p, 0.06, 0.96);
-      const reveal = reducedMotion ? 1 : Math.min(1, pathT + 0.06);
+      // Travel: the camera RIDES the path (linear, so captions stay in sync);
+      // the glow draws slightly ahead so the path always leads (VECTR feel).
+      const pathT = Math.min(1, Math.max(0, (p - 0.06) / 0.9));
+      const reveal = reducedMotion ? 1 : Math.min(1, pathT + 0.05);
       curve.getPointAt(Math.min(0.999, Math.max(0.001, pathT)), followPt);
 
-      const intro = windowT(p, 0.0, 0.12); // overview → follow blend
+      // Zoom breathes IN at each arrival, OUT while traveling between.
+      const arrival = Math.max(
+        stationActivation(pathT, FRAC.tower),
+        stationActivation(pathT, FRAC.gate),
+        stationActivation(pathT, FRAC.radar),
+        stationActivation(pathT, FRAC.antenna),
+      );
+
+      const intro = windowT(p, 0.0, 0.1); // overview → follow blend
       if (reducedMotion) {
         camTarget.copy(OVERVIEW_TARGET);
         camZoom = 0.55;
       } else {
         camTarget.copy(OVERVIEW_TARGET).lerp(followPt, intro);
-        camZoom = 0.62 + (1.5 - 0.62) * intro;
+        const followZoom = 1.34 + 0.24 * arrival;
+        camZoom = 0.58 + (followZoom - 0.58) * intro;
         // Pointer parallax — the world leans gently toward the cursor.
         parallax.x += (pointerNdc.x - parallax.x) * Math.min(1, dt * 3);
         parallax.y += (pointerNdc.y - parallax.y) * Math.min(1, dt * 3);
         camTarget.x += parallax.x * 1.1;
         camTarget.z -= parallax.y * 1.1;
       }
-      frustum();
+      applyProjection();
       camPos.copy(camTarget).addScaledVector(ISO, 60);
       camera.position.copy(camPos);
       camera.lookAt(camTarget);
@@ -719,7 +867,7 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
         curve.getPointAt(Math.min(0.999, reveal), tmp);
         headGlow.position.set(tmp.x, PATH_Y + 0.35, tmp.z);
         const pulse = 1 + Math.sin(elapsed * 5) * 0.12;
-        headGlow.scale.setScalar(3.4 * pulse);
+        headGlow.scale.setScalar(3.8 * pulse);
         (headGlow.material as THREE.SpriteMaterial).opacity = 0.85;
       } else {
         headGlow.visible = false;
@@ -745,15 +893,25 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
       const dotBase = PALETTES[appliedTheme].dotOpacity;
       for (const f of dotFields) {
         const act = reducedMotion ? 0.7 : stationActivation(pathT, f.frac);
-        f.mat.opacity = dotBase * (0.12 + 0.88 * act) * (reveal > 0.01 ? 1 : 0.4);
+        f.mat.opacity = dotBase * f.weight * (0.18 + 0.82 * act);
       }
       for (const r of risers) {
-        const act = reducedMotion ? 1 : 0.45 + 0.55 * stationActivation(pathT, r.frac);
+        const act = reducedMotion ? 1 : 0.8 + 0.2 * stationActivation(pathT, r.frac);
         r.mesh.scale.y = act;
-        r.mesh.position.y = (r.h * act) / 2;
+        r.mesh.position.y = (r.h * act) / 2 + (r.mesh.userData.baseLift ?? 0);
       }
 
-      // 02 — the gate diverts grey noise into the Hidden vault.
+      // 01 — the envelope floats; sheets drift around it.
+      const towerAct = reducedMotion ? 1 : stationActivation(pathT, FRAC.tower);
+      envBody.position.y = Math.sin(elapsed * 1.2) * 0.1 * (0.4 + 0.6 * towerAct);
+      envBody.rotation.y = Math.PI / 4 + Math.sin(elapsed * 0.5) * 0.06;
+      for (const s of sheets) {
+        s.mesh.position.y =
+          (s.phase % 2 ? 2.4 : 2.9) + Math.sin(elapsed * 1.6 + s.phase) * 0.18;
+        s.mesh.rotation.y += dt * 0.4;
+      }
+
+      // 02 — the gate scans; grey noise rides the spur and sinks into the tray.
       const gateAct = reducedMotion ? 1 : stationActivation(pathT, FRAC.gate);
       const spurT = reducedMotion ? 1 : windowT(gateAct, 0.25, 0.9);
       spurTube.geometry.setDrawRange(0, Math.floor(spurIndexCount * spurT));
@@ -764,26 +922,26 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
           gp.mesh.visible = true;
           spur.getPointAt(Math.min(t, 0.999), tmp);
           gp.mesh.position.copy(tmp);
-          if (t > 0.85) gp.mesh.position.y -= (t - 0.85) * 2.4;
+          if (t > 0.82) gp.mesh.position.y -= (t - 0.82) * 3.2; // sink into the tray
           gp.mesh.rotation.y = elapsed * 0.7 + gp.offset * 5;
         } else {
           gp.mesh.visible = false;
         }
       }
 
-      // 03 — radar: pylons rise; sweep accelerates on arrival.
+      // 03 — radar: sweep turns, blips pulse like live work items.
       const radarAct = reducedMotion ? 1 : stationActivation(pathT, FRAC.radar);
-      for (const py of pylons) {
-        const h = py.userData.h as number;
-        py.scale.y = Math.max(0.001, radarAct);
-        py.position.y = 0.4 + (h * py.scale.y) / 2;
-      }
       sweep.rotation.z = -elapsed * (0.5 + radarAct * 1.1);
+      for (const b of blips) {
+        const s = Math.max(0.001, radarAct * (1 + Math.sin(elapsed * 2.4 + b.phase) * 0.18));
+        b.mesh.scale.setScalar(s);
+        b.mesh.rotation.y = elapsed * 0.8 + b.phase;
+      }
 
-      // 04 — antenna fires once the reply is approved.
+      // 04 — the antenna fires: rings expand and the paper plane launches.
       const sendAct = reducedMotion ? 1 : stationActivation(pathT, FRAC.antenna);
       beacon.scale.setScalar(1 + sendAct * (0.3 + Math.sin(elapsed * 4) * 0.2));
-      ripples.forEach((r, i) => {
+      stationRipples.forEach((r, i) => {
         if (sendAct <= 0.05) {
           r.visible = false;
           return;
@@ -793,6 +951,22 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
         r.scale.setScalar(1 + phase * 10);
         matRippleStation.opacity = 0.5 * (1 - phase) * sendAct;
       });
+      if (sendAct > 0.25 && !reducedMotion) {
+        const cycle = (elapsed % 3) / 2.1; // fly ~2.1s, rest ~0.9s
+        if (cycle <= 1) {
+          plane.visible = true;
+          flight.getPointAt(cycle, tmp);
+          plane.position.copy(tmp);
+          flight.getTangentAt(Math.min(cycle, 0.99), tmp);
+          // Cone points +y by default — aim its nose along the flight tangent.
+          plane.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tmp.normalize());
+          matPlane.opacity = cycle < 0.7 ? 1 : 1 - (cycle - 0.7) / 0.3;
+        } else {
+          plane.visible = false;
+        }
+      } else {
+        plane.visible = false;
+      }
 
       // Pointer ripples bloom out and fade.
       for (const r of ripplePool) {
@@ -813,11 +987,11 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
       if (running) raf = requestAnimationFrame(render);
     }
 
-    frustum();
+    resize();
     raf = requestAnimationFrame(render);
 
     /* lifecycle -------------------------------------------------------------------------- */
-    const onResize = () => frustum();
+    const onResize = () => resize();
     window.addEventListener('resize', onResize);
 
     const io = new IntersectionObserver(
@@ -860,7 +1034,8 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
         if (mesh.geometry) mesh.geometry.dispose();
       });
       [
-        matGround, matBuilding, matBuildingSoft, matAccent, matAccent2, matGrey,
+        matGround, matBuilding, matBuildingSoft, matPaper, matAccent, matAccent2, matGrey,
+        matRed, matAmber, matGreen, matPlane,
         matPathBase, matPathGlow, matSpur, matRing, matSweep, matRippleStation, matShadow,
       ].forEach((m) => m.dispose());
       for (const f of dotFields) f.mat.dispose();
@@ -876,4 +1051,4 @@ export const VestaScene = forwardRef<VestaSceneHandle, Props>(function VestaScen
   }, [reducedMotion]);
 
   return <div ref={mountRef} className={className} aria-hidden="true" />;
-});
+}

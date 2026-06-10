@@ -1,19 +1,28 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { forwardRef } from 'react';
+import { useEffect } from 'react';
 import { ThemeProvider } from '@/lib/theme';
 
 /**
  * The landing page itself is DOM + copy; the WebGL scene and GSAP scrolling are
  * browser-only, so they're mocked here (jsdom has no WebGL/ScrollTrigger).
+ * The mock mirrors the real onReady contract (next/dynamic drops refs, so the
+ * scene hands its scroll handle up via callback).
  */
+const sceneHandle = { setProgress: vi.fn() };
 vi.mock('@/components/landing/VestaScene', () => ({
-  VestaScene: forwardRef<HTMLDivElement, { className?: string }>(function MockScene(
-    { className },
-    ref,
-  ) {
-    return <div ref={ref} data-testid="vesta-scene" className={className} />;
-  }),
+  VestaScene: function MockScene({
+    className,
+    onReady,
+  }: {
+    className?: string;
+    onReady?: (handle: { setProgress: (p: number) => void }) => void;
+  }) {
+    useEffect(() => {
+      onReady?.(sceneHandle);
+    }, [onReady]);
+    return <div data-testid="vesta-scene" className={className} />;
+  },
 }));
 
 vi.mock('gsap', () => ({
@@ -89,5 +98,13 @@ describe('LandingPage', () => {
     expect(
       screen.getByRole('button', { name: /Switch to (light|dark) mode/i }),
     ).toBeInTheDocument();
+  });
+
+  it('receives the scene handle and syncs scroll progress to it', () => {
+    sceneHandle.setProgress.mockClear();
+    renderLanding();
+    // onReady fires on mount; the page must replay the current progress so a
+    // late-loading scene starts at the right camera position.
+    expect(sceneHandle.setProgress).toHaveBeenCalledWith(0);
   });
 });

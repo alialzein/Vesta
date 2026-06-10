@@ -4,31 +4,45 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (radar #41 + draft-direction + radar polish #43 + docs
-#44 + **3D scroll landing page — ALL MERGED to main**.)
-**Repo state:** `main` clean — 313 tests green, typecheck/lint/build clean.
-**Next: 1) owner eyeballs the landing live in BOTH themes + phone (list below; use a
-signed-out/incognito window — signed-in users skip /welcome) → 2) Phase 10 — Memory
-& Rules. Smaller queued: due_at in manager timezone.**
+**Last updated:** 2026-06-10 (landing **v3 journey** pushed on `feat/landing-journey`
+— awaiting owner preview + explicit "merge".)
+**Repo state:** `main` clean; `feat/landing-journey` ahead — 314 tests green,
+typecheck/lint clean, Playwright-verified screenshots both themes + mobile.
+**Next: 1) owner previews /welcome on the branch (incognito/signed-out) and says
+"merge" or asks for tuning → 2) Phase 10 — Memory & Rules. Smaller queued: due_at
+in manager timezone.**
 
-## 🔁 Landing v2 — "journey" rework (2026-06-10, owner feedback round)
+## 🔁 Landing v3 — journey FIXED + workflow stations (2026-06-10, round 2)
 
-Owner compared v1 to vectrfl.com: v1 read as ONE small diorama the camera zoomed
-around; no visible path-led travel; no pointer life. Rebuilt on
-`feat/landing-journey`:
-- **World is ~3× larger, 4 distinct districts** (mail downtown → triage checkpoint
-  + container yard + vault → radar campus + HQ slab → signal field with mast
-  array); en-route filler so travel never feels empty.
-- **Camera RIDES the path** (target = curve point at scroll progress; overview →
-  follow blend at start) and the **glow draws ~6% ahead** so the path leads and
-  the scene continuously changes. Multi-line VECTR-style 3-tube glow bundle +
-  pulsing bright head sprite.
-- **Pointer life:** window-level pointermove → raycast to ground → pooled dotted
-  ripples bloom & fade (throttled, 18-pool); subtle camera parallax toward the
-  cursor. VECTR-style **dotted halos** under each district brighten on approach;
-  district props **rise** as their step arrives; gate scanner bar animates.
-- Step thresholds resynced to station fractions; STORY_VH 460→560.
-- 313 tests, typecheck/lint/build clean; /welcome 200 on dev.
+Owner round-2 feedback on v2: camera STILL didn't move on scroll; objects didn't
+read as Vesta's workflow. Root cause found: **`next/dynamic` does not forward
+refs in Next 14** — `ref={sceneRef}` on the dynamic VestaScene stayed `null`, so
+`setProgress()` never reached the scene (the step rail advanced because it's
+plain React state from the same handler). v2's travel system existed but never
+got the scroll signal. Fixes on `feat/landing-journey`:
+- **Wiring:** scene now hands its handle up via an `onReady` callback prop;
+  LandingPage replays the latest progress when the chunk loads. New test asserts
+  the contract (mock mirrors onReady).
+- **Visual verification is now real:** added `playwright` (devDependency) +
+  `scripts/landing-shots.mjs` — drives Chromium through the scroll story and
+  saves screenshots (7 dark + 3 light + 3 mobile) to gitignored
+  `.landing-shots/`. All iterated against actual WebGL renders.
+- **Scene v3 — stations are now literal workflow objects:** 01 floating paper
+  ENVELOPE monument with glowing accent flap + drifting letter sheets → 02
+  scanner GATE straddling the path, grey spur into an open **Hidden tray** bin
+  (grey packets sink in) + container yard → 03 big RADAR DIAL with rotating
+  sweep, **colored priority blips** (red/amber/green/accent octahedra) + ranked
+  **score bar-chart** + HQ slab → 04 send ANTENNA with broadcast rings and a
+  **paper plane that launches** (the approved reply).
+- **No more dead space:** stations pulled closer, 22 corridor blocks hug the
+  route (deterministic placement), dotted ground patches light up as the path
+  passes, brighter dark palette (buildings/fog), far landmarks for depth.
+- **Camera:** progress→path mapping is now LINEAR so captions stay synced with
+  arrivals (was double-eased and drifted); station fractions computed
+  numerically from the curve; zoom breathes in at each arrival; per-frame
+  renderer.setSize waste removed.
+- 314 tests, typecheck/lint clean; screenshots verified at p0–p1 dark, p.1/.5/.9
+  light + mobile (390px).
 
 ## ✅ MERGED — public 3D scroll landing at `/welcome` (2026-06-10)
 
