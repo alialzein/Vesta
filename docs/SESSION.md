@@ -11,6 +11,25 @@
 signed-out/incognito window — signed-in users skip /welcome) → 2) Phase 10 — Memory
 & Rules. Smaller queued: due_at in manager timezone.**
 
+## 🔁 Landing v2 — "journey" rework (2026-06-10, owner feedback round)
+
+Owner compared v1 to vectrfl.com: v1 read as ONE small diorama the camera zoomed
+around; no visible path-led travel; no pointer life. Rebuilt on
+`feat/landing-journey`:
+- **World is ~3× larger, 4 distinct districts** (mail downtown → triage checkpoint
+  + container yard + vault → radar campus + HQ slab → signal field with mast
+  array); en-route filler so travel never feels empty.
+- **Camera RIDES the path** (target = curve point at scroll progress; overview →
+  follow blend at start) and the **glow draws ~6% ahead** so the path leads and
+  the scene continuously changes. Multi-line VECTR-style 3-tube glow bundle +
+  pulsing bright head sprite.
+- **Pointer life:** window-level pointermove → raycast to ground → pooled dotted
+  ripples bloom & fade (throttled, 18-pool); subtle camera parallax toward the
+  cursor. VECTR-style **dotted halos** under each district brighten on approach;
+  district props **rise** as their step arrives; gate scanner bar animates.
+- Step thresholds resynced to station fractions; STORY_VH 460→560.
+- 313 tests, typecheck/lint/build clean; /welcome 200 on dev.
+
 ## ✅ MERGED — public 3D scroll landing at `/welcome` (2026-06-10)
 
 VECTR-style scroll story, fully Vesta-themed: an isometric Three.js world where a

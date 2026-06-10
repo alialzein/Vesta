@@ -25,7 +25,7 @@ const VestaScene = dynamic(() => import('./VestaScene').then((m) => m.VestaScene
  * Both themes; honors prefers-reduced-motion (static scene, no pinning tricks).
  */
 
-const STORY_VH = 460; // height of the pinned story, in viewport-heights
+const STORY_VH = 560; // height of the pinned story, in viewport-heights
 
 type Step = { n: string; title: string; body: string };
 
@@ -52,12 +52,14 @@ const STEPS: Step[] = [
   },
 ];
 
-/** Map story progress (0..1) to the active step index (-1 = hero). */
+/** Map story progress (0..1) to the active step index (-1 = hero).
+ *  Boundaries sit midway between the stations the camera rides past
+ *  (tower ≈ .08, gate ≈ .36, radar ≈ .62, antenna ≈ .93 of raw progress). */
 function stepAt(p: number): number {
-  if (p < 0.08) return -1;
-  if (p < 0.34) return 0;
-  if (p < 0.6) return 1;
-  if (p < 0.84) return 2;
+  if (p < 0.06) return -1;
+  if (p < 0.22) return 0;
+  if (p < 0.49) return 1;
+  if (p < 0.78) return 2;
   return 3;
 }
 
