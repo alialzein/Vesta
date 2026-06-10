@@ -9,6 +9,11 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/auth/callback')).toBe(true);
   });
 
+  it('treats the marketing landing as public', () => {
+    expect(isPublicPath('/welcome')).toBe(true);
+    expect(isPublicPath('/welcomeback')).toBe(false); // no lookalike prefixes
+  });
+
   it('treats the dashboard and app routes as protected', () => {
     expect(isPublicPath('/')).toBe(false);
     expect(isPublicPath('/settings')).toBe(false);

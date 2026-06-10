@@ -2,9 +2,19 @@
 
 Vesta is a private workspace tied to your account. This guide covers getting in.
 
+## The front door
+
+Visiting Vesta while signed out shows the **welcome page** — an animated tour where
+a glowing path carries an email through Vesta's pipeline as you scroll: one
+connection → the noise gate → your radar → approve & send. It works in light and
+dark mode (the toggle is in the top bar) and on phones. **Get started** or
+**Sign in** takes you to the login screen; once you're signed in, Vesta always
+skips the welcome page and goes straight to your dashboard.
+
 ## Signing in
 
-Open Vesta and you'll land on the **login screen**. You have three ways to get in:
+From the welcome page, click **Sign in** (or **Get started**) to reach the
+**login screen**. You have three ways to get in:
 
 - **Continue with Microsoft** — sign in with your Microsoft work account. This is
   the quickest option if you live in Outlook.
