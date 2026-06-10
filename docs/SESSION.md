@@ -4,10 +4,71 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (everything merged ✅ — `main` `e167aef`; admin panel + docs complete)
+**Last updated:** 2026-06-10 (admin panel + docs complete; **dashboard UI/UX diagnostic
+done — fix plan below, not yet implemented**)
 **Repo state:** `main`, clean. Phases 0–9 done; **Admin Waves 1–5 + reset-link fix +
 guide catch-up all merged**. 283 tests green, typecheck + lint + build clean.
-**Next: Phase 10 — Memory & Rules.**
+**Next: 1) Dashboard radar UI/UX fixes (P0+P1 below) → 2) Phase 10 — Memory & Rules.**
+
+## 🎯 NEXT UP — Dashboard radar UI/UX fixes (diagnostic 2026-06-10, approved findings)
+
+Owner reviewed the main dashboard and reported: (a) unselected radar tickets are
+nearly invisible (background ≈ card color, both themes), (b) the email **sender is
+not shown anywhere**. Full diagnostic done in chat on 2026-06-10; root causes
+confirmed in code. **No migrations needed** — all UI/mapping work.
+
+### Bug 1 — invisible ticket boxes (root cause confirmed)
+- `components/dashboard/WorkItemRow.tsx` (~line 45): unselected rows are
+  `border-transparent bg-panel-soft` (deliberate Phase 0.5 "borderless one-surface"
+  decision — it overshot).
+- Dark: `--panel-soft = rgba(120,170,230,0.05)` over panel `#131c2b` → ~2% luminance
+  difference, invisible. Light: `--panel-soft = #f7faff` on `#ffffff` panel — same.
+  (Tokens in `app/globals.css` ~73 / ~107.)
+- **Fix:** persistent quiet card — permanent `border-line` border + stronger fill in
+  BOTH themes (dark: alpha ~0.08–0.10 or solid derived tone like `#182334`; light:
+  `#f2f7ff` fill + `#dce7f5` border). Keep hover/selected as the stronger states.
+
+### Bug 2 — sender missing / wrong ("She", "The manager")
+- `WorkItem.person` is **regex-parsed from the AI urgency sentence**
+  (`lib/dashboard/data.ts` `personFrom()`, ~73–78) — shows whatever noun the AI
+  started with ("She" / "The manager" / nothing). Rail has **no sender field at all**.
+- Real data exists: `email_messages.sender_name / sender_email`. The latest-inbound
+  query in `getDashboardData` (~244–251, used for the unread dot) already runs —
+  **add the sender columns to that select** (zero extra round-trips), map latest
+  inbound sender per conversation, use as `person` (fallback: email local part →
+  AI-parsed name for manual items). Show on the card AND in the rail ("From: …").
+
+### Also found (same diagnostic)
+- **Overdue is not a state**: `dueOf()` in `lib/dashboard/data.ts` never compares
+  `due_at` to now — a late item still shows neutral "Due Jun 9". Add red **Overdue**
+  label state.
+- **Vocabulary clash**: header chip "Top risk: 78" vs rail "Medium priority" for the
+  same item — unify. Brief "1 thing needs your attention" next to "5 Open Items"
+  reads contradictory → "1 of 5 needs you today".
+- **Action-pill noise**: bright accent suggested-action pill repeats on every card →
+  ghost/outline on unselected rows, lit only on the selected one.
+- **No identity anchor**: once sender exists, add initials avatar on cards (reuse the
+  admin Users-table stable-hue pattern).
+- **Interaction motion missing** (ambient motion is good): no staggered entry
+  (`animate-rise` exists, unused here), filter switches jump instantly, Mark
+  done/Dismiss makes the row vanish with zero feedback → add 150–250ms
+  fade/slide-out on resolve + subtle staggered rise on load.
+- Judgment call (not a defect): hover quick-actions on cards (done/snooze) would cut
+  the select-then-rail two-step to one click — rail-centric design today.
+
+### Fix order
+| Priority | Change | Effort |
+|---|---|---|
+| **P0** | Card contrast both themes (border + stronger fill) | Small |
+| **P0** | Real sender on card + rail (columns already queried) | Small |
+| **P0** | Overdue state (red label when `due_at < now`) | Small |
+| **P1** | Sender avatar initials; mute repeated action pills | Medium |
+| **P1** | List micro-motion: resolve fade-out, staggered entry | Medium |
+| **P2** | Unify risk/priority vocabulary; brief wording | Tiny |
+
+Plan: implement P0+P1 in one branch, verify in **both** themes, PR for owner review.
+Overall design verdict (for context): shell/identity/theming/ambient motion are
+strong; the weakness is concentrated in the radar list (who / what / how-late).
 
 ## Reset-link fix + guides (merged `e167aef`)
 
