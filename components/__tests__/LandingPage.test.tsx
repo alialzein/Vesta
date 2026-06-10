@@ -25,13 +25,27 @@ vi.mock('@/components/landing/VestaScene', () => ({
   },
 }));
 
-vi.mock('gsap', () => ({
-  gsap: {
-    registerPlugin: vi.fn(),
-    utils: { toArray: () => [] },
-    fromTo: vi.fn(() => ({ scrollTrigger: null })),
-  },
-}));
+vi.mock('gsap', () => {
+  const timeline = {
+    to: vi.fn(function (this: unknown) {
+      return this;
+    }),
+    fromTo: vi.fn(function (this: unknown) {
+      return this;
+    }),
+    kill: vi.fn(),
+    scrollTrigger: null,
+  };
+  return {
+    gsap: {
+      registerPlugin: vi.fn(),
+      utils: { toArray: () => [] },
+      fromTo: vi.fn(() => ({ scrollTrigger: null, kill: vi.fn() })),
+      to: vi.fn(() => ({ scrollTrigger: null, kill: vi.fn() })),
+      timeline: vi.fn(() => timeline),
+    },
+  };
+});
 
 vi.mock('gsap/ScrollTrigger', () => ({
   ScrollTrigger: { create: vi.fn(() => ({ kill: vi.fn() })) },
@@ -106,5 +120,14 @@ describe('LandingPage', () => {
     // onReady fires on mount; the page must replay the current progress so a
     // late-loading scene starts at the right camera position.
     expect(sceneHandle.setProgress).toHaveBeenCalledWith(0);
+  });
+
+  it('ends with the giant VESTA wordmark finale', () => {
+    renderLanding();
+    const wordmark = screen.getByRole('img', { name: 'Vesta' });
+    expect(wordmark).toBeInTheDocument();
+    // One stroke layer + one fill layer per letter.
+    expect(wordmark.querySelectorAll('[data-stroke]')).toHaveLength(5);
+    expect(wordmark.querySelectorAll('[data-fill]')).toHaveLength(5);
   });
 });

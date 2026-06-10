@@ -44,6 +44,27 @@ got the scroll signal. Fixes on `feat/landing-journey`:
 - 314 tests, typecheck/lint clean; screenshots verified at p0–p1 dark, p.1/.5/.9
   light + mobile (390px).
 
+### Round 3 (same day, owner-approved directions via Q&A)
+
+Owner liked v3; asked for: faster scroll, new header, animated lower half, giant
+VESTA ending. Confirmed choices: floating-minimal header / "path draws VESTA"
+finale / all lower-section animations. Shipped:
+- **~20% faster journey:** STORY_VH 560→450.
+- **Floating minimal header:** no bar/border/tagline — wordmark + theme toggle
+  + pill buttons float over the scene; translucent blur backdrop (color-mix)
+  fades in only past the story (scroll listener sets `pastStory`).
+- **Lower-half animation:** feature cards + safety bullets + step cards cascade
+  in (`data-stagger` groups), section headings parallax (`data-parallax`
+  scrub), an accent connector line draws across the 3-step section (clip-path
+  scrub), CTA radial glow breathes (existing animate-vesta-breathe).
+- **Finale:** footer replaced — the glowing line arrives from the page and
+  **draws giant VESTA letters stroke-by-stroke** (per-letter SVG text
+  dashoffset in a scrubbed GSAP timeline), then letters fill with an
+  accent→accent-2 userSpaceOnUse gradient + drop-shadow glow; footer links fold
+  in under the wordmark. Reduced-motion renders the final state statically.
+- 315 tests (finale wordmark test added; gsap mock gained timeline/to);
+  screenshots re-verified incl. dark-steps, dark/light/mobile finale.
+
 ## ✅ MERGED — public 3D scroll landing at `/welcome` (2026-06-10)
 
 VECTR-style scroll story, fully Vesta-themed: an isometric Three.js world where a

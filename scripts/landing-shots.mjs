@@ -54,6 +54,23 @@ try {
     await shoot(page, `dark-p${String(p).replace('.', '')}`);
   }
 
+  // Lower sections: scroll by absolute offsets from the bottom.
+  const gotoBottomOffset = async (pg, px) => {
+    await pg.evaluate((off) => {
+      const scroller = document.querySelector('.v-scroll');
+      scroller.scrollTop = scroller.scrollHeight - scroller.clientHeight - off;
+    }, px);
+    await pg.waitForTimeout(900);
+  };
+  await gotoBottomOffset(page, 2600);
+  await shoot(page, 'dark-features');
+  await gotoBottomOffset(page, 1100);
+  await shoot(page, 'dark-steps');
+  await gotoBottomOffset(page, 300);
+  await shoot(page, 'dark-finale-mid');
+  await gotoBottomOffset(page, 0);
+  await shoot(page, 'dark-finale-end');
+
   // Light theme spot-checks.
   await page.click('button[aria-label="Switch to light mode"]');
   await page.waitForTimeout(600);
@@ -61,6 +78,8 @@ try {
     await gotoProgress(page, p);
     await shoot(page, `light-p${String(p).replace('.', '')}`);
   }
+  await gotoBottomOffset(page, 0);
+  await shoot(page, 'light-finale-end');
   await page.close();
 
   // Mobile, dark.
@@ -72,6 +91,12 @@ try {
     await gotoProgress(mob, p);
     await shoot(mob, `mobile-p${String(p).replace('.', '')}`);
   }
+  await mob.evaluate(() => {
+    const scroller = document.querySelector('.v-scroll');
+    scroller.scrollTop = scroller.scrollHeight;
+  });
+  await mob.waitForTimeout(900);
+  await shoot(mob, 'mobile-finale-end');
   await mob.close();
 
   console.log('Done.');

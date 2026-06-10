@@ -1,0 +1,21 @@
+feat(landing): floating header, animated lower half, path-drawn VESTA finale, 20% faster journey
+
+Owner-approved directions (round 3):
+- Journey scroll ~20% faster (STORY_VH 560 -> 450).
+- Header: no more bordered bar - wordmark + theme toggle + pill CTAs float
+  over the scene; a translucent blur backdrop (color-mix) fades in only
+  once the story yields to the content sections.
+- Lower half now moves with the scroll: feature/safety/step cards cascade
+  in with stagger, section headings parallax against the scroll, an accent
+  connector line draws across the 3-step section (clip-path scrub), and
+  the CTA glow breathes (reuses animate-vesta-breathe).
+- Finale replaces the footer: the glowing line from the journey arrives
+  one last time and draws giant VESTA letters stroke-by-stroke (per-letter
+  SVG text dashoffset in a scrubbed GSAP timeline), then fills them with
+  the accent gradient + glow. Footer links fold in under the wordmark.
+  Reduced-motion renders the finished wordmark statically.
+- Screenshot script extended to the lower sections + finale (dark, light,
+  mobile). 315 tests green (new finale test; gsap mock gained timeline/to),
+  typecheck + lint clean.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
