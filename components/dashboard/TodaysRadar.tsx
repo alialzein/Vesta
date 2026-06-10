@@ -3,13 +3,15 @@
 import { useMemo, useState } from 'react';
 import type { WorkItem, WorkItemCategory } from '@/lib/types';
 import { filterWorkItems } from '@/lib/priority';
-import { WorkItemRow } from './WorkItemRow';
+import { WorkItemRow, type QuickAction } from './WorkItemRow';
+import { Icon } from '@/components/ui/Icon';
 import { EmptyRadarState } from '@/components/ui/StateView';
 
-export type RadarFilter = WorkItemCategory | 'all';
+export type RadarFilter = WorkItemCategory | 'overdue' | 'all';
 
 const FILTERS: { id: RadarFilter; label: string }[] = [
   { id: 'all', label: 'All' },
+  { id: 'overdue', label: 'Overdue' },
   { id: 'task', label: 'Tasks' },
   { id: 'waiting_on_them', label: 'Waiting on them' },
   { id: 'decision', label: 'Decisions' },
@@ -19,6 +21,11 @@ const FILTERS: { id: RadarFilter; label: string }[] = [
   { id: 'delegate', label: 'Can delegate' },
   { id: 'drafts', label: 'Drafts' },
 ];
+
+/** Stable identity key for "everything from this person" filtering. */
+function senderKeyOf(item: WorkItem): string | null {
+  return item.personEmail ?? item.person ?? null;
+}
 
 type TodaysRadarProps = {
   items: WorkItem[];
@@ -33,6 +40,10 @@ type TodaysRadarProps = {
   onFilterChange?: (filter: RadarFilter) => void;
   /** Items mid-resolve: their rows play the exit transition before leaving. */
   leavingIds?: ReadonlySet<string>;
+  /** Hover quick-actions on cards (done/dismiss/snooze) — optional. */
+  onQuickAction?: (item: WorkItem, action: QuickAction) => void;
+  /** Disables quick-action buttons while an action runs. */
+  busy?: boolean;
 };
 
 export function TodaysRadar({
@@ -42,8 +53,13 @@ export function TodaysRadar({
   filter: controlledFilter,
   onFilterChange,
   leavingIds,
+  onQuickAction,
+  busy,
 }: TodaysRadarProps) {
   const [internalFilter, setInternalFilter] = useState<RadarFilter>('all');
+  // "Everything from this person" — set by clicking a card's sender, cleared
+  // via the chip. Stacks with the category filter.
+  const [sender, setSender] = useState<{ key: string; label: string } | null>(null);
   const filter = controlledFilter ?? internalFilter;
 
   function setFilter(next: RadarFilter) {
@@ -51,7 +67,10 @@ export function TodaysRadar({
     if (controlledFilter === undefined) setInternalFilter(next);
   }
 
-  const visible = useMemo(() => filterWorkItems(items, filter), [items, filter]);
+  const visible = useMemo(() => {
+    const byCategory = filterWorkItems(items, filter);
+    return sender ? byCategory.filter((i) => senderKeyOf(i) === sender.key) : byCategory;
+  }, [items, filter, sender]);
 
   return (
     <section className="relative z-[1] rounded-[var(--radius)] border border-line bg-panel p-5 shadow-glow">
@@ -63,6 +82,17 @@ export function TodaysRadar({
           <span className="rounded-full bg-panel-2 px-[9px] py-[2px] font-mono text-[11px] font-semibold text-muted">
             {visible.length}
           </span>
+          {sender && (
+            <button
+              type="button"
+              onClick={() => setSender(null)}
+              title="Clear the sender filter"
+              className="inline-flex items-center gap-[5px] rounded-full bg-accent-soft px-[9px] py-[3px] text-[11.5px] font-semibold text-accent transition hover:brightness-110"
+            >
+              From: {sender.label}
+              <Icon name="close" className="h-[11px] w-[11px]" />
+            </button>
+          )}
         </div>
 
         <div
@@ -92,7 +122,7 @@ export function TodaysRadar({
 
       {/* Keyed by filter so switching tabs remounts the list and replays the
           staggered rise — a soft beat of feedback instead of an instant jump. */}
-      <div key={filter} className="flex flex-col gap-[7px]">
+      <div key={`${filter}:${sender?.key ?? ''}`} className="flex flex-col gap-[7px]">
         {visible.length > 0 ? (
           visible.map((item, i) => (
             <WorkItemRow
@@ -102,6 +132,12 @@ export function TodaysRadar({
               onSelect={onSelect}
               index={i}
               leaving={leavingIds?.has(item.id)}
+              onQuickAction={onQuickAction}
+              busy={busy}
+              onSelectSender={(it) => {
+                const key = senderKeyOf(it);
+                if (key) setSender({ key, label: it.person ?? key });
+              }}
             />
           ))
         ) : (

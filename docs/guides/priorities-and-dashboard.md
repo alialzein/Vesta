@@ -9,10 +9,12 @@ how items get there.
 Your **Today** dashboard leads with **Today's Radar** — a focused list of the items
 waiting on you, highest priority first. Above it sits a short **Morning Brief**
 summarizing how many things are waiting and what the top one is, plus a compact strip
-of metrics (waiting on you, high priority, follow-ups, open items, FYI, top score).
+of metrics (**Overdue**, waiting on you, high priority, open items, follow-ups, top
+score). **Click a metric tile to filter the Radar** to that slice — e.g. click
+**Overdue** to see only what's already past its deadline.
 
-You can filter the Radar by type using the chips at the top (All, Decisions,
-Blockers, Follow-ups, Promises, Can delegate, Drafts).
+You can filter the Radar by type using the chips at the top (All, Overdue, Tasks,
+Waiting on them, Decisions, Blockers, Follow-ups, Promises, Can delegate, Drafts).
 
 > What's on the Radar is **real data from your mailbox**, not a demo. If nothing is
 > waiting on you, you'll see an honest "You're all clear" state — not filler.
@@ -22,11 +24,22 @@ Blockers, Follow-ups, Promises, Can delegate, Drafts).
 - **Who it's from** — the real sender of the latest message (their name, or a
   readable version of their email address), with a small colored **initials
   avatar** so the same person is recognizable at a glance. The AI rail shows the
-  full email address under **From**.
+  full email address under **From**. **Click the sender** to filter the Radar to
+  *everything from that person* — a "From: …" chip appears next to the title;
+  click its ✕ to clear.
 - **Overdue in red** — if an item's deadline has passed, the card says **Overdue**
   in red (with the original date), instead of a quiet "Due Jun 9" you could miss.
 - Title, a one-line summary of the newest message, category chips, the priority
   score, and the suggested action (highlighted on the card you've selected).
+
+### Quick actions on a card (hover)
+
+Hover over any card (desktop) and three small buttons appear on its right:
+**✓ Mark done**, **✕ Dismiss**, and **💤 Snooze until tomorrow 9 AM** — so routine
+triage is one click, without opening the rail. The rail still has the full set
+(snooze presets, drafting, the AI's reasoning); quick actions are just the fast
+path. The same safety net applies: done/dismissed threads come back if the sender
+replies again.
 
 ## Priorities ("Waiting on Me")
 

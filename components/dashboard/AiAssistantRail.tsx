@@ -380,7 +380,11 @@ function ActionTab({
       <div className="flex flex-wrap gap-[9px]">
         {item.canDraft && (
           <RailButton primary icon="edit" onClick={onOpenDraft}>
-            {item.draft ? 'Review draft' : 'Draft reply'}
+            {item.draft
+              ? 'Review draft'
+              : item.categories.includes('waiting_on_them')
+                ? 'Draft follow-up'
+                : 'Draft reply'}
           </RailButton>
         )}
         <RailButton icon="delegate" onClick={() => showToast(SOON.delegate)}>
@@ -466,13 +470,15 @@ function DraftTab({ item, onOpenDraft }: { item: WorkItem; onOpenDraft?: () => v
   }
 
   const hasDraft = !!item.draft;
+  // "Waiting on them" drafts are follow-up nudges, not replies — label honestly.
+  const isFollowUp = item.categories.includes('waiting_on_them');
   const flagged = item.draft?.requiresHumanReview || (item.draft?.sensitiveTopics?.length ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-[12px]">
       <div className="flex items-center justify-between">
         <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-          {hasDraft ? 'Draft ready' : 'AI draft reply'}
+          {hasDraft ? 'Draft ready' : isFollowUp ? 'AI follow-up nudge' : 'AI draft reply'}
         </span>
         {hasDraft && (
           <span className="rounded-full bg-green-soft px-[8px] py-[2px] font-mono text-[10px] font-semibold uppercase tracking-wide text-green">
@@ -486,6 +492,8 @@ function DraftTab({ item, onOpenDraft }: { item: WorkItem; onOpenDraft?: () => v
           <span className="block max-h-[180px] overflow-hidden whitespace-pre-wrap">
             {item.draft?.bodyText}
           </span>
+        ) : isFollowUp ? (
+          'They owe you an answer on this thread. Vesta can write a short, polite follow-up asking for it. You review and edit, then approve — nothing sends without you.'
         ) : (
           'Vesta can write a reply to the latest message in this thread. You review and edit it, then approve — nothing sends without you.'
         )}
@@ -506,7 +514,7 @@ function DraftTab({ item, onOpenDraft }: { item: WorkItem; onOpenDraft?: () => v
 
       <div className="flex flex-wrap gap-[9px]">
         <RailButton primary icon="edit" onClick={onOpenDraft}>
-          {hasDraft ? 'Review & send' : 'Draft a reply'}
+          {hasDraft ? 'Review & send' : isFollowUp ? 'Draft a follow-up' : 'Draft a reply'}
         </RailButton>
       </div>
     </div>
