@@ -1,5 +1,27 @@
 import 'server-only';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getConfiguredAiRates } from '@/lib/admin/settings';
+
+/**
+ * Cost of one ledger row for display: the stored estimate when present, else
+ * computed from its tokens × the currently configured rates. Rows recorded (or
+ * backfilled) before prices were set therefore still show real dollars.
+ */
+type UsageTokens = {
+  token_input: number | null;
+  token_output: number | null;
+  cost_estimate_usd: number | string | null;
+};
+function rowCostUsd(r: UsageTokens, rates: { input: number; output: number } | null): number {
+  if (r.cost_estimate_usd !== null && r.cost_estimate_usd !== undefined) {
+    return Number(r.cost_estimate_usd);
+  }
+  if (!rates) return 0;
+  return (
+    (Number(r.token_input ?? 0) * rates.input + Number(r.token_output ?? 0) * rates.output) /
+    1_000_000
+  );
+}
 
 /**
  * Cross-user read queries for the operator console. These use the SERVICE-ROLE
@@ -70,7 +92,7 @@ export async function getHealthOverview(): Promise<HealthOverview> {
       .order('created_at', { ascending: false })
       .limit(5),
     svc.from('ai_usage').select('cost_estimate_usd, token_input, token_output').gte('created_at', todayIso),
-    svc.from('ai_usage').select('cost_estimate_usd').gte('created_at', monthIso),
+    svc.from('ai_usage').select('cost_estimate_usd, token_input, token_output').gte('created_at', monthIso),
     svc
       .from('ai_analyses')
       .select('error, created_at, user_id')
@@ -91,16 +113,14 @@ export async function getHealthOverview(): Promise<HealthOverview> {
     .sort()
     .at(-1) as string | null | undefined;
 
+  const rates = await getConfiguredAiRates();
   const usageToday = usageTodayRes.data ?? [];
-  const costToday = usageToday.reduce((s, r) => s + Number(r.cost_estimate_usd ?? 0), 0);
+  const costToday = usageToday.reduce((s, r) => s + rowCostUsd(r, rates), 0);
   const tokensToday = usageToday.reduce(
     (s, r) => s + Number(r.token_input ?? 0) + Number(r.token_output ?? 0),
     0,
   );
-  const costMonth = (usageMonthRes.data ?? []).reduce(
-    (s, r) => s + Number(r.cost_estimate_usd ?? 0),
-    0,
-  );
+  const costMonth = (usageMonthRes.data ?? []).reduce((s, r) => s + rowCostUsd(r, rates), 0);
 
   const errors: ErrorFeedItem[] = [
     ...cursors
@@ -162,6 +182,8 @@ export type MailboxRow = {
   lastSyncAt: string | null;
   lastError: string | null;
   triageMode: string | null;
+  /** Graph webhook subscription expiry (from mailboxes.metadata), if any. */
+  subscriptionExpiresAt: string | null;
 };
 
 export async function listMailboxes(): Promise<MailboxRow[]> {
@@ -170,7 +192,7 @@ export async function listMailboxes(): Promise<MailboxRow[]> {
     await Promise.all([
       svc
         .from('mailboxes')
-        .select('id, user_id, integration_id, mailbox_email, status, last_sync_at, triage_mode')
+        .select('id, user_id, integration_id, mailbox_email, status, last_sync_at, triage_mode, metadata')
         .order('created_at', { ascending: true }),
       svc.from('user_integrations').select('id, status, last_error'),
       svc.from('sync_cursors').select('user_id, last_success_at, last_error, resource_type'),
@@ -188,6 +210,7 @@ export async function listMailboxes(): Promise<MailboxRow[]> {
   return (mailboxes ?? []).map((m) => {
     const integ = m.integration_id ? integrationById.get(m.integration_id) : undefined;
     const cur = cursorByUser.get(m.user_id);
+    const sub = (m.metadata as { subscription?: { expiresAt?: string } } | null)?.subscription;
     return {
       id: m.id,
       userId: m.user_id,
@@ -198,6 +221,7 @@ export async function listMailboxes(): Promise<MailboxRow[]> {
       lastSyncAt: cur?.last_success_at ?? m.last_sync_at ?? null,
       lastError: cur?.last_error ?? integ?.last_error ?? null,
       triageMode: (m as { triage_mode?: string | null }).triage_mode ?? null,
+      subscriptionExpiresAt: sub?.expiresAt ?? null,
     };
   });
 }
@@ -421,6 +445,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
 
   if (!p) return null;
   const authUser = authRes.data?.user;
+  const rates = await getConfiguredAiRates();
 
   return {
     profile: {
@@ -474,7 +499,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
         (s, r) => s + Number(r.token_input ?? 0) + Number(r.token_output ?? 0),
         0,
       ),
-      cost: (usage ?? []).reduce((s, r) => s + Number(r.cost_estimate_usd ?? 0), 0),
+      cost: (usage ?? []).reduce((s, r) => s + rowCostUsd(r, rates), 0),
     },
     audit: (audit ?? []).map((a) => ({
       id: a.id,
@@ -529,6 +554,7 @@ export async function getAiUsageSummary(): Promise<AiUsageSummary> {
     ],
   );
 
+  const rates = await getConfiguredAiRates();
   const emailById = new Map((profiles ?? []).map((p) => [p.id, p.email]));
   const rows = usage ?? [];
   const tokens = (r: { token_input: number; token_output: number }) =>
@@ -538,26 +564,27 @@ export async function getAiUsageSummary(): Promise<AiUsageSummary> {
   const userMap = new Map<string, { calls: number; tokens: number; cost: number }>();
   let costToday = 0;
   for (const r of rows) {
+    const cost = rowCostUsd(r, rates);
     const f = featureMap.get(r.feature) ?? { calls: 0, tokens: 0, cost: 0 };
     f.calls++;
     f.tokens += tokens(r);
-    f.cost += Number(r.cost_estimate_usd ?? 0);
+    f.cost += cost;
     featureMap.set(r.feature, f);
 
     const uid = r.user_id ?? 'unknown';
     const u = userMap.get(uid) ?? { calls: 0, tokens: 0, cost: 0 };
     u.calls++;
     u.tokens += tokens(r);
-    u.cost += Number(r.cost_estimate_usd ?? 0);
+    u.cost += cost;
     userMap.set(uid, u);
 
-    if (r.created_at >= todayIso) costToday += Number(r.cost_estimate_usd ?? 0);
+    if (r.created_at >= todayIso) costToday += cost;
   }
 
   const openItems = items ?? [];
   return {
     costToday,
-    costMonth: rows.reduce((s, r) => s + Number(r.cost_estimate_usd ?? 0), 0),
+    costMonth: rows.reduce((s, r) => s + rowCostUsd(r, rates), 0),
     tokensMonth: rows.reduce((s, r) => s + tokens(r), 0),
     callsMonth: rows.length,
     byFeature: [...featureMap.entries()]
@@ -571,7 +598,7 @@ export async function getAiUsageSummary(): Promise<AiUsageSummary> {
       feature: r.feature,
       model: r.model,
       tokens: tokens(r),
-      cost: r.cost_estimate_usd === null ? null : Number(r.cost_estimate_usd),
+      cost: r.cost_estimate_usd === null && !rates ? null : rowCostUsd(r, rates),
       error: r.error,
       who: r.user_id,
     })),
@@ -601,6 +628,7 @@ export type RuleRow = {
   match: string | null;
   value: string | null;
   createdFrom: string | null;
+  createdAt: string;
 };
 
 export async function listManagerRules(): Promise<RuleRow[]> {
@@ -609,7 +637,7 @@ export async function listManagerRules(): Promise<RuleRow[]> {
     emailMap(svc),
     svc
       .from('manager_rules')
-      .select('id, user_id, name, rule_type, is_enabled, conditions, created_from')
+      .select('id, user_id, name, rule_type, is_enabled, conditions, created_from, created_at')
       .order('created_at', { ascending: false }),
   ]);
   return (data ?? []).map((r) => {
@@ -624,6 +652,7 @@ export async function listManagerRules(): Promise<RuleRow[]> {
       match: c.match ?? null,
       value: c.value ?? null,
       createdFrom: r.created_from,
+      createdAt: r.created_at,
     };
   });
 }
@@ -636,6 +665,7 @@ export type MemoryRow = {
   text: string | null;
   active: boolean;
   scope: string | null;
+  createdAt: string;
 };
 
 export async function listManagerMemories(): Promise<MemoryRow[]> {
@@ -644,7 +674,7 @@ export async function listManagerMemories(): Promise<MemoryRow[]> {
     emailMap(svc),
     svc
       .from('manager_memories')
-      .select('id, user_id, memory_type, memory_text, is_active, scope')
+      .select('id, user_id, memory_type, memory_text, is_active, scope, created_at')
       .order('created_at', { ascending: false }),
   ]);
   return (data ?? []).map((m) => ({
@@ -655,6 +685,7 @@ export async function listManagerMemories(): Promise<MemoryRow[]> {
     text: m.memory_text,
     active: m.is_active,
     scope: m.scope,
+    createdAt: m.created_at,
   }));
 }
 

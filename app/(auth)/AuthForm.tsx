@@ -96,6 +96,17 @@ export function AuthForm({
   notice?: string | null;
 }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+
+  // Rescue a stranded password-recovery link: Supabase puts the session in the
+  // URL #hash, and if the redirect allow-list isn't set it falls back to the
+  // Site URL → middleware lands here with the tokens still in the hash. Forward
+  // them (hash survives client navigation) to the page that consumes them.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('access_token') && hash.includes('type=recovery')) {
+      window.location.replace(`/auth/update-password${hash}`);
+    }
+  }, []);
   const action = mode === 'signin' ? signIn : signUp;
   const [state, formAction] = useFormState<AuthState, FormData>(action, null);
 

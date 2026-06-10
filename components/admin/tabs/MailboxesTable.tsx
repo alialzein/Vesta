@@ -3,12 +3,23 @@
 import { Table, Th, Td, Badge, EmptyState } from '@/components/admin/ui';
 import { useTableControls, TableToolbar, SortTh, Pager } from '@/components/admin/DataTable';
 import { MailboxRowActions } from '@/components/admin/tabs/MailboxRowActions';
-import { fmtRel } from '@/lib/admin/format';
+import { ActionButton } from '@/components/admin/ActionButton';
+import { adminRenewSubscription } from '@/app/(admin)/admin/actions';
+import { fmtRel, fmtIn } from '@/lib/admin/format';
 import type { MailboxRow } from '@/lib/admin/data';
 
 const STALE_MS = 30 * 60_000;
+const SUB_EXPIRING_MS = 12 * 60 * 60_000; // matches the renew cron's window
 
-type Row = MailboxRow & Record<string, unknown> & { health: string };
+/** Graph webhook subscription state for the row's badge. */
+function webhookState(expiresAt: string | null, now: number): 'none' | 'expired' | 'expiring' | 'active' {
+  if (!expiresAt) return 'none';
+  const t = new Date(expiresAt).getTime();
+  if (!Number.isFinite(t) || t <= now) return 'expired';
+  return t - now < SUB_EXPIRING_MS ? 'expiring' : 'active';
+}
+
+type Row = MailboxRow & Record<string, unknown> & { health: string; webhook: string };
 
 export function MailboxesTable({ mailboxes }: { mailboxes: MailboxRow[] }) {
   const now = Date.now();
@@ -19,6 +30,7 @@ export function MailboxesTable({ mailboxes }: { mailboxes: MailboxRow[] }) {
       : !m.lastSyncAt || now - new Date(m.lastSyncAt).getTime() > STALE_MS
         ? 'stale'
         : 'healthy',
+    webhook: webhookState(m.subscriptionExpiresAt, now),
   }));
 
   const t = useTableControls<Row>(rows, {
@@ -37,7 +49,7 @@ export function MailboxesTable({ mailboxes }: { mailboxes: MailboxRow[] }) {
         facets={[
           { key: 'health', label: 'Health', options: t.facetOptions.health ?? [], value: t.facetValues.health ?? '', onChange: (v) => t.setFacet('health', v) },
           { key: 'status', label: 'Status', options: t.facetOptions.status ?? [], value: t.facetValues.status ?? '', onChange: (v) => t.setFacet('status', v) },
-          { key: 'triageMode', label: 'Watch mode', options: t.facetOptions.triageMode ?? [], value: t.facetValues.triageMode ?? '', onChange: (v) => t.setFacet('triageMode', v) },
+          { key: 'webhook', label: 'Webhook', options: t.facetOptions.webhook ?? [], value: t.facetValues.webhook ?? '', onChange: (v) => t.setFacet('webhook', v) },
         ]}
       />
 
@@ -51,6 +63,7 @@ export function MailboxesTable({ mailboxes }: { mailboxes: MailboxRow[] }) {
               <Th>Mailbox</Th>
               <Th>Status</Th>
               <SortTh label="Last sync" sortKey="lastSyncAt" sort={t.sort} onToggle={t.toggleSort} />
+              <Th>Webhook</Th>
               <Th>Error</Th>
               <Th className="text-right">Actions</Th>
             </tr>
@@ -71,7 +84,27 @@ export function MailboxesTable({ mailboxes }: { mailboxes: MailboxRow[] }) {
                     {fmtRel(m.lastSyncAt)}
                   </span>
                 </Td>
-                <Td className="max-w-[260px]">
+                <Td className="whitespace-nowrap">
+                  <Badge
+                    tone={
+                      m.webhook === 'active'
+                        ? 'good'
+                        : m.webhook === 'expiring'
+                          ? 'warn'
+                          : m.webhook === 'expired'
+                            ? 'bad'
+                            : 'default'
+                    }
+                  >
+                    {m.webhook}
+                  </Badge>
+                  {m.subscriptionExpiresAt && (
+                    <span className="ml-2 text-[11px] text-muted">
+                      expires {fmtIn(m.subscriptionExpiresAt)}
+                    </span>
+                  )}
+                </Td>
+                <Td className="max-w-[220px]">
                   {m.lastError ? (
                     <span className="break-words text-[12px] text-red">{m.lastError}</span>
                   ) : (
@@ -79,7 +112,12 @@ export function MailboxesTable({ mailboxes }: { mailboxes: MailboxRow[] }) {
                   )}
                 </Td>
                 <Td>
-                  <MailboxRowActions userId={m.userId} />
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    <ActionButton subtle run={() => adminRenewSubscription(m.id)}>
+                      Renew webhook
+                    </ActionButton>
+                    <MailboxRowActions userId={m.userId} />
+                  </div>
                 </Td>
               </tr>
             ))}

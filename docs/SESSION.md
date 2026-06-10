@@ -4,14 +4,47 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (Admin Panel — **Wave 3** built; branch `feature/admin-wave-3`, PR pending review)
-**Repo state:** Phases 0–9 done; Admin Waves 1+2 merged. **Wave 3 on the branch** —
-279 tests green, typecheck + lint + build clean. **No migration** (code only).
+**Last updated:** 2026-06-10 (Admin **Wave 4** built; branch `feature/admin-wave-4`, PR pending review)
+**Repo state:** Phases 0–9 done; Admin Waves 1–3 merged. **Wave 4 on the branch** —
+283 tests green, typecheck + lint + build clean. **No migration** (code only).
+Next core phase after merge: **Phase 10 — Memory & Rules**.
 
-Earlier: **Phase 9 (Draft Replies) merged AND verified live**. Mailbox connection +
-`Mail.Send` grant live in Supabase (shared across laptops).
+## 🆕 Admin Wave 4 (branch `feature/admin-wave-4` — review & merge next)
 
-## 🆕 Admin Wave 3 (branch `feature/admin-wave-3` — review & merge next)
+**Settings are now real levers (the Wave 3 gap):**
+- `lib/ai/runtime.ts` — `getEffectiveAi(userId, task)`: env overlaid with
+  app/user_settings → per-task **model** (analysis/draft), **provider override**,
+  **max per run/day**, **prices**, **reply-intent mode** (user → global → env),
+  **ai_paused**, and **daily cost caps** (user + global, checked against today's
+  ledger). Wired into analysis (`lib/ai/store.ts`), drafts, and ✨ capture (falls
+  back to the deterministic parser when blocked). `getEffectiveSendMode(userId)`
+  drives sendDraft + capabilities (user → global → env `DRAFT_SEND_MODE`).
+- **Scan-back enforced**: first enumeration of a mailbox (no delta_link yet) skips
+  mail older than the admin window (default 7d) — `lib/sync/scanback.ts` (tested).
+- **Scheduled purge**: `GET/POST /api/cron/purge` (CRON_SECRET) = soft-delete grace
+  purge + per-user retention; records purge_jobs + an audit row. Schedule daily in
+  pg_cron alongside /api/cron/sync.
+- **Webhook subscriptions**: Mailboxes tab shows each sub's state
+  (active/expiring/expired/none + expiry) with a **Renew webhook** button.
+- **Users**: **Export data** (JSON download, audit-logged) +
+  **Re-trigger onboarding** on the user detail page.
+
+**Feedback fixes (from live testing):**
+- **Reset-password link fixed** — it used to 404/dead-end: recovery tokens arrive
+  in the URL #hash (implicit flow) and Supabase fell back to the Site URL. Now the
+  email lands directly on `/auth/update-password`, which consumes the hash
+  client-side (verifying → form → expired states); `/login` also rescues stranded
+  recovery hashes. ⚠️ **Supabase setting needed:** Authentication → URL
+  Configuration → add `http://localhost:3000/**` and the production domain to
+  **Redirect URLs**, or Supabase keeps ignoring the redirect.
+- **Triage tab**: default shows the **10 newest rules/memories** across users +
+  a **user dropdown** for the full per-user set.
+- **AI page**: glossary removed → **hover tooltips** on every KPI and settings
+  field (ⓘ dots); cost rollups now **estimate from tokens × configured rates when
+  a row has no stored cost** (so backfilled history shows real dollars).
+- Native `<select>` options were white-on-white in dark mode → themed globally.
+
+## Admin Wave 3 (merged `c2d5605`)
 
 - **AI usage fixed (was all zeros):** the panel reads the `ai_usage` ledger, but only
   analysis/reply-intent wrote to it → wired **drafts** + **✨ quick-capture** in (success

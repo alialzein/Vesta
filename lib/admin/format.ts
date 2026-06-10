@@ -37,6 +37,19 @@ export function fmtRel(iso: string | null | undefined, now: number = Date.now())
   return `${Math.round(h / 24)}d ago`;
 }
 
+/** Coarse time-until for future instants, e.g. "in 2h", "in 3d"; past → "expired". */
+export function fmtIn(iso: string | null | undefined, now: number = Date.now()): string {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '—';
+  const s = Math.round((t - now) / 1000);
+  if (s <= 0) return 'expired';
+  if (s < 3600) return `in ${Math.max(1, Math.round(s / 60))}m`;
+  const h = Math.round(s / 3600);
+  if (h < 48) return `in ${h}h`;
+  return `in ${Math.round(h / 24)}d`;
+}
+
 export function fmtUsd(n: number | null | undefined): string {
   const v = Number(n ?? 0);
   if (v === 0) return '$0.00';

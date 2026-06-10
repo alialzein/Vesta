@@ -505,3 +505,13 @@ html[data-theme='light'] .vesta-splash {
     animation: vesta-fade-out 0.2s linear forwards;
   }
 }
+
+/* ============================================================
+   Native <select> dropdown options: the OS popup ignores Tailwind classes,
+   so in dark mode light text rendered on a white list (invisible until
+   hover). Pin option colors to the theme tokens for both modes.
+   ============================================================ */
+select option {
+  background-color: var(--panel-solid);
+  color: var(--ink);
+}

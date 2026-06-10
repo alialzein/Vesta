@@ -1,67 +1,162 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Section, Table, Th, Td, Badge, EmptyState } from '@/components/admin/ui';
 import { useTableControls, TableToolbar, Pager } from '@/components/admin/DataTable';
 import { RuleRowActions } from '@/components/admin/tabs/RuleRowActions';
 import { MemoryRowActions } from '@/components/admin/tabs/MemoryRowActions';
-import { Icon } from '@/components/ui/Icon';
+import { fmtRel } from '@/lib/admin/format';
 import type { RuleRow, MemoryRow } from '@/lib/admin/data';
 
 /**
- * Rules & memories are per-user data and grow with every account — so both lists
- * are search-first: pick a user (type their email/name) before rows render.
- * This keeps the page readable at scale and avoids skimming other users' context
- * unnecessarily.
+ * Rules & memories are per-user data and grow with every account. Default view
+ * shows the 10 most recently added entries (across all users) so the operator
+ * sees what's new at a glance; a user dropdown narrows to one account's full,
+ * filterable set.
  */
 
 type RRow = RuleRow & Record<string, unknown>;
 type MRow = MemoryRow & Record<string, unknown>;
 
-export function TriageTables({ rules, memories }: { rules: RuleRow[]; memories: MemoryRow[] }) {
-  // One shared user search drives both sections.
-  const [query, setQuery] = useState('');
-  const q = query.trim().toLowerCase();
-  const active = q.length >= 2;
+/** A rule or memory flattened into one "recently added" feed row. */
+type RecentRow = {
+  kind: 'rule' | 'memory';
+  id: string;
+  email: string | null;
+  userId: string;
+  type: string;
+  content: string;
+  active: boolean;
+  createdAt: string;
+};
 
-  const userRules = active
-    ? (rules as RRow[]).filter((r) => String(r.email ?? r.userId).toLowerCase().includes(q))
-    : [];
-  const userMemories = active
-    ? (memories as MRow[]).filter((m) => String(m.email ?? m.userId).toLowerCase().includes(q))
+export function TriageTables({ rules, memories }: { rules: RuleRow[]; memories: MemoryRow[] }) {
+  const [selectedUser, setSelectedUser] = useState('');
+
+  // Dropdown options: every user that owns at least one rule or memory.
+  const userOptions = useMemo(() => {
+    const map = new Map<string, string>(); // email/id key → label
+    for (const r of rules) map.set(r.userId, r.email ?? r.userId);
+    for (const m of memories) map.set(m.userId, m.email ?? m.userId);
+    return [...map.entries()]
+      .map(([userId, label]) => ({ userId, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rules, memories]);
+
+  // Default feed: the 10 newest entries across rules + memories combined.
+  const recent = useMemo<RecentRow[]>(() => {
+    const all: RecentRow[] = [
+      ...rules.map((r) => ({
+        kind: 'rule' as const,
+        id: r.id,
+        email: r.email,
+        userId: r.userId,
+        type: r.ruleType ?? 'rule',
+        content: r.name ?? (r.value ? `${r.match ?? ''}: ${r.value}` : '—'),
+        active: r.enabled,
+        createdAt: r.createdAt,
+      })),
+      ...memories.map((m) => ({
+        kind: 'memory' as const,
+        id: m.id,
+        email: m.email,
+        userId: m.userId,
+        type: m.memoryType ?? 'memory',
+        content: m.text ?? '—',
+        active: m.active,
+        createdAt: m.createdAt,
+      })),
+    ];
+    return all.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 10);
+  }, [rules, memories]);
+
+  const userRules = selectedUser ? (rules as RRow[]).filter((r) => r.userId === selectedUser) : [];
+  const userMemories = selectedUser
+    ? (memories as MRow[]).filter((m) => m.userId === selectedUser)
     : [];
 
   return (
     <>
       <div className="mb-6 rounded-[14px] border border-line bg-panel p-4 shadow-soft">
         <label className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">
-          Find a user&apos;s rules &amp; memories
+          View a user&apos;s rules &amp; memories
         </label>
-        <span className="relative block max-w-[360px]">
-          <Icon
-            name="search"
-            className="pointer-events-none absolute left-3 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-muted"
-          />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a user's email (at least 2 characters)…"
-            aria-label="Search user rules and memories"
-            className="w-full rounded-[11px] border border-line bg-field py-[9px] pl-9 pr-3 text-[13px] text-ink outline-none transition placeholder:text-muted focus:border-accent"
-          />
-        </span>
-        <p className="mb-0 mt-2 text-[12px] text-muted">
-          {rules.length.toLocaleString('en-US')} rule(s) and{' '}
-          {memories.length.toLocaleString('en-US')} memorie(s) across all users — search to view a
-          user&apos;s set.
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            aria-label="Select a user"
+            className="min-w-[280px] rounded-[11px] border border-line bg-field px-3 py-[9px] text-[13px] text-ink outline-none transition focus:border-accent"
+          >
+            <option value="">All users — latest 10 additions</option>
+            {userOptions.map((u) => (
+              <option key={u.userId} value={u.userId}>
+                {u.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-[12px] text-muted">
+            {rules.length.toLocaleString('en-US')} rule(s) ·{' '}
+            {memories.length.toLocaleString('en-US')} memorie(s) across all users
+          </span>
+        </div>
       </div>
 
-      {active && (
+      {!selectedUser && (
+        <Section
+          title="Recently added"
+          hint="The 10 newest rules & memories across all users — pick a user above to manage their full set."
+        >
+          {recent.length === 0 ? (
+            <EmptyState>No rules or memories yet.</EmptyState>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>When</Th>
+                  <Th>User</Th>
+                  <Th>Kind</Th>
+                  <Th>Type</Th>
+                  <Th>Content</Th>
+                  <Th>State</Th>
+                  <Th className="text-right">Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((r) => (
+                  <tr key={`${r.kind}-${r.id}`}>
+                    <Td className="whitespace-nowrap text-muted">{fmtRel(r.createdAt)}</Td>
+                    <Td className="whitespace-nowrap">{r.email ?? r.userId}</Td>
+                    <Td>
+                      <Badge tone={r.kind === 'rule' ? 'accent' : 'default'}>{r.kind}</Badge>
+                    </Td>
+                    <Td className="text-muted">{r.type}</Td>
+                    <Td className="max-w-[320px]">
+                      <span className="break-words">{r.content}</span>
+                    </Td>
+                    <Td>{r.active ? <Badge tone="good">on</Badge> : <Badge>off</Badge>}</Td>
+                    <Td>
+                      <div className="flex justify-end">
+                        {r.kind === 'rule' ? (
+                          <RuleRowActions ruleId={r.id} enabled={r.active} />
+                        ) : (
+                          <MemoryRowActions memoryId={r.id} active={r.active} />
+                        )}
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Section>
+      )}
+
+      {selectedUser && (
         <>
           <Section title="Manager rules" hint="Allow/mute/VIP rules (override or boost triage).">
             {userRules.length === 0 ? (
-              <EmptyState>No rules for this search.</EmptyState>
+              <EmptyState>This user has no rules.</EmptyState>
             ) : (
               <RulesInner rows={userRules} />
             )}
@@ -69,7 +164,7 @@ export function TriageTables({ rules, memories }: { rules: RuleRow[]; memories: 
 
           <Section title="Manager memories" hint="Soft context the AI uses (tone, role, preferences).">
             {userMemories.length === 0 ? (
-              <EmptyState>No memories for this search.</EmptyState>
+              <EmptyState>This user has no memories.</EmptyState>
             ) : (
               <MemoriesInner rows={userMemories} />
             )}
@@ -99,7 +194,6 @@ function RulesInner({ rows }: { rows: RRow[] }) {
       <Table>
         <thead>
           <tr>
-            <Th>User</Th>
             <Th>Rule</Th>
             <Th>Type</Th>
             <Th>Match</Th>
@@ -110,7 +204,6 @@ function RulesInner({ rows }: { rows: RRow[] }) {
         <tbody>
           {t.rows.map((r) => (
             <tr key={r.id}>
-              <Td className="whitespace-nowrap">{r.email ?? r.userId}</Td>
               <Td>{r.name ?? '—'}</Td>
               <Td><Badge tone="accent">{r.ruleType ?? 'rule'}</Badge></Td>
               <Td className="text-muted">{r.value ? `${r.match ?? ''}: ${r.value}` : '—'}</Td>
@@ -147,7 +240,6 @@ function MemoriesInner({ rows }: { rows: MRow[] }) {
       <Table>
         <thead>
           <tr>
-            <Th>User</Th>
             <Th>Type</Th>
             <Th>Memory</Th>
             <Th>State</Th>
@@ -157,9 +249,8 @@ function MemoriesInner({ rows }: { rows: MRow[] }) {
         <tbody>
           {t.rows.map((m) => (
             <tr key={m.id}>
-              <Td className="whitespace-nowrap">{m.email ?? m.userId}</Td>
               <Td className="text-muted">{m.memoryType ?? '—'}</Td>
-              <Td className="max-w-[360px]"><span className="break-words">{m.text ?? '—'}</span></Td>
+              <Td className="max-w-[420px]"><span className="break-words">{m.text ?? '—'}</span></Td>
               <Td>{m.active ? <Badge tone="good">active</Badge> : <Badge>off</Badge>}</Td>
               <Td>
                 <MemoryRowActions memoryId={m.id} active={m.active} />
