@@ -1,8 +1,18 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
-import type { Chip, DraftView, KpiMetric, MorningBrief, WorkItem, WorkItemCategory } from '@/lib/types';
+import type { DraftView, KpiMetric, MorningBrief, WorkItem, WorkItemCategory } from '@/lib/types';
 import { encodeThreadId } from '@/lib/thread';
 import { toDraftView, ACTIVE_DRAFT_STATUSES, type DraftRow } from '@/lib/drafts/serialize';
+import {
+  CATEGORY_LABEL,
+  chipsFor,
+  cleanPreview,
+  dueOf,
+  escapeHtml,
+  personFrom,
+  senderDisplay,
+} from '@/lib/dashboard/present';
+import { priorityBand } from '@/lib/priority';
 
 /**
  * Real dashboard data (Phase 6-derived). Maps the manager's `work_items` (the
@@ -30,86 +40,23 @@ type WorkItemRow = {
 const WORK_ITEM_COLS =
   'id, title, summary, category, priority_score, urgency_reason, suggested_action, due_at, source, source_external_id, status, snoozed_until';
 
-const CATEGORY_LABEL: Record<string, string> = {
-  critical: 'Critical',
-  waiting: 'Waiting on you',
-  followup: 'Follow-up',
-  delegate: 'Can delegate',
-  decision: 'Decision',
-  promise: 'Promise',
-  task: 'Task',
-  waiting_on_them: 'Waiting on them',
-  fyi: 'FYI',
-};
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-}
-
-/**
- * Trim the quoted reply chain out of a body preview so the row shows just the new
- * message, not "…On Mon, Jun 8 … wrote: <the whole previous email>". Cuts at common
- * reply markers (only when they appear mid-text, never at the very start), then
- * collapses whitespace.
- */
-function cleanPreview(s: string | null): string {
-  if (!s) return '';
-  let t = s.replace(/\r/g, ' ');
-  const markers = [
-    /\bOn\s.+?\bwrote:/s,
-    /\bFrom:\s.+?\bSent:/s,
-    /-{3,}\s*Original Message\s*-{3,}/i,
-    /_{5,}/,
-  ];
-  for (const m of markers) {
-    const idx = t.search(m);
-    if (idx > 0) t = t.slice(0, idx);
-  }
-  return t.replace(/\s+/g, ' ').trim();
-}
-
-/** Pull the counterpart's name out of an urgency reason ("Maya is waiting…" or
- *  "Waiting on Maya to reply"). */
-function personFrom(reason: string | null): string | undefined {
-  const waiting = reason?.match(/^(.+?)\s+is waiting/i);
-  if (waiting?.[1]) return waiting[1].trim();
-  const owed = reason?.match(/^Waiting on (.+?) to reply/i);
-  return owed?.[1]?.trim() || undefined;
-}
-
-function dueOf(due: string | null, category: WorkItemCategory): { label: string; detail?: string } {
-  if (due) {
-    const d = new Date(due);
-    return {
-      label: `Due ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
-      detail: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-    };
-  }
-  return { label: category === 'waiting' ? 'Waiting on you' : 'In your queue' };
-}
-
-function chipsFor(category: WorkItemCategory, score: number): Chip[] {
-  const chips: Chip[] = [];
-  if (category === 'waiting') chips.push({ label: 'Waiting on you', tone: 'red' });
-  else if (category === 'followup') chips.push({ label: 'Follow-up', tone: 'amber' });
-  else if (category === 'fyi') chips.push({ label: 'FYI', tone: 'neutral' });
-  else if (category === 'task') chips.push({ label: 'Task', tone: 'blue' });
-  else if (category === 'waiting_on_them')
-    chips.push({ label: 'Waiting on them', tone: 'amber' });
-  else chips.push({ label: CATEGORY_LABEL[category] ?? category, tone: 'blue' });
-  if (score >= 80) chips.push({ label: 'High priority', tone: 'red' });
-  return chips;
-}
+/** Latest inbound sender of a thread (email_messages.sender_name/sender_email). */
+type SenderInfo = { name: string | null; email: string | null };
 
 function toWorkItem(
   w: WorkItemRow,
   lastActivityAt?: string,
   unread?: boolean,
   draft?: DraftView,
+  sender?: SenderInfo,
 ): WorkItem {
   const category = (w.category ?? 'fyi') as WorkItemCategory;
   const score = w.priority_score ?? 0;
-  const person = personFrom(w.urgency_reason);
+  // Real sender first; the AI-parsed name is only a fallback (manual items, or
+  // threads whose messages haven't synced) — it used to show "She"/"The manager".
+  const person =
+    senderDisplay(sender?.name, sender?.email) ?? personFrom(w.urgency_reason);
+  const personEmail = sender?.email ?? undefined;
   const due = dueOf(w.due_at, category);
   const summary = cleanPreview(w.summary) || w.urgency_reason?.trim() || 'Open item from your mailbox.';
   // Only Outlook threads can be replied to; manual tasks have nothing to answer.
@@ -127,12 +74,14 @@ function toWorkItem(
     lastActivityAt,
     unread,
     person,
+    personEmail,
     summary,
     suggestedAction: w.suggested_action ?? undefined,
     priorityScore: score,
     chips: chipsFor(category, score),
     dueLabel: due.label,
     dueDetail: due.detail,
+    overdue: due.overdue,
     urgencyReason: w.urgency_reason ?? summary,
     // AI fields — Phase 7. Honest heuristics/placeholders for now.
     nextBestAction:
@@ -155,7 +104,14 @@ function toWorkItem(
       { label: 'Priority', value: `${score}/100` },
       { label: 'Category', value: CATEGORY_LABEL[category] ?? category },
       { label: 'Source', value: 'Outlook' },
-      ...(w.due_at ? [{ label: 'Due', value: due.label.replace(/^Due /, '') }] : []),
+      ...(w.due_at
+        ? [
+            {
+              label: 'Due',
+              value: due.overdue ? `Overdue (${due.detail})` : due.label.replace(/^Due /, ''),
+            },
+          ]
+        : []),
     ],
     canDraft,
     draft,
@@ -164,11 +120,13 @@ function toWorkItem(
 
 function buildKpis(items: WorkItem[]): KpiMetric[] {
   const count = (c: WorkItemCategory) => items.filter((i) => i.categories.includes(c)).length;
-  const high = items.filter((i) => i.priorityScore >= 80).length;
+  // "High priority" = the red band (85+) — same vocabulary as the score badge,
+  // the row chip, and the rail's band label.
+  const high = items.filter((i) => priorityBand(i.priorityScore) === 'red').length;
   const top = items.reduce((m, i) => Math.max(m, i.priorityScore), 0);
   return [
     { id: 'kpi-waiting', value: count('waiting'), label: 'Waiting on You', helper: 'Awaiting your reply', tone: 'amber', filter: 'waiting' },
-    { id: 'kpi-high', value: high, label: 'High Priority', helper: 'Score 80+', tone: 'red', filter: 'critical' },
+    { id: 'kpi-high', value: high, label: 'High Priority', helper: 'Score 85+', tone: 'red', filter: 'critical' },
     { id: 'kpi-followup', value: count('followup'), label: 'Follow-ups', helper: 'Repeated nudges', tone: 'amber', filter: 'followup' },
     { id: 'kpi-open', value: items.length, label: 'Open Items', helper: 'In your queue', tone: 'blue', filter: 'waiting' },
     { id: 'kpi-fyi', value: count('fyi'), label: 'FYI', helper: 'Lower priority', tone: 'green', filter: 'fyi' },
@@ -189,9 +147,13 @@ function buildBrief(items: WorkItem[]): MorningBrief {
   const followup = items.filter((i) => i.categories.includes('followup')).length;
   const top = items[0];
   const topScore = items.reduce((m, i) => Math.max(m, i.priorityScore), 0);
+  // "1 of 5 needs you today" — reads with the Open Items KPI, never against it
+  // (the old "1 thing needs your attention" next to "5 Open Items" clashed).
   const headline = top.person
     ? `${top.person} is waiting on your reply.`
-    : `${waiting || items.length} ${waiting === 1 ? 'thing needs' : 'things need'} your attention.`;
+    : waiting > 0
+      ? `${waiting} of ${items.length} ${waiting === 1 ? 'needs' : 'need'} you today.`
+      : `${items.length} ${items.length === 1 ? 'item' : 'items'} in your queue.`;
   return {
     headline,
     body: `You have <b>${items.length}</b> open ${items.length === 1 ? 'item' : 'items'}: <b>${waiting}</b> waiting on you and <b>${followup}</b> with follow-ups. The top one is <b>${escapeHtml(top.title)}</b>.`,
@@ -235,6 +197,9 @@ export async function getDashboardData(): Promise<DashboardData> {
   // Unread state lives on the messages, not the thread: the latest INBOUND message's
   // is_read tells the manager whether they've actually opened the newest reply.
   const unreadByConv = new Map<string, boolean>();
+  // Who the thread is from — the latest inbound message's real sender (the same
+  // query also feeds the unread dot, so this costs zero extra round-trips).
+  const senderByConv = new Map<string, { name: string | null; email: string | null }>();
   if (convIds.length > 0) {
     const [{ data: threads }, { data: inbound }] = await Promise.all([
       supabase
@@ -243,7 +208,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         .in('graph_conversation_id', convIds),
       supabase
         .from('email_messages')
-        .select('graph_conversation_id, is_read, received_at')
+        .select('graph_conversation_id, is_read, received_at, sender_name, sender_email')
         .in('graph_conversation_id', convIds)
         .eq('direction', 'inbound')
         .is('deleted_at', null)
@@ -254,10 +219,14 @@ export async function getDashboardData(): Promise<DashboardData> {
       if (t.graph_conversation_id && at) lastByConv.set(t.graph_conversation_id, at);
     }
     // Rows arrive newest-first, so the first one seen per conversation is the latest
-    // inbound message — its read state is the one that matters.
+    // inbound message — its read state and sender are the ones that matter.
     for (const m of inbound ?? []) {
       if (m.graph_conversation_id && !unreadByConv.has(m.graph_conversation_id)) {
         unreadByConv.set(m.graph_conversation_id, m.is_read === false);
+        senderByConv.set(m.graph_conversation_id, {
+          name: m.sender_name,
+          email: m.sender_email,
+        });
       }
     }
   }
@@ -287,6 +256,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       w.source_external_id ? lastByConv.get(w.source_external_id) : undefined,
       w.source_external_id ? unreadByConv.get(w.source_external_id) : undefined,
       draftByItem.get(w.id),
+      w.source_external_id ? senderByConv.get(w.source_external_id) : undefined,
     ),
   );
   return { workItems, kpis: buildKpis(workItems), brief: buildBrief(workItems) };

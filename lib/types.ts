@@ -59,6 +59,8 @@ export type WorkItem = {
   unread?: boolean;
   /** Person this item is from / about (sender or counterpart), when known. */
   person?: string;
+  /** Real email address of the latest inbound sender, when this is a thread. */
+  personEmail?: string;
   /** Short, user-facing line shown under the title. */
   summary: string;
   /** Short suggested next action shown on the radar row, when available. */
@@ -70,6 +72,8 @@ export type WorkItem = {
   dueLabel: string;
   /** Optional secondary due detail, e.g. "4:00 PM". */
   dueDetail?: string;
+  /** due_at is in the past — the row shows a red Overdue state. */
+  overdue?: boolean;
   /** User-visible AI reasoning. Mirrors ai_analyses.user_visible_reason. */
   urgencyReason: string;
   /** One-line recommended next step shown in the rail's Action tab. */
@@ -175,7 +179,7 @@ export type MorningBrief = {
   body: string;
   /** One concise plain-text line shown in the compact brief card. */
   summaryLine: string;
-  /** Highest urgency score in the queue — shown as a compact "Top risk" chip. */
+  /** Highest priority score in the queue — shown as a compact "Top priority" chip. */
   topUrgencyScore: number;
 };
 

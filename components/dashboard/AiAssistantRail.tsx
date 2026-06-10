@@ -186,7 +186,9 @@ export function AiAssistantRail({
         {/* Context grid — makes the selected item unambiguous. */}
         <dl className="mt-[14px] grid grid-cols-2 gap-x-3 gap-y-[10px]">
           <ContextCell label="Source" value={SOURCE_LABEL[item.source]} icon="inbox" />
-          {item.person && <ContextCell label="From" value={item.person} icon="people" />}
+          {item.person && (
+            <ContextCell label="From" value={item.person} sub={item.personEmail} icon="people" />
+          )}
           {item.lastActivityAt ? (
             <div className="min-w-0">
               <dt className="flex items-center gap-[5px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
@@ -420,7 +422,18 @@ function snoozeOptions(): { label: string; hint: string; iso: string }[] {
 }
 
 /** A label/value cell in the rail header context grid. */
-function ContextCell({ label, value, icon }: { label: string; value: string; icon: IconName }) {
+function ContextCell({
+  label,
+  value,
+  sub,
+  icon,
+}: {
+  label: string;
+  value: string;
+  /** Optional secondary line, e.g. the sender's real email address. */
+  sub?: string;
+  icon: IconName;
+}) {
   return (
     <div className="min-w-0">
       <dt className="flex items-center gap-[5px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
@@ -428,6 +441,11 @@ function ContextCell({ label, value, icon }: { label: string; value: string; ico
         {label}
       </dt>
       <dd className="m-0 mt-[3px] truncate text-[12.5px] font-semibold text-ink-soft">{value}</dd>
+      {sub && sub !== value && (
+        <dd className="m-0 truncate font-mono text-[10.5px] text-muted" title={sub}>
+          {sub}
+        </dd>
+      )}
     </div>
   );
 }

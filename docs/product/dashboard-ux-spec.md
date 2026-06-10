@@ -43,7 +43,7 @@ The visual direction is strong:
 - Left navigation (collapsible; collapse never overlaps the logo).
 - Topbar utility toolbar (search, Outlook status, notifications, settings, theme,
   AI-rail toggle, profile).
-- Compact Morning Brief with a "Top risk" chip and quick actions.
+- Compact Morning Brief with a "Top priority" chip and quick actions.
 - Compact metrics strip (Decision Debt, People Blocked, Follow-up Risk, Drafts
   Ready, + Promises / Time to Clear).
 - Today's Radar list — the primary, focal section.
