@@ -4,12 +4,68 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-10 (radar #41 + draft-direction + radar polish #43 + docs
-#44 + **3D scroll landing page — ALL MERGED to main**.)
-**Repo state:** `main` clean — 313 tests green, typecheck/lint/build clean.
-**Next: 1) owner eyeballs the landing live in BOTH themes + phone (list below; use a
-signed-out/incognito window — signed-in users skip /welcome) → 2) Phase 10 — Memory
-& Rules. Smaller queued: due_at in manager timezone.**
+**Last updated:** 2026-06-11 (landing **v3 journey + round-3 polish MERGED to
+main** — owner approved after live preview).
+**Repo state:** `main` clean — 315 tests green, typecheck/lint clean,
+Playwright-verified screenshots both themes + mobile (`node
+scripts/landing-shots.mjs` regenerates them against a running dev server).
+**Next: 1) after Vercel deploys main, owner spot-checks production /welcome
+(incognito; scroll to the VESTA finale) — the 4 re-queued work items also
+re-analyze with v2 prompts after deploy + next sync → 2) Phase 10 — Memory &
+Rules. Smaller queued: due_at in manager timezone.**
+
+## 🔁 Landing v3 — journey FIXED + workflow stations (2026-06-10, round 2)
+
+Owner round-2 feedback on v2: camera STILL didn't move on scroll; objects didn't
+read as Vesta's workflow. Root cause found: **`next/dynamic` does not forward
+refs in Next 14** — `ref={sceneRef}` on the dynamic VestaScene stayed `null`, so
+`setProgress()` never reached the scene (the step rail advanced because it's
+plain React state from the same handler). v2's travel system existed but never
+got the scroll signal. Fixes on `feat/landing-journey`:
+- **Wiring:** scene now hands its handle up via an `onReady` callback prop;
+  LandingPage replays the latest progress when the chunk loads. New test asserts
+  the contract (mock mirrors onReady).
+- **Visual verification is now real:** added `playwright` (devDependency) +
+  `scripts/landing-shots.mjs` — drives Chromium through the scroll story and
+  saves screenshots (7 dark + 3 light + 3 mobile) to gitignored
+  `.landing-shots/`. All iterated against actual WebGL renders.
+- **Scene v3 — stations are now literal workflow objects:** 01 floating paper
+  ENVELOPE monument with glowing accent flap + drifting letter sheets → 02
+  scanner GATE straddling the path, grey spur into an open **Hidden tray** bin
+  (grey packets sink in) + container yard → 03 big RADAR DIAL with rotating
+  sweep, **colored priority blips** (red/amber/green/accent octahedra) + ranked
+  **score bar-chart** + HQ slab → 04 send ANTENNA with broadcast rings and a
+  **paper plane that launches** (the approved reply).
+- **No more dead space:** stations pulled closer, 22 corridor blocks hug the
+  route (deterministic placement), dotted ground patches light up as the path
+  passes, brighter dark palette (buildings/fog), far landmarks for depth.
+- **Camera:** progress→path mapping is now LINEAR so captions stay synced with
+  arrivals (was double-eased and drifted); station fractions computed
+  numerically from the curve; zoom breathes in at each arrival; per-frame
+  renderer.setSize waste removed.
+- 314 tests, typecheck/lint clean; screenshots verified at p0–p1 dark, p.1/.5/.9
+  light + mobile (390px).
+
+### Round 3 (same day, owner-approved directions via Q&A)
+
+Owner liked v3; asked for: faster scroll, new header, animated lower half, giant
+VESTA ending. Confirmed choices: floating-minimal header / "path draws VESTA"
+finale / all lower-section animations. Shipped:
+- **~20% faster journey:** STORY_VH 560→450.
+- **Floating minimal header:** no bar/border/tagline — wordmark + theme toggle
+  + pill buttons float over the scene; translucent blur backdrop (color-mix)
+  fades in only past the story (scroll listener sets `pastStory`).
+- **Lower-half animation:** feature cards + safety bullets + step cards cascade
+  in (`data-stagger` groups), section headings parallax (`data-parallax`
+  scrub), an accent connector line draws across the 3-step section (clip-path
+  scrub), CTA radial glow breathes (existing animate-vesta-breathe).
+- **Finale:** footer replaced — the glowing line arrives from the page and
+  **draws giant VESTA letters stroke-by-stroke** (per-letter SVG text
+  dashoffset in a scrubbed GSAP timeline), then letters fill with an
+  accent→accent-2 userSpaceOnUse gradient + drop-shadow glow; footer links fold
+  in under the wordmark. Reduced-motion renders the final state statically.
+- 315 tests (finale wordmark test added; gsap mock gained timeline/to);
+  screenshots re-verified incl. dark-steps, dark/light/mobile finale.
 
 ## ✅ MERGED — public 3D scroll landing at `/welcome` (2026-06-10)
 

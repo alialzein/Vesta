@@ -25,7 +25,9 @@ const VestaScene = dynamic(() => import('./VestaScene').then((m) => m.VestaScene
  * Both themes; honors prefers-reduced-motion (static scene, no pinning tricks).
  */
 
-const STORY_VH = 460; // height of the pinned story, in viewport-heights
+const STORY_VH = 450; // height of the pinned story, in viewport-heights (~20% faster travel)
+
+const FINALE_LETTERS = ['V', 'E', 'S', 'T', 'A'] as const;
 
 type Step = { n: string; title: string; body: string };
 
@@ -52,12 +54,14 @@ const STEPS: Step[] = [
   },
 ];
 
-/** Map story progress (0..1) to the active step index (-1 = hero). */
+/** Map story progress (0..1) to the active step index (-1 = hero).
+ *  Boundaries sit midway between the stations the camera rides past
+ *  (tower ≈ .08, gate ≈ .36, radar ≈ .62, antenna ≈ .93 of raw progress). */
 function stepAt(p: number): number {
-  if (p < 0.08) return -1;
-  if (p < 0.34) return 0;
-  if (p < 0.6) return 1;
-  if (p < 0.84) return 2;
+  if (p < 0.06) return -1;
+  if (p < 0.22) return 0;
+  if (p < 0.49) return 1;
+  if (p < 0.78) return 2;
   return 3;
 }
 
@@ -107,7 +111,11 @@ export function LandingPage() {
   const storyRef = useRef<HTMLDivElement | null>(null);
   const heroRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<VestaSceneHandle | null>(null);
+  const progressRef = useRef(0); // latest story progress, replayed when the scene loads
+  const stepLineRef = useRef<HTMLDivElement | null>(null);
+  const finaleRef = useRef<HTMLElement | null>(null);
   const [activeStep, setActiveStep] = useState(-1);
+  const [pastStory, setPastStory] = useState(false); // header gains a backdrop in the content half
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -136,6 +144,7 @@ export function LandingPage() {
         end: 'bottom bottom',
         scrub: true,
         onUpdate(self) {
+          progressRef.current = self.progress;
           sceneRef.current?.setProgress(self.progress);
           setActiveStep(stepAt(self.progress));
           if (heroRef.current) {
@@ -149,8 +158,19 @@ export function LandingPage() {
       }),
     );
 
-    // Content sections rise in as they enter the viewport.
+    // The floating header gains a backdrop once the story yields to content.
+    const onScroll = () => {
+      setPastStory(
+        scroller.scrollTop > story.offsetTop + story.offsetHeight - window.innerHeight * 1.05,
+      );
+    };
+    onScroll();
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+
+    const killables: { kill: () => void }[] = [];
+
     if (!reduced) {
+      // Single elements rise in as they enter the viewport.
       gsap.utils.toArray<HTMLElement>('[data-reveal]').forEach((el) => {
         const tween = gsap.fromTo(
           el,
@@ -165,9 +185,89 @@ export function LandingPage() {
         );
         if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
       });
+
+      // Grids cascade: children stagger in one after another.
+      gsap.utils.toArray<HTMLElement>('[data-stagger]').forEach((group) => {
+        const items = Array.from(group.children) as HTMLElement[];
+        if (!items.length) return;
+        const tween = gsap.fromTo(
+          items,
+          { opacity: 0, y: 34, scale: 0.97 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.6,
+            ease: 'power2.out',
+            stagger: 0.09,
+            scrollTrigger: { trigger: group, scroller, start: 'top 85%' },
+          },
+        );
+        if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
+      });
+
+      // Section headings drift slightly against the scroll for depth.
+      gsap.utils.toArray<HTMLElement>('[data-parallax]').forEach((el) => {
+        const tween = gsap.fromTo(
+          el,
+          { y: 36 },
+          {
+            y: -24,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: el,
+              scroller,
+              scrub: true,
+              start: 'top bottom',
+              end: 'bottom top',
+            },
+          },
+        );
+        if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
+      });
+
+      // The 3-step connector draws itself across — the path language continued.
+      if (stepLineRef.current) {
+        const tween = gsap.to(stepLineRef.current, {
+          clipPath: 'inset(0 0% 0 0)',
+          ease: 'none',
+          scrollTrigger: {
+            trigger: stepLineRef.current,
+            scroller,
+            scrub: true,
+            start: 'top 92%',
+            end: 'top 50%',
+          },
+        });
+        if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
+      }
+
+      // Finale: the glowing line arrives from above and draws the giant VESTA
+      // stroke by stroke as the last screens scroll in; then the letters fill.
+      const finale = finaleRef.current;
+      if (finale) {
+        const lead = finale.querySelector<SVGPathElement>('[data-lead]');
+        const strokes = Array.from(finale.querySelectorAll<SVGTextElement>('[data-stroke]'));
+        const fills = Array.from(finale.querySelectorAll<SVGTextElement>('[data-fill]'));
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: finale, scroller, scrub: true, start: 'top 88%', end: 'bottom 100%' },
+        });
+        if (lead) tl.to(lead, { strokeDashoffset: 0, duration: 0.5, ease: 'none' });
+        strokes.forEach((s, i) => {
+          tl.to(s, { strokeDashoffset: 0, duration: 1.6, ease: 'none' }, i === 0 ? '>' : '<0.45');
+        });
+        if (fills.length) tl.to(fills, { opacity: 1, duration: 1.0, stagger: 0.12, ease: 'none' }, '-=0.8');
+        killables.push(tl);
+        const st = (tl as { scrollTrigger?: ScrollTrigger }).scrollTrigger;
+        if (st) triggers.push(st);
+      }
     }
 
-    return () => triggers.forEach((t) => t.kill());
+    return () => {
+      scroller.removeEventListener('scroll', onScroll);
+      triggers.forEach((t) => t.kill());
+      killables.forEach((k) => k.kill());
+    };
   }, [reduced]);
 
   function scrollToStory() {
@@ -182,37 +282,48 @@ export function LandingPage() {
       ref={scrollerRef}
       className="v-scroll relative h-screen overflow-y-auto overflow-x-hidden bg-bg text-ink"
     >
-      {/* ------------------------------ nav ------------------------------ */}
-      <header className="sticky top-0 z-50 border-b border-line bg-bg/80 backdrop-blur-md">
-        <nav className="mx-auto flex h-[64px] max-w-[1200px] items-center gap-4 px-5">
-          <span className="font-display text-[20px] font-semibold tracking-tight">Vesta</span>
-          <span className="hidden font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-muted sm:inline">
-            Your work, in order
-          </span>
-          <span className="ml-auto" />
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="grid h-9 w-9 place-items-center rounded-full border border-line bg-panel text-ink-soft transition hover:border-accent hover:text-accent"
-          >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} className="h-[16px] w-[16px]" />
-          </button>
-          <Link
-            href="/login"
-            prefetch
-            className="rounded-full border border-line bg-panel px-4 py-[8px] text-[13px] font-semibold text-ink transition hover:border-accent hover:text-accent"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/login"
-            prefetch
-            className="hidden rounded-full bg-gradient-to-br from-accent to-accent-2 px-4 py-[8px] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110 sm:inline-flex"
-          >
-            Get started
-          </Link>
-        </nav>
+      {/* --------------------------- floating nav --------------------------- */}
+      {/* No bar: the wordmark and pills float over the scene. A translucent
+          backdrop fades in only once the story yields to the content half. */}
+      <header className="pointer-events-none sticky top-0 z-50">
+        <div
+          className={[
+            'transition-[background-color,box-shadow] duration-500',
+            pastStory ? 'shadow-soft backdrop-blur-md' : '',
+          ].join(' ')}
+          style={
+            pastStory
+              ? { backgroundColor: 'color-mix(in srgb, var(--bg) 78%, transparent)' }
+              : undefined
+          }
+        >
+          <nav className="pointer-events-auto mx-auto flex h-[68px] max-w-[1280px] items-center gap-3 px-5 sm:px-7">
+            <span className="font-display text-[21px] font-semibold tracking-tight">Vesta</span>
+            <span className="ml-auto" />
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="grid h-9 w-9 place-items-center rounded-full border border-line bg-panel text-ink-soft shadow-soft transition hover:border-accent hover:text-accent"
+            >
+              <Icon name={theme === 'dark' ? 'sun' : 'moon'} className="h-[16px] w-[16px]" />
+            </button>
+            <Link
+              href="/login"
+              prefetch
+              className="rounded-full border border-line bg-panel px-4 py-[8px] text-[13px] font-semibold text-ink shadow-soft transition hover:border-accent hover:text-accent"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/login"
+              prefetch
+              className="hidden rounded-full bg-gradient-to-br from-accent to-accent-2 px-4 py-[8px] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.32)] transition hover:brightness-110 sm:inline-flex"
+            >
+              Get started
+            </Link>
+          </nav>
+        </div>
       </header>
 
       {/* ------------------------- 3D scroll story ------------------------ */}
@@ -224,7 +335,12 @@ export function LandingPage() {
       >
         <div className="sticky top-0 h-screen w-full overflow-hidden">
           <VestaScene
-            ref={sceneRef}
+            onReady={(handle) => {
+              // The scene chunk loads async — sync it to wherever the user
+              // has already scrolled. (Callback, not ref: next/dynamic drops refs.)
+              sceneRef.current = handle;
+              handle.setProgress(progressRef.current);
+            }}
             theme={theme}
             reducedMotion={reduced}
             className="absolute inset-0 h-full w-full"
@@ -336,7 +452,7 @@ export function LandingPage() {
       {/* ----------------------------- features ---------------------------- */}
       <section className="relative border-t border-line bg-bg px-5 py-20 sm:py-28">
         <div className="mx-auto max-w-[1100px]">
-          <div data-reveal className="max-w-[640px]">
+          <div data-parallax className="max-w-[640px]">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-accent">
               The command center
             </p>
@@ -346,11 +462,10 @@ export function LandingPage() {
               Nothing that doesn&apos;t.
             </h2>
           </div>
-          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div data-stagger className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <article
                 key={f.title}
-                data-reveal
                 className="rounded-[var(--radius)] border border-line bg-panel p-6 shadow-soft transition hover:-translate-y-1 hover:border-line-strong"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-accent-soft text-accent">
@@ -369,13 +484,16 @@ export function LandingPage() {
       {/* ------------------------------ safety ----------------------------- */}
       <section className="border-t border-line bg-panel px-5 py-16">
         <div className="mx-auto max-w-[1100px]">
-          <div data-reveal className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="m-0 max-w-[420px] font-display text-[26px] font-semibold leading-tight tracking-tight sm:text-[32px]">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <h2
+              data-parallax
+              className="m-0 max-w-[420px] font-display text-[26px] font-semibold leading-tight tracking-tight sm:text-[32px]"
+            >
               Built on approval,
               <br />
               not autopilot.
             </h2>
-            <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
+            <ul data-stagger className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
               {SAFETY.map((s) => (
                 <li key={s.text} className="flex items-start gap-3">
                   <span className="mt-[2px] grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-green-soft text-green">
@@ -392,7 +510,7 @@ export function LandingPage() {
       {/* ---------------------------- how to start ------------------------- */}
       <section className="border-t border-line bg-bg px-5 py-20 sm:py-28">
         <div className="mx-auto max-w-[1100px]">
-          <div data-reveal className="max-w-[640px]">
+          <div data-parallax className="max-w-[640px]">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-accent">
               Two minutes to calm
             </p>
@@ -400,7 +518,15 @@ export function LandingPage() {
               Three steps. No setup project.
             </h2>
           </div>
-          <ol className="mt-12 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-3">
+          {/* The journey's path language, continued: a line draws across the steps. */}
+          <div aria-hidden="true" className="mt-12 hidden sm:block">
+            <div
+              ref={stepLineRef}
+              className="h-[2px] w-full rounded-full bg-gradient-to-r from-accent via-accent-2 to-accent opacity-70"
+              style={{ clipPath: reduced ? undefined : 'inset(0 100% 0 0)' }}
+            />
+          </div>
+          <ol data-stagger className="mt-6 grid list-none grid-cols-1 gap-4 p-0 sm:mt-8 sm:grid-cols-3">
             {[
               ['Create your account', 'Email or Microsoft/Google single sign-on — your theme and choices stick.'],
               ['Connect Outlook', 'One consent screen. Vesta starts reading recent mail and keeps itself in sync.'],
@@ -408,7 +534,6 @@ export function LandingPage() {
             ].map(([title, body], i) => (
               <li
                 key={title}
-                data-reveal
                 className="relative rounded-[var(--radius)] border border-line bg-panel p-6 shadow-soft"
               >
                 <span className="font-mono text-[12px] font-bold text-accent">{`0${i + 1}`}</span>
@@ -427,7 +552,7 @@ export function LandingPage() {
           className="relative mx-auto max-w-[1100px] overflow-hidden rounded-[var(--radius-lg)] border border-line-strong bg-panel p-10 text-center shadow-glow sm:p-16"
         >
           <span
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_240px_at_50%_-10%,var(--accent-soft),transparent_70%)]"
+            className="animate-vesta-breathe pointer-events-none absolute inset-0 bg-[radial-gradient(600px_240px_at_50%_-10%,var(--accent-soft),transparent_70%)]"
             aria-hidden="true"
           />
           <h2 className="relative m-0 font-display text-[30px] font-semibold leading-tight tracking-tight sm:text-[44px]">
@@ -449,19 +574,94 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ------------------------------ footer ------------------------------ */}
-      <footer className="border-t border-line bg-panel px-5 py-8">
-        <div className="mx-auto flex max-w-[1100px] flex-wrap items-center gap-4 text-[12.5px] text-muted">
-          <span className="font-display text-[15px] font-semibold tracking-tight text-ink">
-            Vesta
-          </span>
-          <span>Your work, in order.</span>
-          <span className="ml-auto flex items-center gap-4">
-            <Link href="/login" prefetch className="transition hover:text-accent">
-              Sign in
-            </Link>
-            <span>© {new Date().getFullYear()} Vesta</span>
-          </span>
+      {/* -------------------- finale: the path draws VESTA -------------------- */}
+      {/* The glowing line from the journey arrives one last time and writes the
+          wordmark stroke by stroke as the final screens scroll in. */}
+      <footer
+        ref={finaleRef}
+        className="relative overflow-hidden border-t border-line bg-bg px-5 pb-8 pt-16 sm:pt-24"
+      >
+        <div className="mx-auto max-w-[1200px]">
+          <svg
+            role="img"
+            aria-label="Vesta"
+            viewBox="0 0 1080 312"
+            className="block h-auto w-full select-none"
+          >
+            <defs>
+              <linearGradient
+                id="vesta-finale-grad"
+                gradientUnits="userSpaceOnUse"
+                x1="0"
+                y1="0"
+                x2="1080"
+                y2="0"
+              >
+                <stop offset="0" style={{ stopColor: 'var(--accent)' }} />
+                <stop offset="1" style={{ stopColor: 'var(--accent-2)' }} />
+              </linearGradient>
+            </defs>
+            {/* The incoming line from the page above. */}
+            <path
+              data-lead
+              d="M540 0 V58"
+              fill="none"
+              stroke="url(#vesta-finale-grad)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              pathLength={100}
+              strokeDasharray={100}
+              strokeDashoffset={reduced ? 0 : 100}
+            />
+            {/* Stroke layer: the letters draw in… */}
+            <g style={{ filter: 'drop-shadow(0 0 14px var(--accent))' }}>
+              {FINALE_LETTERS.map((ch, i) => (
+                <text
+                  key={`stroke-${ch}`}
+                  data-stroke
+                  x={108 + i * 216}
+                  y={248}
+                  textAnchor="middle"
+                  className="font-display"
+                  fontSize="232"
+                  fontWeight="600"
+                  fill="none"
+                  stroke="url(#vesta-finale-grad)"
+                  strokeWidth="2.5"
+                  strokeDasharray={2200}
+                  strokeDashoffset={reduced ? 0 : 2200}
+                >
+                  {ch}
+                </text>
+              ))}
+            </g>
+            {/* …then fill with the accent gradient. */}
+            {FINALE_LETTERS.map((ch, i) => (
+              <text
+                key={`fill-${ch}`}
+                data-fill
+                x={108 + i * 216}
+                y={248}
+                textAnchor="middle"
+                className="font-display"
+                fontSize="232"
+                fontWeight="600"
+                fill="url(#vesta-finale-grad)"
+                opacity={reduced ? 1 : 0}
+              >
+                {ch}
+              </text>
+            ))}
+          </svg>
+          <div className="mt-10 flex flex-wrap items-center gap-4 border-t border-line pt-6 text-[12.5px] text-muted">
+            <span>Your work, in order.</span>
+            <span className="ml-auto flex items-center gap-4">
+              <Link href="/login" prefetch className="transition hover:text-accent">
+                Sign in
+              </Link>
+              <span>© {new Date().getFullYear()} Vesta</span>
+            </span>
+          </div>
         </div>
       </footer>
     </div>
