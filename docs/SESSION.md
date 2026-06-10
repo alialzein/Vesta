@@ -5,13 +5,13 @@
 > Claude updates it at the end of each session and pushes it.
 
 **Last updated:** 2026-06-10 (radar #41 + draft-direction + radar polish #43 + docs
-all merged. **NEW: 3D scroll landing page built on `feat/landing-page`, PR pending.**)
-**Repo state:** `main` clean; branch `feat/landing-page` adds the public landing
-(313 tests green there, typecheck/lint/build clean).
-**Next: 1) merge `feat/landing-page` + owner eyeballs the 3D scene live (list below)
-→ 2) Phase 10 — Memory & Rules. Smaller queued: due_at in manager timezone.**
+#44 + **3D scroll landing page — ALL MERGED to main**.)
+**Repo state:** `main` clean — 313 tests green, typecheck/lint/build clean.
+**Next: 1) owner eyeballs the landing live in BOTH themes + phone (list below; use a
+signed-out/incognito window — signed-in users skip /welcome) → 2) Phase 10 — Memory
+& Rules. Smaller queued: due_at in manager timezone.**
 
-## 🆕 Branch `feat/landing-page` — public 3D scroll landing (2026-06-10, PR pending)
+## ✅ MERGED — public 3D scroll landing at `/welcome` (2026-06-10)
 
 VECTR-style scroll story, fully Vesta-themed: an isometric Three.js world where a
 **glowing path carries an email through the real pipeline** — Outlook tower → noise
