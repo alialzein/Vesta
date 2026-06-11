@@ -936,6 +936,50 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['briefing_items']['Insert']>;
         Relationships: [];
       };
+      chat_conversations: {
+        Row: {
+          id: UUID;
+          user_id: UUID;
+          title: string;
+          last_message_at: Timestamptz;
+          metadata: Json;
+          created_at: Timestamptz;
+          updated_at: Timestamptz;
+        };
+        Insert: {
+          id?: UUID;
+          user_id: UUID;
+          title?: string;
+          last_message_at?: Timestamptz;
+          metadata?: Json;
+          created_at?: Timestamptz;
+          updated_at?: Timestamptz;
+        };
+        Update: Partial<Database['public']['Tables']['chat_conversations']['Insert']>;
+        Relationships: [];
+      };
+      chat_messages: {
+        Row: {
+          id: UUID;
+          conversation_id: UUID;
+          user_id: UUID;
+          role: string;
+          content: string;
+          metadata: Json;
+          created_at: Timestamptz;
+        };
+        Insert: {
+          id?: UUID;
+          conversation_id: UUID;
+          user_id: UUID;
+          role: string;
+          content: string;
+          metadata?: Json;
+          created_at?: Timestamptz;
+        };
+        Update: Partial<Database['public']['Tables']['chat_messages']['Insert']>;
+        Relationships: [];
+      };
       webhook_events: {
         Row: {
           id: UUID;

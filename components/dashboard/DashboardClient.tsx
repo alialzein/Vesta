@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type {
   KpiMetric,
   MemoryRecord,
@@ -33,7 +35,6 @@ import { AiAssistantRail } from './AiAssistantRail';
 import { DraftComposer } from './DraftComposer';
 import { CollapsedRail } from './CollapsedRail';
 import { MemoryView } from './MemoryView';
-import { AssistantChat } from './AssistantChat';
 import { FocusMode } from './FocusMode';
 import { MeetingPrepDrawer } from './MeetingPrepDrawer';
 import { CleanInboxDrawer } from './CleanInboxDrawer';
@@ -148,6 +149,12 @@ export function DashboardClient({
   // Deep link from the Drafts page: pre-select the linked item (and optionally
   // open its composer) instead of defaulting to the top of the radar.
   const linkedItem = initialItemId ? workItems.find((i) => i.id === initialItemId) : undefined;
+  const router = useRouter();
+  // Ask Vesta is one click away from everywhere on the dashboard — keep the
+  // chat route warm (nav rule: prefetch everything we navigate to).
+  useEffect(() => {
+    router.prefetch('/chat');
+  }, [router]);
   const [selected, setSelected] = useState<WorkItem | undefined>(linkedItem ?? workItems[0]);
   const [view, setView] = useState<NavView>(initialView);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -155,7 +162,6 @@ export function DashboardClient({
   const [railCollapsed, setRailCollapsed] = useState(false);
   const [railTab, setRailTab] = useState<RailTab>('action');
   const [radarFilter, setRadarFilter] = useState<RadarFilter>('all');
-  const [chatOpen, setChatOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(
     Boolean(initialComposer && linkedItem?.canDraft),
   );
@@ -473,7 +479,7 @@ export function DashboardClient({
                 <CollapsedRail
                   highPriority={highPriority}
                   onExpand={expandRail}
-                  onOpenChat={() => setChatOpen(true)}
+                  onOpenChat={() => router.push('/chat')}
                 />
               ) : (
                 <AiAssistantRail
@@ -492,33 +498,29 @@ export function DashboardClient({
         </div>
       </div>
 
-      {/* Floating chat button — bottom-right. Compact (icon-only) while the AI
-          rail is expanded so it does not compete with the rail. */}
-      {!chatOpen && (
-        <button
-          type="button"
-          onClick={() => setChatOpen(true)}
-          title="Ask Vesta"
-          aria-label="Open Vesta assistant"
+      {/* Floating Ask Vesta button — bottom-right, navigates to the real chat
+          page. Compact (icon-only) while the AI rail is expanded so it does
+          not compete with the rail. */}
+      <Link
+        href="/chat"
+        prefetch
+        title="Ask Vesta"
+        aria-label="Ask Vesta"
+        className={[
+          'group fixed bottom-6 right-6 z-50 flex h-14 items-center gap-3 rounded-full border border-line-strong bg-[radial-gradient(circle_at_30%_20%,var(--accent),var(--accent-2))] text-white shadow-[0_14px_34px_rgba(47,125,235,.45)] transition hover:scale-[1.03]',
+          railExpanded ? 'pl-4 pr-5 xl:w-14 xl:justify-center xl:px-0' : 'pl-4 pr-5',
+        ].join(' ')}
+      >
+        <Icon name="chat" className="h-5 w-5" />
+        <span
           className={[
-            'group fixed bottom-6 right-6 z-50 flex h-14 items-center gap-3 rounded-full border border-line-strong bg-[radial-gradient(circle_at_30%_20%,var(--accent),var(--accent-2))] text-white shadow-[0_14px_34px_rgba(47,125,235,.45)] transition hover:scale-[1.03]',
-            railExpanded ? 'pl-4 pr-5 xl:w-14 xl:justify-center xl:px-0' : 'pl-4 pr-5',
+            'font-display text-[15px] font-semibold',
+            railExpanded ? 'inline xl:hidden' : 'inline',
           ].join(' ')}
         >
-          <Icon name="chat" className="h-5 w-5" />
-          <span
-            className={[
-              'font-display text-[15px] font-semibold',
-              railExpanded ? 'inline xl:hidden' : 'inline',
-            ].join(' ')}
-          >
-            Ask Vesta
-          </span>
-        </button>
-      )}
-
-      {/* Chat drawer */}
-      <AssistantChat open={chatOpen} onClose={() => setChatOpen(false)} />
+          Ask Vesta
+        </span>
+      </Link>
 
       {/* Draft reply composer (Phase 9) — generate, edit, approve & send. */}
       <DraftComposer

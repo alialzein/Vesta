@@ -39,11 +39,18 @@ describe('AppShell', () => {
     expect(screen.getByText('page content')).toBeInTheDocument();
     // The full nav is present with its real badges.
     expect(screen.getByRole('link', { name: /Draft Replies/ })).toHaveAttribute('href', '/drafts');
+    expect(screen.getByRole('link', { name: /Ask Vesta/ })).toHaveAttribute('href', '/chat');
     expect(screen.getByRole('link', { name: /Briefing/ })).toHaveAttribute('href', '/briefing');
     expect(screen.getByRole('link', { name: /Weekly Review/ })).toHaveAttribute(
       'href',
       '/weekly-review',
     );
+  });
+
+  it('shows the Ask Vesta page header on /chat', () => {
+    pathname = '/chat';
+    renderShell();
+    expect(screen.getByRole('heading', { name: 'Ask Vesta' })).toBeInTheDocument();
   });
 
   it('routes the Today and Memory & Rules buttons back to the dashboard', async () => {

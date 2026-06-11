@@ -90,20 +90,16 @@ test.describe('Dashboard shell', () => {
     ).toBeVisible();
   });
 
-  test('opens and closes the Vesta chat drawer via the floating button', async ({ page }) => {
+  test('the floating Ask Vesta button opens the real chat page', async ({ page }) => {
     await waitForDashboard(page);
 
-    // The drawer is always mounted (it slides in via transform), so we use the
-    // floating "Ask Vesta" button — which is only shown while the drawer is
-    // closed — as the reliable open/closed signal.
-    const fab = page.getByRole('button', { name: 'Open Vesta assistant' });
+    // The old demo drawer is gone — Ask Vesta is a real route now.
+    const fab = page.getByRole('link', { name: 'Ask Vesta' }).last();
     await expect(fab).toBeVisible();
 
     await fab.click();
-    await expect(page.getByPlaceholder('Ask the assistant anything…')).toBeVisible();
-
-    await page.getByRole('button', { name: 'Close assistant' }).click();
-    await expect(page.getByRole('button', { name: 'Open Vesta assistant' })).toBeVisible();
+    await expect(page).toHaveURL(/\/chat/);
+    await expect(page.getByLabel('Message Vesta')).toBeVisible();
   });
 
   test('a quick action opens its demo preview drawer', async ({ page }) => {

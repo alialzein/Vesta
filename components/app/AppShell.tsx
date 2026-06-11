@@ -36,6 +36,10 @@ const PAGE_HEADERS: Record<string, { title: string; subtitle: string }> = {
     title: 'Briefing',
     subtitle: 'What happened in your world today — picked for your interests.',
   },
+  '/chat': {
+    title: 'Ask Vesta',
+    subtitle: 'Your second brain — it answers from your world and learns you over time.',
+  },
   '/weekly-review': {
     title: 'Weekly Review',
     subtitle: 'What moved in the last 7 days — and what took your attention.',

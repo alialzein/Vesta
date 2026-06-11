@@ -10,7 +10,6 @@
  */
 
 import type {
-  ChatMessage,
   CommandCard,
   KpiMetric,
   ManagerMemory,
@@ -335,35 +334,8 @@ export const demoMemories: ManagerMemory[] = [
   },
 ];
 
-export const demoChat: ChatMessage[] = [
-  {
-    id: 'chat-1',
-    author: 'ai',
-    html: "Morning, Ali — Vesta here. I've scanned <b>Outlook</b>, <b>Teams</b> and your calendar and kept everything in order. The <b>Cedars Group</b> approval is the one I'd handle first — want me to draft the reply?",
-  },
-  { id: 'chat-2', author: 'user', html: "What's blocking finance?" },
-  {
-    id: 'chat-3',
-    author: 'ai',
-    html: 'Rania needs your sign-off to release the <b>supplier payment</b>. It came up in both email and Teams, so I flagged it as a blocker. I can draft a note to her for your approval.',
-  },
-];
-
-/** Mock canned replies for the assistant. Replaced by a real endpoint later. */
-export const demoChatReplies: Record<string, string> = {
-  'summarise my day':
-    'Today: <b>5 critical</b>, <b>3 follow-ups</b>, <b>1 finance blocker</b>. Start with Cedars Group (due 4 PM), then approve Rania&apos;s payment.',
-  'draft the cedars reply':
-    'Drafted — &ldquo;Hi Maya, reviewing the final notes now, I&apos;ll confirm approval before 4 PM today and loop in legal if needed.&rdquo; Want me to refine or edit?',
-  "who's waiting on me":
-    '<b>8 people.</b> Most urgent: Maya (Cedars), Rania (Finance), Lina (HR). The first two are time-sensitive today.',
-};
-
-export const demoChatSuggestions = [
-  'Summarise my day',
-  'Draft the Cedars reply',
-  "Who's waiting on me?",
-];
+/* (The demo chat data is gone — Ask Vesta is real now: see app/(shell)/chat,
+ * components/chat/ChatView, and app/actions/chat.) */
 
 /* ------------------------------------------------------------------ *
  * AI Command Center — demo content for the preview drawers.
