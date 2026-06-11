@@ -6,10 +6,12 @@
 
 **Last updated:** 2026-06-11 (**#56 Briefing-alive + #57 Ask Vesta both
 MERGED** — `main` = #49–#57, 428 tests green on merged main.
-**PR #58 `fix/briefing-row-cards` OPEN, awaiting owner merge:** owner
-disliked the gradient placeholder panels → one story per row, og:image
-embedded LEFT when present, text-only card when not (CategoryArt deleted);
-guide + tests updated, 428 green on the branch.
+#58 (briefing row cards, no placeholder art) also MERGED — `main` = #49–#58.
+**PR #59 `fix/chat-ack-only-when-learned` OPEN, awaiting owner merge:**
+owner-reported "Noted — I'll keep that in mind" on turns where nothing was
+saved → chat-v2 prompt forbids the acknowledgment when `remember` is empty.
+Owner also asked about chat cost / learning algorithm / future "orders" —
+answered in chat 2026-06-11; chat-actions (orders) is a candidate next phase.
 **⚠️ Ask Vesta migration:** owner was running
 `supabase/migrations/20260611220001_ask_vesta_chat.sql` in the Supabase SQL
 editor at session end (chat_conversations + chat_messages, own-rows RLS) —
