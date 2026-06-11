@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { KpiMetric, MorningBrief as MorningBriefData, RailTab, WorkItem } from '@/lib/types';
+import type {
+  KpiMetric,
+  MemoryRecord,
+  MorningBrief as MorningBriefData,
+  RailTab,
+  WorkItem,
+} from '@/lib/types';
 import {
   resolveWorkItem,
   snoozeWorkItem,
@@ -69,6 +75,7 @@ export function DashboardClient({
   workItems = demoWorkItems,
   kpis = demoKpis,
   brief = demoMorningBrief,
+  memories = [],
   capabilities = DEFAULT_CAPABILITIES,
 }: {
   account?: AccountView;
@@ -80,6 +87,8 @@ export function DashboardClient({
   workItems?: WorkItem[];
   kpis?: KpiMetric[];
   brief?: MorningBriefData;
+  /** Phase 10 — the manager's real Memory & Rules rows (workspace + approvals). */
+  memories?: MemoryRecord[];
   /** Phase 9 — what the draft composer may do (AI on? sending enabled?). */
   capabilities?: DraftCapabilities;
 } = {}) {
@@ -370,7 +379,7 @@ export function DashboardClient({
                 <HowItWorks />
               </>
             ) : (
-              <MemoryView />
+              <MemoryView memories={memories} />
             )}
           </main>
 

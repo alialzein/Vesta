@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { MemoryType, RailTab, WorkItem, WorkItemSource } from '@/lib/types';
+import { addMemory } from '@/app/actions/memories';
 import { priorityBand } from '@/lib/priority';
 import { Chip } from '@/components/ui/Chip';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -14,7 +15,6 @@ import { useToast } from '@/components/ui/Toast';
 const SOON = {
   delegate: 'One-click delegation arrives in Phase 8.',
   snooze: 'Snooze & reminders arrive in Phase 8.',
-  memory: 'Teaching Vesta memories & rules arrives in Phase 10.',
 };
 
 const SOURCE_LABEL: Record<WorkItemSource, string> = {
@@ -523,6 +523,32 @@ function DraftTab({ item, onOpenDraft }: { item: WorkItem; onOpenDraft?: () => v
 
 function MemoryTab({ item }: { item: WorkItem }) {
   const { showToast } = useToast();
+  const [adding, setAdding] = useState(false);
+  const [type, setType] = useState<MemoryType>('preference');
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Real since Phase 10: saves a memory scoped to this item's sender (when
+  // known), so "always escalate Maya" lands exactly on Maya's threads. The
+  // action revalidates the dashboard, so "memory used" refreshes on its own.
+  async function save() {
+    const trimmed = text.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    const res = await addMemory({
+      type,
+      text: trimmed,
+      scopeEmail: type === 'tone' || type === 'company_context' ? null : item.personEmail ?? null,
+    });
+    setSaving(false);
+    if (res.ok) {
+      setText('');
+      setAdding(false);
+      showToast('Saved to Memory & Rules — Vesta will use it.');
+    } else {
+      showToast(res.error ?? 'Could not save the memory.');
+    }
+  }
 
   return (
     <div className="flex flex-col gap-[12px]">
@@ -552,18 +578,63 @@ function MemoryTab({ item }: { item: WorkItem }) {
         </p>
       )}
 
-      {/* Add memory placeholder */}
-      <button
-        type="button"
-        onClick={() => showToast(SOON.memory)}
-        className="flex items-center justify-center gap-[7px] rounded-[11px] border border-dashed border-line-strong bg-panel-solid px-3 py-[10px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-      >
-        <Icon name="plus" className="h-[15px] w-[15px]" />
-        Add a memory or rule
-      </button>
+      {adding ? (
+        <div className="flex flex-col gap-[8px] rounded-[13px] border border-line bg-panel-solid p-3">
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as MemoryType)}
+            aria-label="Memory type"
+            className="w-full cursor-pointer rounded-[10px] border border-line bg-field px-[10px] py-[8px] text-[12px] font-semibold text-ink focus:border-accent"
+          >
+            <option value="preference">Preference</option>
+            <option value="vip">VIP person</option>
+            <option value="tone">Tone</option>
+            <option value="delegation_rule">Delegation rule</option>
+            <option value="do_not_do">Do NOT do</option>
+            <option value="project_context">Project context</option>
+            <option value="company_context">Company context</option>
+          </select>
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void save();
+            }}
+            placeholder={
+              item.person ? `e.g. Always answer ${item.person} same-day` : 'e.g. Treat this as VIP'
+            }
+            aria-label="New memory text"
+            // eslint-disable-next-line jsx-a11y/no-autofocus
+            autoFocus
+            className="w-full rounded-[10px] border border-line bg-field px-3 py-[8px] text-[12.5px] text-ink outline-none placeholder:text-muted focus:border-accent"
+          />
+          {item.personEmail && type !== 'tone' && type !== 'company_context' && (
+            <span className="font-mono text-[10px] text-muted">
+              Applies to {item.personEmail}
+            </span>
+          )}
+          <div className="flex gap-2">
+            <RailButton primary icon="check" onClick={() => void save()}>
+              {saving ? 'Saving…' : 'Save memory'}
+            </RailButton>
+            <RailButton icon="close" onClick={() => setAdding(false)}>
+              Cancel
+            </RailButton>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="flex items-center justify-center gap-[7px] rounded-[11px] border border-dashed border-line-strong bg-panel-solid px-3 py-[10px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+        >
+          <Icon name="plus" className="h-[15px] w-[15px]" />
+          Add a memory or rule
+        </button>
+      )}
 
       <p className="text-[11.5px] leading-snug text-muted">
-        This memory affects future prioritization. You can edit or delete it anytime.
+        This memory affects future prioritization and drafts. Manage it all in Memory &amp; Rules.
       </p>
     </div>
   );

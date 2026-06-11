@@ -28,6 +28,16 @@ vi.mock('@/app/actions/drafts', () => ({
   discardDraft: vi.fn(async () => ({ ok: true })),
 }));
 
+// MemoryView + the rail's Memory tab import the Phase 10 memory actions.
+vi.mock('@/app/actions/memories', () => ({
+  addMemory: vi.fn(async () => ({ ok: true })),
+  updateMemoryText: vi.fn(async () => ({ ok: true })),
+  setMemoryActive: vi.fn(async () => ({ ok: true })),
+  deleteMemory: vi.fn(async () => ({ ok: true })),
+  approveMemory: vi.fn(async () => ({ ok: true })),
+  rejectMemory: vi.fn(async () => ({ ok: true })),
+}));
+
 function renderDashboard() {
   return render(
     <ThemeProvider>

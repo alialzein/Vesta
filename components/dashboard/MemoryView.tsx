@@ -1,18 +1,26 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { ManagerMemory, MemoryType } from '@/lib/types';
-import { demoMemories } from '@/lib/demo-data';
+import type { MemoryRecord, MemoryType } from '@/lib/types';
+import {
+  addMemory,
+  approveMemory,
+  deleteMemory,
+  rejectMemory,
+  setMemoryActive,
+} from '@/app/actions/memories';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { useToast } from '@/components/ui/Toast';
 import { NoMemoriesState } from '@/components/ui/StateView';
 
 /**
- * Full-page "Memory & Rules" workspace (Phase 0.4).
+ * Full-page "Memory & Rules" workspace — real since Phase 10.
  *
- * Sections: page header + intro, an add form, category filter tabs, the saved
- * memories list, and a side help/tips panel. Demo only — memories live in local
- * React state for the session (no persistence, no AI). Saving real manager
- * memory requires explicit approval in a later phase.
+ * Backed by `manager_memories` via server actions: add / pause / resume /
+ * forget, plus the approval queue for memories Vesta suggested (they do
+ * nothing until approved here). Every active memory is read by AI analysis
+ * (VIPs, delegation, hard limits, context) and by draft generation (tone,
+ * hard limits, context) — see lib/ai/memory.ts.
  */
 
 type CategoryId = 'all' | 'people' | 'tone' | 'delegation' | 'safety' | 'context';
@@ -74,44 +82,71 @@ const TIPS = [
   '“Never” rules are hard limits Vesta will not cross.',
 ];
 
-let nextId = 200;
-
-export function MemoryView() {
-  const [memories, setMemories] = useState<ManagerMemory[]>(demoMemories);
+export function MemoryView({ memories = [] }: { memories?: MemoryRecord[] }) {
+  const { showToast } = useToast();
+  const [pending, setPending] = useState(false);
   const [type, setType] = useState<MemoryType>('vip');
   const [text, setText] = useState('');
   const [category, setCategory] = useState<CategoryId>('all');
+  // Rows hidden optimistically while their server action runs (the actions
+  // call revalidatePath('/'), so the server list refreshes on its own).
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set());
 
-  function addMemory() {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setMemories((prev) => [{ id: `mem-${nextId++}`, type, text: trimmed }, ...prev]);
-    setText('');
+  const visibleRows = memories.filter((m) => !hiddenIds.has(m.id));
+  const suggestions = visibleRows.filter((m) => m.pending);
+  const saved = visibleRows.filter((m) => !m.pending);
+
+  function hideRow(id: string) {
+    setHiddenIds((s) => new Set(s).add(id));
   }
 
-  function forget(id: string) {
-    setMemories((prev) => prev.filter((m) => m.id !== id));
+  async function run(
+    id: string | null,
+    action: () => Promise<{ ok: boolean; error?: string }>,
+    okMessage: string,
+  ) {
+    setPending(true);
+    const res = await action();
+    setPending(false);
+    if (res.ok) {
+      showToast(okMessage);
+    } else {
+      if (id) {
+        setHiddenIds((s) => {
+          const next = new Set(s);
+          next.delete(id);
+          return next;
+        });
+      }
+      showToast(res.error ?? 'Something went wrong.');
+    }
+  }
+
+  function submitAdd() {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setText('');
+    void run(null, () => addMemory({ type, text: trimmed }), 'Saved — Vesta will use this.');
   }
 
   const visible = useMemo(
-    () =>
-      category === 'all' ? memories : memories.filter((m) => CATEGORY_OF[m.type] === category),
-    [memories, category],
+    () => (category === 'all' ? saved : saved.filter((m) => CATEGORY_OF[m.type] === category)),
+    [saved, category],
   );
 
   /** Count per category for the filter-tab badges. */
   const counts = useMemo(() => {
     const c: Record<CategoryId, number> = {
-      all: memories.length,
+      all: saved.length,
       people: 0,
       tone: 0,
       delegation: 0,
       safety: 0,
       context: 0,
     };
-    for (const m of memories) c[CATEGORY_OF[m.type]]++;
+    for (const m of saved) c[CATEGORY_OF[m.type]]++;
     return c;
-  }, [memories]);
+  }, [saved]);
 
   return (
     <section className="flex flex-col gap-5">
@@ -129,16 +164,73 @@ export function MemoryView() {
           </span>
         </div>
         <p className="max-w-[760px] text-sm leading-relaxed text-muted">
-          Teach Vesta who matters, how you prefer replies, and what to delegate. The assistant uses
-          these every time it prioritises and drafts. This memory affects future prioritization —
-          you can edit or delete it anytime.
+          Teach Vesta who matters, how you prefer replies, and what to delegate. Every active
+          memory is used when Vesta prioritises your radar and writes drafts. You can pause or
+          delete any of them anytime — and nothing Vesta suggests applies until you approve it.
         </p>
       </header>
 
       {/* Workspace: main column + side help panel */}
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex min-w-0 flex-col gap-5">
-          {/* 2. Add new memory / rule */}
+          {/* 2. Suggestions waiting for approval (Vesta proposed, manager decides) */}
+          {suggestions.length > 0 && (
+            <div className="rounded-[var(--radius)] border border-accent/40 bg-accent-soft/40 p-5 shadow-soft">
+              <h3 className="m-0 flex items-center gap-2 font-display text-[16px] font-semibold tracking-tight">
+                <Icon name="sparkle" className="h-[16px] w-[16px] text-accent" />
+                Vesta suggests — waiting for your approval
+                <span className="rounded-full bg-accent px-[8px] py-px font-mono text-[10.5px] font-bold text-white">
+                  {suggestions.length}
+                </span>
+              </h3>
+              <p className="mb-0 mt-1 text-[12.5px] text-muted">
+                These do nothing until you approve them.
+              </p>
+              <div className="mt-3 flex flex-col gap-[10px]">
+                {suggestions.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex flex-wrap items-center gap-[10px] rounded-[13px] border border-line bg-panel p-[12px]"
+                  >
+                    <span
+                      className={`flex-none rounded-md px-[8px] py-[3px] font-mono text-[10px] font-semibold uppercase tracking-wide ${TAG_TONE[m.type]}`}
+                    >
+                      {TYPE_LABEL[m.type]}
+                    </span>
+                    <span className="min-w-[180px] flex-1 text-[13.5px] leading-snug text-ink-soft">
+                      {m.text}
+                    </span>
+                    <span className="flex flex-none gap-2">
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          hideRow(m.id);
+                          void run(m.id, () => approveMemory(m.id), 'Approved — Vesta will use it.');
+                        }}
+                        className="rounded-full bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[7px] text-[12px] font-semibold text-white transition hover:brightness-110"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          hideRow(m.id);
+                          void run(m.id, () => rejectMemory(m.id), 'Rejected and forgotten.');
+                        }}
+                        className="rounded-full border border-line bg-panel px-[14px] py-[7px] text-[12px] font-semibold text-ink-soft transition hover:border-red hover:text-red"
+                      >
+                        Reject
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. Add new memory / rule */}
           <div className="rounded-[var(--radius)] border border-line bg-panel p-5 shadow-soft">
             <h3 className="m-0 flex items-center gap-2 font-display text-[16px] font-semibold tracking-tight">
               <Icon name="plus" className="h-[16px] w-[16px] text-accent" />
@@ -161,23 +253,28 @@ export function MemoryView() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') addMemory();
+                  if (e.key === 'Enter') submitAdd();
                 }}
-                placeholder="e.g. Treat Cedars Group as VIP"
+                placeholder="e.g. Treat maya@cedars.com as VIP"
                 aria-label="New memory text"
                 className="min-w-0 flex-1 rounded-[11px] border border-line bg-field px-3 py-[10px] text-[13px] text-ink outline-none placeholder:text-muted focus:border-accent"
               />
               <button
                 type="button"
-                onClick={addMemory}
-                className="flex-none justify-center rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[16px] py-[10px] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.3)] transition hover:brightness-110"
+                onClick={submitAdd}
+                disabled={pending}
+                className="flex-none justify-center rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[16px] py-[10px] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.3)] transition hover:brightness-110 disabled:opacity-60"
               >
                 ＋ Remember this
               </button>
             </div>
+            <p className="mb-0 mt-2 text-[11.5px] text-muted">
+              Tip: a VIP memory that includes an email address also marks that sender as VIP for
+              filtering and priority.
+            </p>
           </div>
 
-          {/* 3. Category filter tabs */}
+          {/* 4. Category filter tabs */}
           <div
             role="tablist"
             aria-label="Filter memories by category"
@@ -211,29 +308,65 @@ export function MemoryView() {
             ))}
           </div>
 
-          {/* 4. Saved memories list */}
+          {/* 5. Saved memories list */}
           {visible.length > 0 ? (
             <div className="grid grid-cols-1 gap-[11px] md:grid-cols-2">
               {visible.map((m) => (
                 <div
                   key={m.id}
-                  className="animate-rise flex items-start gap-[11px] rounded-[15px] border border-line bg-panel p-[15px] shadow-soft"
+                  className={[
+                    'animate-rise flex flex-col gap-[9px] rounded-[15px] border border-line bg-panel p-[15px] shadow-soft',
+                    m.isActive ? '' : 'opacity-60',
+                  ].join(' ')}
                 >
-                  <span
-                    className={`mt-px flex-none rounded-md px-[8px] py-[3px] font-mono text-[10px] font-semibold uppercase tracking-wide ${TAG_TONE[m.type]}`}
-                  >
-                    {TYPE_LABEL[m.type]}
-                  </span>
-                  <span className="flex-1 text-[13.5px] leading-snug text-ink-soft">{m.text}</span>
-                  <button
-                    type="button"
-                    onClick={() => forget(m.id)}
-                    title="Forget this"
-                    aria-label={`Forget memory: ${m.text}`}
-                    className="flex-none rounded-md px-[3px] text-base leading-none text-muted transition hover:text-red"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-start gap-[11px]">
+                    <span
+                      className={`mt-px flex-none rounded-md px-[8px] py-[3px] font-mono text-[10px] font-semibold uppercase tracking-wide ${TAG_TONE[m.type]}`}
+                    >
+                      {TYPE_LABEL[m.type]}
+                    </span>
+                    <span className="flex-1 text-[13.5px] leading-snug text-ink-soft">{m.text}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        hideRow(m.id);
+                        void run(m.id, () => deleteMemory(m.id), 'Forgotten.');
+                      }}
+                      disabled={pending}
+                      title="Forget this"
+                      aria-label={`Forget memory: ${m.text}`}
+                      className="flex-none rounded-md px-[3px] text-base leading-none text-muted transition hover:text-red"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pl-[2px]">
+                    {m.scopeEmail && (
+                      <span className="rounded-full bg-panel-2 px-[9px] py-[2px] font-mono text-[10px] text-muted">
+                        {m.scopeEmail}
+                      </span>
+                    )}
+                    {m.source !== 'manual' && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-[9px] py-[2px] font-mono text-[10px] font-semibold text-accent">
+                        <Icon name="sparkle" className="h-[10px] w-[10px]" />
+                        Suggested by Vesta
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() =>
+                        void run(
+                          null,
+                          () => setMemoryActive(m.id, !m.isActive),
+                          m.isActive ? 'Paused — Vesta will ignore it.' : 'Active again.',
+                        )
+                      }
+                      className="ml-auto rounded-full border border-line px-[10px] py-[3px] text-[11px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+                    >
+                      {m.isActive ? 'Pause' : 'Resume'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -242,7 +375,7 @@ export function MemoryView() {
           )}
         </div>
 
-        {/* 5. Side help / tips panel */}
+        {/* 6. Side help / tips panel */}
         <aside className="flex flex-col gap-4">
           <div className="rounded-[var(--radius)] border border-line bg-panel-soft p-5 shadow-soft">
             <h3 className="m-0 flex items-center gap-2 font-display text-[15px] font-semibold tracking-tight">
@@ -265,8 +398,8 @@ export function MemoryView() {
           <div className="rounded-[var(--radius)] border border-line bg-panel-soft p-5 shadow-soft">
             <p className="flex items-start gap-2 text-[12px] leading-snug text-muted">
               <Icon name="shield" className="mt-px h-[15px] w-[15px] flex-none text-accent" />
-              Vesta never sends email or saves sensitive memory without your explicit approval.
-              These rules only shape prioritisation and drafts.
+              Vesta never saves a memory on its own — anything it suggests waits here for your
+              approval. These rules only shape prioritisation and drafts.
             </p>
           </div>
         </aside>

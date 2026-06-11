@@ -4,15 +4,52 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (landing **v4 — labeled 6-beat journey + fan-out
-finale + spotlight bands — MERGED to main, PR #45 `bd70226`**).
-**Repo state:** `main` clean — 317 tests green, typecheck/lint clean,
-Playwright-verified screenshots both themes + mobile (`node
-scripts/landing-shots.mjs` against a running dev server).
-**Next: 1) after Vercel deploys main, owner spot-checks production /welcome
-(both themes; scroll the full journey to the fan-out + VESTA finale) — the 4
-re-queued work items also re-analyze with v2 prompts after deploy + next sync →
-2) Phase 10 — Memory & Rules. Smaller queued: due_at in manager timezone.**
+**Last updated:** 2026-06-11 (**Phase 10 — Memory & Rules BUILT on branch
+`feat/phase-10-memory-rules`, PR open — owner reviews/merges**; landing v4
+merged earlier today, #45).
+**Repo state:** branch `feat/phase-10-memory-rules` (off `main` `a893bc0`) —
+337 tests green, typecheck/lint/build clean; Memory & Rules verified live in
+BOTH themes with the dev user (add → list → VIP flag → delete).
+**Next: 1) owner reviews/merges the Phase 10 PR → 2) after deploy: run
+`node scripts/reanalyze-work-items.mjs` once (prompt v3 applies memory to
+existing items) + owner spot-checks production /welcome (landing v4) →
+3) Phase 11 — Daily Brief & Focus Mode. Smaller queued: due_at in manager
+timezone.**
+
+## 🧠 Phase 10 — Memory & Rules (built 2026-06-11, on branch)
+
+The manager teaches Vesta once; it applies everywhere. **No migration** —
+approval state rides on `manager_memories.is_active` + `metadata.status`.
+
+- **Retrieval (the core):** new pure `lib/ai/memory.ts` (type/scope selection,
+  person-scoped memories fire only on that sender, capped lines, unit-tested).
+  **Analysis prompt v3**: manager's standing notes (VIP / delegation /
+  do-not-do / project / company / preference) + "this sender is a VIP" signal;
+  loaded ONCE per sync run. **Draft prompt draft-v3**: hard "never do" rules in
+  the system prompt (absolute) + saved context notes + tone (was tone-only).
+- **VIP senders:** VIP memory naming an email → `people.is_vip` flips
+  (stamped `vip_reason='memory:<id>'`; deleting/pausing the memory un-VIPs
+  exactly that flag, hand-set VIPs untouched). **Gap fixed:** sync now passes
+  `isVip` into `scoreThread` — the engine's +20 VIP boost existed but was
+  never wired into the orchestrator.
+- **UI real:** `MemoryView` backed by `app/actions/memories.ts`
+  (add/pause/resume/forget/approve/reject, optimistic rows + toasts +
+  revalidate); approval queue "Vesta suggests — waiting for your approval";
+  rail Memory tab shows the memories actually applied to the selected item +
+  real quick-add scoped to the sender's email.
+- **Approval flow:** anything not typed by the manager lands pending
+  (`is_active=false`, does nothing). First producer: **sendDraft** with a
+  custom instruction files a deterministic, deduped per-recipient preference
+  suggestion (`source='ai_suggested'`).
+- Tests 337 (memory helpers, prompt v3/draft-v3 blocks, MemoryView component);
+  guide `docs/guides/memory-and-rules.md` + ai-analysis/draft-replies/README
+  updates; phases.md Phase 10 → Done.
+- ⚠️ **After merge + deploy:** run `node scripts/reanalyze-work-items.mjs` so
+  open items re-analyze with prompt v3 (memory applied). **Verify live:** add
+  a VIP memory with an email → that sender's item climbs after next sync and
+  the rail's Memory tab lists the memory; a "Do NOT do" rule shows up obeyed
+  in a fresh draft; steer a draft with an instruction → send → a suggestion
+  appears in Memory & Rules → approve it.
 
 ## 🔭 Landing v4 — labeled journey + fan-out finale (MERGED #45, 2026-06-11)
 

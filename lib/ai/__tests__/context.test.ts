@@ -82,5 +82,26 @@ describe('buildPrompt', () => {
     });
     expect(user).not.toContain("Today's date");
     expect(user).not.toContain('Conversation so far');
+    expect(user).not.toContain("Manager's standing notes");
+    expect(user).not.toContain('This sender is a VIP');
+  });
+
+  it("includes the manager's memory notes and the VIP signal (Phase 10)", () => {
+    const { system, user } = buildPrompt({
+      subject: 'Invoice 4411',
+      latestMessage: 'Could you approve the invoice?',
+      senderName: 'Maya',
+      messageCount: 1,
+      followupCount: 0,
+      isWaitingOnManager: true,
+      latestAt: null,
+      managerNotes: ['Cedars Group is a VIP client.', 'Invoices go to Lina first.'],
+      senderIsVip: true,
+    });
+    expect(system).toContain('standing notes');
+    expect(user).toContain('This sender is a VIP for the manager.');
+    expect(user).toContain("Manager's standing notes (apply where relevant):");
+    expect(user).toContain('- Cedars Group is a VIP client.');
+    expect(user).toContain('- Invoices go to Lina first.');
   });
 });

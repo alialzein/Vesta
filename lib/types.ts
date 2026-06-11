@@ -172,6 +172,22 @@ export type ManagerMemory = {
   text: string;
 };
 
+/** A full Memory & Rules row for the workspace (Phase 10). */
+export type MemoryRecord = {
+  id: string;
+  type: MemoryType;
+  text: string;
+  /** Pinned to one person (lowercased email) when set; null = applies everywhere. */
+  scopeEmail: string | null;
+  /** 'manual' = the manager typed it; 'ai_suggested' = proposed by Vesta. */
+  source: string;
+  /** Paused memories are kept but ignored by the AI and VIP flags. */
+  isActive: boolean;
+  /** Suggested by Vesta and awaiting the manager's approval — does nothing yet. */
+  pending: boolean;
+  createdAt: string;
+};
+
 /** Morning brief hero content. Later sourced from daily_briefs. */
 export type MorningBrief = {
   headline: string;

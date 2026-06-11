@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/database.types';
 import { buildPrompt, bodyForAi } from './context';
 import { parseAnalysis, PROMPT_VERSION } from './schema';
+import { isVipByMemory, memoryNotesForAnalysis, type MemoryRow } from './memory';
 import { buildReplyIntentPrompt, parseReplyIntent } from './reply-intent';
 import { estimateCostUsd } from './cost';
 import { recordAiUsage } from './usage';
@@ -89,6 +90,24 @@ export async function analyzeMailboxWorkItems(
     .eq('status', 'open')
     .order('priority_score', { ascending: false })
     .limit(100);
+
+  // Phase 10 — the manager's memory, loaded ONCE per run (not per item): the
+  // standing notes go into each analysis prompt, and VIP senders are flagged
+  // from people.is_vip plus any VIP memory naming the person/domain.
+  const [{ data: memRows }, { data: vipRows }] = await Promise.all([
+    db
+      .from('manager_memories')
+      .select('id, memory_type, memory_text, scope, scope_ref, is_active')
+      .eq('user_id', ctx.userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(200),
+    db.from('people').select('email').eq('user_id', ctx.userId).eq('is_vip', true),
+  ]);
+  const memories = (memRows ?? []) as MemoryRow[];
+  const vipEmails = new Set(
+    (vipRows ?? []).map((r) => r.email?.toLowerCase()).filter((e): e is string => !!e),
+  );
 
   let analyzed = 0;
   let skipped = 0;
@@ -262,6 +281,11 @@ export async function analyzeMailboxWorkItems(
           }).slice(0, 400) || '(no body available)',
       }));
 
+    const sender = { email: m?.sender_email ?? null, name: m?.sender_name ?? null };
+    const senderIsVip =
+      (sender.email ? vipEmails.has(sender.email.toLowerCase()) : false) ||
+      isVipByMemory(memories, sender);
+
     const prompt = buildPrompt({
       subject: m?.subject ?? w.title ?? null,
       latestMessage: bodyForAi({
@@ -276,6 +300,8 @@ export async function analyzeMailboxWorkItems(
       latestAt,
       today: new Date().toISOString().slice(0, 10),
       threadContext,
+      managerNotes: memoryNotesForAnalysis(memories, sender),
+      senderIsVip,
     });
 
     budget--; // count every attempt (success or failure) against the budget

@@ -24,6 +24,7 @@ manual. Each guide is self-contained and matches the product as it actually ship
 | [Your dashboard & Priorities](priorities-and-dashboard.md) | Today's Radar, "Waiting on you", overdue & senders, quick actions, and how items are ranked |
 | [How Vesta's AI reads your email](ai-analysis.md) | What the AI produces (summary, priority, deadline, next action), what it reads, cost & privacy |
 | [Draft replies](draft-replies.md) | Let Vesta write a reply — or a follow-up nudge — edit it, and approve & send; nothing sends without you |
+| [Memory & Rules](memory-and-rules.md) | Teach Vesta VIPs, tone, delegation, and hard limits — used in every ranking and draft; suggestions wait for your approval |
 | [Settings & appearance](settings-and-themes.md) | Managing your mailbox connection, filter mode, and light/dark theme |
 | [Admin panel (operator)](admin-panel.md) | ⚙️ **Operator-only** — the `/admin` console: users, mailboxes/sync, email retention, and AI cost control |
 
