@@ -4,27 +4,21 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**TWO PRs OPEN, awaiting owner merge:**
-**PR #56 `feat/briefing-alive`** — Briefing page brought to life: article
-og:images (Google News link decode), hero top story, publisher favicons,
-"NN% match" labeled score with tooltip, Saved-shelf explainer; no migration.
-**PR #57 `feat/ask-vesta`** — Ask Vesta chat made REAL (the superpower):
-full `/chat` page, grounded in memories + rules + today's radar + briefing +
-inbox brief, with a learning loop that writes durable facts to
-`manager_memories` (source 'chat', visible/deletable in Memory & Rules);
-demo drawer deleted; dashboard FAB now links to /chat.
-**⚠️ PR #57 needs its migration run in Supabase BEFORE testing:**
-`supabase/migrations/20260611220001_ask_vesta_chat.sql` (chat_conversations +
-chat_messages, own-rows RLS; owner pre-approved DB changes for this feature).
-Both branches pass 411 tests each; PRs are independent (both cut from
-#49–#55 main). If both merge, re-run the suite on main after the second
-merge (trivial overlap only: none expected — different files).
-**Owner verify after merge+migration (both themes):** Briefing → Refresh →
-cards show images (old items show gradient art until rebuilt; some sites
-block previews → that's the fallback, not a bug). Chat → sidebar Ask Vesta →
-starter chip answers from real radar; say "Remember that ..." → blue "Saved
-to memory" chip → confirm it appears in Memory & Rules and can be deleted;
-admin AI page shows `chat` rows.
+**Last updated:** 2026-06-11 (**#56 Briefing-alive + #57 Ask Vesta both
+MERGED** — `main` = #49–#57, 428 tests green on merged main.
+**⚠️ Ask Vesta migration:** owner was running
+`supabase/migrations/20260611220001_ask_vesta_chat.sql` in the Supabase SQL
+editor at session end (chat_conversations + chat_messages, own-rows RLS) —
+**confirm it's applied before testing /chat**; until then sendChatMessage
+fails with a missing-table error.)
+**Owner verify (both themes, after Vercel deploys + migration):**
+Briefing → Refresh → cards show article images, hero top story, "NN% match"
+chips (old items show gradient art until rebuilt; some sites block previews
+→ that's the intended fallback). Chat → sidebar Ask Vesta (or dashboard
+floating button) → starter chip answers from the real radar; say
+"Remember that I prefer short, direct emails" → blue "Saved to memory" chip
+→ confirm it appears in Memory & Rules (source chat) and is deletable;
+conversation survives in the left rail; admin AI page shows `chat` rows.
 **Next: pick next track: AI Decision Desk (Phase 12, discuss scope first) /
 Teams (Phase 13) / reminder processor + notifications bell (Phase 8
 leftover). Pre-launch checklist standing (rotate keys/passwords, re-enable
