@@ -185,6 +185,67 @@ describe('parseChatReply — actions', () => {
     );
     expect(parsed.action).toEqual({ kind: 'create_task', title: 'Call Ahmad', dueLocal: null });
   });
+
+  it('accepts a recurring email reminder (hourly × 3) and clamps abuse', () => {
+    expect(
+      parseChatReply(
+        wrap({
+          kind: 'create_reminder',
+          itemIndex: 0,
+          subject: 'Technical meeting timing',
+          toEmail: null,
+          firstAtLocal: '2026-06-12 15:00',
+          repeatMinutes: 60,
+          count: 3,
+        }),
+        3,
+      ).action,
+    ).toEqual({
+      kind: 'create_reminder',
+      itemIndex: 0,
+      subject: 'Technical meeting timing',
+      toEmail: null,
+      firstAtLocal: '2026-06-12 15:00',
+      repeatMinutes: 60,
+      count: 3,
+    });
+
+    // 5-minute spam → floor of 15; count 99 → cap 10; bad email → null (self).
+    const clamped = parseChatReply(
+      wrap({
+        kind: 'create_reminder',
+        itemIndex: null,
+        subject: 'Ping me',
+        toEmail: 'not-an-email',
+        firstAtLocal: '2026-06-12 15:00',
+        repeatMinutes: 5,
+        count: 99,
+      }),
+      0,
+    ).action;
+    expect(clamped).toMatchObject({ repeatMinutes: 15, count: 10, toEmail: null, itemIndex: null });
+  });
+
+  it('reminder without a valid first time is dropped; single send never repeats', () => {
+    expect(
+      parseChatReply(
+        wrap({ kind: 'create_reminder', subject: 'Ping', toEmail: null, firstAtLocal: '3pm', count: 1 }),
+        0,
+      ).action,
+    ).toBeNull();
+    const single = parseChatReply(
+      wrap({
+        kind: 'create_reminder',
+        subject: 'Ping once',
+        toEmail: 'zahraa@example.com',
+        firstAtLocal: '2026-06-12 15:00',
+        repeatMinutes: 60,
+        count: 1,
+      }),
+      0,
+    ).action;
+    expect(single).toMatchObject({ repeatMinutes: null, count: 1, toEmail: 'zahraa@example.com' });
+  });
 });
 
 describe('actionLabel', () => {
@@ -201,6 +262,17 @@ describe('actionLabel', () => {
     expect(
       actionLabel({ kind: 'draft_reply', itemIndex: 0, instruction: 'x' }, 'Cedars contract'),
     ).toContain('for your approval');
+    expect(
+      actionLabel({
+        kind: 'create_reminder',
+        itemIndex: 0,
+        subject: 'Meeting timing',
+        toEmail: null,
+        firstAtLocal: '2026-06-12 15:00',
+        repeatMinutes: 60,
+        count: 3,
+      }),
+    ).toBe('Email reminder to you about "Meeting timing" starting 2026-06-12 15:00, hourly × 3');
   });
 });
 

@@ -1,9 +1,13 @@
 # Chat Actions — giving Vesta orders (Plan, drafted 2026-06-11)
 
-**Status: Phase A BUILT 2026-06-11 (chat-v3 — mark_done / snooze /
-create_task / draft_reply with Confirm cards in both chat surfaces).
-Phase B next (needs the reminders migration approval); Phase C after
-(owner agreed 2026-06-11 to grant Calendars.ReadWrite in Azure).**
+**Status: Phases A + B BUILT 2026-06-11. A (chat-v3): mark_done / snooze /
+create_task / draft_reply with Confirm cards. B (chat-v4): create_reminder
+email engine — the Phase 1 `reminders` table EXTENDED (not duplicated; see
+20260611230001_reminders.sql: title=subject, remind_at=next firing), cron
+route /api/cron/reminders, Settings → Scheduled reminders panel with
+Cancel. ⚠️ Owner must run the migration + schedule the cron (every 5 min,
+same CRON_SECRET as the sync cron). Phase C next — owner granted
+Calendars.ReadWrite in Azure 2026-06-11 (mailbox re-consent needed).**
 
 The goal: the manager types orders in Ask Vesta the way he'd tell a chief of
 staff — and Vesta executes them through the SAME server actions the buttons

@@ -23,6 +23,7 @@ import { getEffectiveAi } from '@/lib/ai/runtime';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
 import { safeTz, todayInTz, zonedTimeToUtc } from '@/lib/time/zone';
+import { clampSchedule } from '@/lib/reminders/logic';
 import { createManualTask, resolveWorkItem, snoozeWorkItem } from './work-items';
 import { generateDraft } from './drafts';
 
@@ -207,7 +208,8 @@ export async function sendChatMessage(input: {
     let storedAction: StoredChatAction | null = null;
     if (parsed.action) {
       const a = parsed.action;
-      const item = 'itemIndex' in a ? shownItems[a.itemIndex] : undefined;
+      const idx = 'itemIndex' in a ? a.itemIndex : null;
+      const item = typeof idx === 'number' ? shownItems[idx] : undefined;
       storedAction = {
         kind: a.kind,
         status: 'proposed',
@@ -219,6 +221,11 @@ export async function sendChatMessage(input: {
         task_title: a.kind === 'create_task' ? a.title : null,
         due_local: a.kind === 'create_task' ? a.dueLocal : null,
         instruction: a.kind === 'draft_reply' ? a.instruction : null,
+        reminder_subject: a.kind === 'create_reminder' ? a.subject : null,
+        to_email: a.kind === 'create_reminder' ? a.toEmail : null,
+        first_at_local: a.kind === 'create_reminder' ? a.firstAtLocal : null,
+        repeat_minutes: a.kind === 'create_reminder' ? a.repeatMinutes : null,
+        send_count: a.kind === 'create_reminder' ? a.count : null,
       };
     }
 
@@ -372,6 +379,51 @@ export async function executeChatAction(messageId: string): Promise<ExecuteChatA
       });
       result = `Draft ready for "${action.item_title}" — review and approve it in Draft Replies. Nothing sends without you.`;
       break;
+    case 'create_reminder': {
+      if (!action.reminder_subject || !action.first_at_local) break;
+      // Recipient defaults to the manager himself (profile email, falling
+      // back to the connected mailbox address).
+      let toEmail = action.to_email;
+      if (!toEmail) {
+        const [{ data: prof }, { data: mb }] = await Promise.all([
+          supabase.from('profiles').select('email').eq('id', msg.user_id).maybeSingle(),
+          supabase
+            .from('mailboxes')
+            .select('mailbox_email')
+            .eq('status', 'active')
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        toEmail = prof?.email ?? mb?.mailbox_email ?? null;
+      }
+      if (!toEmail) {
+        exec = { ok: false, error: 'No recipient email found — connect a mailbox first.' };
+        break;
+      }
+      const schedule = clampSchedule(action.repeat_minutes ?? null, action.send_count ?? 1);
+      const { error } = await supabase.from('reminders').insert({
+        user_id: msg.user_id,
+        work_item_id: action.item_id,
+        send_to_email: toEmail,
+        title: action.reminder_subject,
+        body: action.item_title
+          ? `You asked Vesta to remind you about "${action.item_title}".`
+          : null,
+        remind_at: localToIso(action.first_at_local),
+        timezone: action.tz,
+        delivery_channels: ['email'],
+        ...schedule,
+        created_from: 'chat',
+        metadata: { item_title: action.item_title } as Json,
+      });
+      exec = error ? { ok: false, error: error.message } : { ok: true };
+      const times =
+        schedule.repeat_every_minutes && schedule.remaining_sends > 1
+          ? `${schedule.remaining_sends} emails, every ${schedule.repeat_every_minutes} min, starting`
+          : 'one email at';
+      result = `Reminder scheduled — ${times} ${action.first_at_local} to ${toEmail}. Manage it in Settings → Scheduled reminders.`;
+      break;
+    }
   }
 
   if (!exec.ok) {

@@ -69,6 +69,25 @@ export async function sendReply(
   };
 }
 
+/**
+ * Send a brand-new mail (not a reply) in one call — POST /me/sendMail, which
+ * only needs Mail.Send. Used by the reminders engine (Phase B chat orders);
+ * every reminder the cron sends was explicitly confirmed by the manager.
+ */
+export async function sendNewMail(
+  accessToken: string,
+  input: { to: string; subject: string; html: string },
+): Promise<void> {
+  await graphPostNoContent(accessToken, '/me/sendMail', {
+    message: {
+      subject: input.subject,
+      body: { contentType: 'HTML', content: input.html },
+      toRecipients: [{ emailAddress: { address: input.to } }],
+    },
+    saveToSentItems: true,
+  });
+}
+
 type GraphDraft = { id: string; subject?: string | null };
 
 /**
