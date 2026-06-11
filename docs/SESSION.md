@@ -6,6 +6,10 @@
 
 **Last updated:** 2026-06-11 (**#56 Briefing-alive + #57 Ask Vesta both
 MERGED** — `main` = #49–#57, 428 tests green on merged main.
+**PR #58 `fix/briefing-row-cards` OPEN, awaiting owner merge:** owner
+disliked the gradient placeholder panels → one story per row, og:image
+embedded LEFT when present, text-only card when not (CategoryArt deleted);
+guide + tests updated, 428 green on the branch.
 **⚠️ Ask Vesta migration:** owner was running
 `supabase/migrations/20260611220001_ask_vesta_chat.sql` in the Supabase SQL
 editor at session end (chat_conversations + chat_messages, own-rows RLS) —
