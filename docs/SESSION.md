@@ -5,17 +5,16 @@
 > Claude updates it at the end of each session and pushes it.
 
 **Last updated:** 2026-06-11 (landing **v4 — labeled 6-beat journey + fan-out
-finale + spotlight bands — built on branch `feat/landing-v4-journey`, awaiting
-owner review in VS Code; NOT pushed yet**).
-**Repo state:** branch `feat/landing-v4-journey` (off `main` `90ff564`) —
-317 tests green, typecheck/lint clean, Playwright-verified screenshots both
-themes + mobile (`node scripts/landing-shots.mjs` against a running dev server).
-**Next: 1) owner reviews the landing v4 branch (then push → PR → merge) →
-2) after Vercel deploys, owner spot-checks production /welcome — the 4 re-queued
-work items also re-analyze with v2 prompts after deploy + next sync →
-3) Phase 10 — Memory & Rules. Smaller queued: due_at in manager timezone.**
+finale + spotlight bands — MERGED to main, PR #45 `bd70226`**).
+**Repo state:** `main` clean — 317 tests green, typecheck/lint clean,
+Playwright-verified screenshots both themes + mobile (`node
+scripts/landing-shots.mjs` against a running dev server).
+**Next: 1) after Vercel deploys main, owner spot-checks production /welcome
+(both themes; scroll the full journey to the fan-out + VESTA finale) — the 4
+re-queued work items also re-analyze with v2 prompts after deploy + next sync →
+2) Phase 10 — Memory & Rules. Smaller queued: due_at in manager timezone.**
 
-## 🔭 Landing v4 — labeled journey + fan-out finale (2026-06-11, on branch)
+## 🔭 Landing v4 — labeled journey + fan-out finale (MERGED #45, 2026-06-11)
 
 Owner asked (after reviewing v3 live): words ON the 3D objects, an AI-analysis
 beat, a NEW post-radar scene showing what comes after the send ("advanced and
@@ -55,10 +54,14 @@ Built on `feat/landing-v4-journey` (all in `components/landing/`):
   the mouse after every scroll so parallax never biases screenshots.
 - Guide updated: `getting-started.md` "The front door". Tests: LandingPage suite
   covers 6 steps, bands, grid, roadmap + Soon badges (317 total).
-- ⚠️ **Owner verify (live, both themes):** scroll the full journey — labels
-  appear per station, AI station reads, fan-out finale + SOON wireframes,
-  6-step captions stay synced; bands' mocks loop; card-open reveal; roadmap;
-  mobile (390px) labels fit.
+- ⚠️ **Owner verify on production after deploy (both themes):** scroll the full
+  journey — labels appear per station, AI station reads, fan-out finale + SOON
+  wireframes, 6-step captions stay synced; bands' mocks loop; card-open reveal;
+  roadmap; mobile (390px) labels fit.
+- Note for this laptop's twin: after pulling, run `npm install` (gh CLI is NOT
+  installed on the work laptop — PR #45 was created via the GitHub API using
+  the git credential; `winget install GitHub.cli` in an elevated terminal if
+  wanted).
 
 ## 🔁 Landing v3 — journey FIXED + workflow stations (2026-06-10, round 2)
 
