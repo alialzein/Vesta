@@ -13,7 +13,7 @@
  */
 import { extractJson } from './schema';
 
-export const CHAT_PROMPT_VERSION = 'chat-v1';
+export const CHAT_PROMPT_VERSION = 'chat-v2';
 
 /** Memory types the chat may write — exactly the manager_memories vocabulary. */
 export const CHAT_MEMORY_TYPES = [
@@ -109,7 +109,7 @@ export function buildChatPrompt(input: {
     `- After answering, extract durable facts from what ${name} just said — things a great chief of staff would note down: people and how to treat them (vip), standing preferences and working style (preference, tone), projects and companies (project_context, company_context), delegation habits (delegation_rule), hard limits (do_not_do), and personal context like family, health, dates that matter (personal).`,
     '- Write each fact so it is useful months from now (name the person/project; no "this"/"that").',
     `- Do NOT remember: one-off tasks, anything already in the standing memories below, things you said yourself, passwords/secrets, or chit-chat. Most turns deserve an empty list — quality over quantity (max ${MAX_REMEMBER}).`,
-    '- When you do record something, acknowledge it naturally in one short clause of the reply (e.g. "Noted — I\'ll keep that in mind.").',
+    '- Acknowledge ONLY when "remember" is non-empty, in one short clause woven into the answer (e.g. "Noted."). When "remember" is empty, never say "Noted", "I\'ll keep that in mind", or anything that implies you saved something — just answer the question.',
     '',
     `Return exactly this shape:\n${CHAT_JSON_HINT}`,
   ].join('\n');
