@@ -4,17 +4,20 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**Phase 11 MERGED (#51). Owner found a real
-draft bug while testing → fixed on `fix/draft-time-awareness` (PR open):
-drafts were TIME-BLIND** — no today/received dates in the prompt, so a reply
-to a 2-day-old "meeting today or tomorrow?" email cheerfully accepted times
-already past. **draft-v4**: today's date + "received … (N days ago)" on the
-message + per-message [Jun 9] dates in the thread context + a TIME AWARENESS
-system rule (acknowledge late replies, never confirm past times, propose new
-timing). 368 tests green.)
-**Repo state:** `main` = Phase 11 (#51) + app shell (#50) + sidebar pass
-(#49) + Phase 10; fix branch pushed. NOTE: existing saved drafts keep their
-old text — hit **Regenerate** to get a v4 draft.
+**Last updated:** 2026-06-11 (**Phase 11 MERGED (#51) and draft time-awareness
+fix MERGED (#52) — owner VERIFIED LIVE: regenerated draft on the overdue
+"today or tomorrow?" email now acknowledges the delay and asks for new
+timing.** draft-v4 = today's date + "received … (N days ago)" + per-message
+dates + TIME AWARENESS rule. 368 tests green.)
+**Repo state:** `main` clean = #49–#52 (sidebar pass, app shell everywhere,
+Phase 11 Daily Brief & Focus Mode, draft-v4). Old saved drafts keep their
+text — **Regenerate** picks up v4.
+**Next session — pick one:** 1) **manager-timezone pass** (one branch:
+due_at 9:00 in profiles.timezone, Weekly Review day buckets, brief_date,
+draft-v4 date labels — all currently UTC); 2) **Phase 12 feature** (AI
+Decision Desk / Microsoft Teams / Promise tracker — discuss first);
+3) remaining honest placeholders ("Ask Vesta" chat → could become real,
+reading 'personal' memories; Meeting Prep stays Phase 12/calendar).
 **Owner decisions (2026-06-11 Q&A):** AI-written brief once/morning (cached);
 storage = `daily_briefs` — **already existed from Phase 1, NO migration
 needed**; Focus Mode = full-screen. Also clarified: Phase 11 is about the
