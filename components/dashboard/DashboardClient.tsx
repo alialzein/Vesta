@@ -77,6 +77,8 @@ export function DashboardClient({
   brief = demoMorningBrief,
   memories = [],
   capabilities = DEFAULT_CAPABILITIES,
+  initialItemId,
+  initialComposer = false,
 }: {
   account?: AccountView;
   /** Server decides (cookie-gated) so the splash plays once per session, not on
@@ -91,6 +93,11 @@ export function DashboardClient({
   memories?: MemoryRecord[];
   /** Phase 9 — what the draft composer may do (AI on? sending enabled?). */
   capabilities?: DraftCapabilities;
+  /** Deep link (`/?item=…`) — pre-select this work item on load (used by the
+   *  Drafts page so a saved draft reopens exactly where it was). */
+  initialItemId?: string;
+  /** Deep link (`&compose=1`) — also open the draft composer on the item. */
+  initialComposer?: boolean;
 } = {}) {
   const { showToast } = useToast();
 
@@ -99,16 +106,17 @@ export function DashboardClient({
   // on mount so it never replays on internal navigation. Default off (tests).
   const [showSplash, setShowSplash] = useState(showSplashInitially);
 
-  // Strip the one-shot ?splash=1 from the URL as soon as we mount, so a refresh
-  // or back-navigation to the dashboard never replays the splash.
+  // Strip the one-shot URL params (?splash=1, ?item=…&compose=1) as soon as we
+  // mount, so a refresh or back-navigation never replays the splash or re-opens
+  // the composer.
   useEffect(() => {
-    if (!showSplashInitially) return;
+    if (!showSplashInitially && !initialItemId) return;
     try {
       window.history.replaceState(null, '', window.location.pathname);
     } catch {
       /* non-blocking */
     }
-  }, [showSplashInitially]);
+  }, [showSplashInitially, initialItemId]);
 
   // Local copy of the server's work items so radar actions (done/dismiss/snooze)
   // can optimistically drop a card; re-synced whenever the server sends fresh data.
@@ -130,7 +138,10 @@ export function DashboardClient({
     });
   }
 
-  const [selected, setSelected] = useState<WorkItem | undefined>(workItems[0]);
+  // Deep link from the Drafts page: pre-select the linked item (and optionally
+  // open its composer) instead of defaulting to the top of the radar.
+  const linkedItem = initialItemId ? workItems.find((i) => i.id === initialItemId) : undefined;
+  const [selected, setSelected] = useState<WorkItem | undefined>(linkedItem ?? workItems[0]);
   const [view, setView] = useState<NavView>('today');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
@@ -138,7 +149,9 @@ export function DashboardClient({
   const [railTab, setRailTab] = useState<RailTab>('action');
   const [radarFilter, setRadarFilter] = useState<RadarFilter>('all');
   const [chatOpen, setChatOpen] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(
+    Boolean(initialComposer && linkedItem?.canDraft),
+  );
 
   // Quick-action preview drawers (demo only).
   const [focusOpen, setFocusOpen] = useState(false);
@@ -156,6 +169,7 @@ export function DashboardClient({
     today: items.length,
     waiting: items.filter((i) => i.categories.includes('waiting')).length,
     followup: items.filter((i) => i.categories.includes('followup')).length,
+    drafts: items.filter((i) => i.draft).length,
   };
   const highPriority = selected ? priorityBand(selected.priorityScore) === 'red' : false;
   // When the expanded rail is showing on desktop, keep the chat FAB subtle.
@@ -321,7 +335,12 @@ export function DashboardClient({
           collapsed={sidebarCollapsed}
           onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
           activeView={view}
-          onSelectView={setView}
+          activeFilter={radarFilter}
+          onSelectView={(v, filter) => {
+            setView(v);
+            // Today = the full queue; Follow-ups = the followup-filtered queue.
+            if (v === 'today') setRadarFilter((filter as RadarFilter) ?? 'all');
+          }}
           mobileOpen={sidebarMobileOpen}
           onCloseMobile={() => setSidebarMobileOpen(false)}
           account={account}

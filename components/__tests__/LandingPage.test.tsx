@@ -127,6 +127,8 @@ describe('LandingPage', () => {
     expect(screen.getByText('“Waiting on them” tracking')).toBeInTheDocument();
     expect(screen.getByText('Morning Brief')).toBeInTheDocument();
     expect(screen.getByText('Senders with faces')).toBeInTheDocument();
+    // Weekly Review shipped with the sidebar button pass — it's in the grid now.
+    expect(screen.getByText('Weekly Review')).toBeInTheDocument();
     expect(screen.getByText(/Nothing is ever sent without your explicit approval/)).toBeInTheDocument();
   });
 

@@ -115,6 +115,11 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
     title: 'Snooze, done & resurface',
     body: 'Done means done — until they reply. Snoozed items return exactly when due. Nothing silently disappears.',
   },
+  {
+    icon: 'trend',
+    title: 'Weekly Review',
+    body: 'Your week at a glance — what you finished, the replies you sent, and which senders took your attention.',
+  },
 ];
 
 const ROADMAP: { title: string; body: string }[] = [

@@ -4,22 +4,63 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**Phase 10 fully MERGED — #46 core, #47 landing
-sync, #48 memory UX (per-type samples + About-me type). Re-analysis DONE:**
-reanalyze script + cron sync run; all open items confirmed on **prompt v3**,
-zero errors).
-**Repo state:** `main` clean — 339 tests green, typecheck/lint clean. New
-CLAUDE.md rules: **5a guides must be actionable (what/where/effect +
-quick-start)** and **5b landing page stays in sync with shipped reality, both
-themes**.
-**Next (owner-announced): 1) review every button on the RIGHT RAIL and make
-each one real (known placeholders: "Delegate" → SOON toast; "Ask Vesta" chat
-drawer → demo shell; Morning Brief quick-action drawers → demo previews) →
-2) discuss/pick the next feature (Phase 11 — Daily Brief & Focus Mode is the
-queued default). Smaller queued: due_at in manager timezone; future chat
-assistant reads 'personal' memories (type already stored + retrieved).
-Owner test pass for Memory & Rules: follow the guide's "Start with these
-five" quick-start.**
+**Last updated:** 2026-06-11 (**LEFT-SIDEBAR button pass built on
+`feat/sidebar-button-pass` — PR open, awaiting owner review/merge.** Every
+left-panel button is now real or honestly "Soon"; 349 tests green,
+typecheck/lint/build clean, landing-shots re-verified both themes + mobile.)
+**Repo state:** branch pushed; `main` = Phase 10 merged (#46–#48), re-analysis
+done (all open items on prompt v3).
+**Next: 1) owner merges the sidebar PR after testing (see "Verify live"
+below) → 2) the RIGHT-RAIL pass (known placeholders: "Delegate" → SOON toast;
+"Ask Vesta" chat drawer → demo shell; Morning Brief quick-action drawers →
+demo previews) → 3) Phase 11 — Daily Brief & Focus Mode (owner wants a SCOPE
+DISCUSSION first, per Q&A 2026-06-11 — don't start coding without it; note
+Phase 11 will make the Morning Brief drawers real, so order 2+3 together).
+Smaller queued: due_at + Weekly Review day-buckets in manager timezone
+(profiles.timezone); future chat assistant reads 'personal' memories.**
+
+## 🧭 Left-sidebar button pass (built 2026-06-11, `feat/sidebar-button-pass`)
+
+Owner asked for a button-by-button pass on the LEFT panel — found 4 of 9 nav
+items were dead clicks (no href/view): Follow-ups, Draft Replies, Delegation,
+Weekly Review. All fixed (owner-confirmed directions via Q&A):
+
+- **Follow-ups** → switches to Today with the radar pre-filtered to the
+  `followup` chip (badge already real). Sidebar highlight is filter-aware:
+  Follow-ups lights up when the followup filter is active, Today otherwise;
+  clicking Today resets the filter to All.
+- **Draft Replies** → new **`/drafts` route**: every live draft (AI draft /
+  Edited by you / Approved / Send failed) with recipients + preview + time;
+  badge = open items with a saved draft. Click a row → **deep-link
+  `/?item=<id>&compose=1`** lands on the dashboard with that item selected and
+  the composer open (DashboardClient gained `initialItemId`/`initialComposer`;
+  one-shot params stripped from the URL like ?splash). Drafts whose item is no
+  longer open are kept + explained, not hidden.
+- **Weekly Review** → real v1 at **`/weekly-review`**: KPIs (completed,
+  replies sent, dismissed, inbound), day-by-day completion bars (last 7 days,
+  UTC buckets — manager-timezone is queued), carry-over count, "Completed this
+  week" list, "Who took your attention" top-5 senders (initials avatars).
+  Aggregation is pure + tested: `lib/review/weekly.ts` (reads
+  work_items.metadata.resolved_at/resolved_kind, draft_replies status=sent,
+  inbound email_messages). No migration.
+- **Delegation** → honest violet **Soon** pill (landing's roadmap language),
+  non-clickable row, tooltip "Delegation · Soon" when collapsed.
+- Also: `hidden/loading.tsx` was missing (nav rule) — added; both new routes
+  have PageSkeleton loading states + prefetch links.
+- **Landing sync (rule 5b):** Weekly Review added to the toolkit grid (8
+  cards) — verified via landing-shots in both themes; nothing advertised it as
+  "Soon" before, so no roadmap card to retire.
+- Guides: **new `docs/guides/weekly-review.md`**; draft-replies.md gained "All
+  your drafts in one place"; priorities-and-dashboard.md gained "The left
+  sidebar — every button does something"; README index updated.
+- Tests 349 (weekly builder suite + 5 new DashboardClient nav tests + landing
+  grid check).
+- ⚠️ **Verify live (both themes):** sidebar **Follow-ups** → radar shows only
+  follow-ups + chip selected (Today resets); **Draft Replies** → save a draft
+  on an item, see it listed with the badge, click it → composer reopens with
+  your text; **Weekly Review** → numbers match what you did this week (mark
+  something done → today's bar + Completed move); **Delegation** shows Soon
+  and does nothing; Hidden navigation shows an instant skeleton.
 
 ## 🧠 Phase 10 — Memory & Rules (built 2026-06-11, on branch)
 
