@@ -8,6 +8,8 @@ import { ToastProvider } from '@/components/ui/Toast';
 const sendChatMessage = vi.fn();
 vi.mock('@/app/actions/chat', () => ({
   sendChatMessage: (...args: unknown[]) => sendChatMessage(...(args as [])),
+  executeChatAction: vi.fn(async () => ({ ok: true, result: 'done' })),
+  cancelChatAction: vi.fn(async () => ({ ok: true })),
 }));
 
 const AI_MSG: ChatMessageView = {
@@ -15,6 +17,7 @@ const AI_MSG: ChatMessageView = {
   role: 'assistant',
   content: 'Zahraa is waiting on the meeting timing.',
   learned: [],
+  action: null,
   createdAt: '2026-06-11T10:00:01.000Z',
 };
 

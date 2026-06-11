@@ -1,8 +1,9 @@
 # Chat Actions — giving Vesta orders (Plan, drafted 2026-06-11)
 
-**Status: PROPOSED — owner requested 2026-06-11 ("yes i want chat order").
-Phase A can start immediately; Phase B needs a migration approval; Phase C
-needs the owner to grant new Microsoft Graph permissions in Azure.**
+**Status: Phase A BUILT 2026-06-11 (chat-v3 — mark_done / snooze /
+create_task / draft_reply with Confirm cards in both chat surfaces).
+Phase B next (needs the reminders migration approval); Phase C after
+(owner agreed 2026-06-11 to grant Calendars.ReadWrite in Azure).**
 
 The goal: the manager types orders in Ask Vesta the way he'd tell a chief of
 staff — and Vesta executes them through the SAME server actions the buttons
@@ -107,6 +108,14 @@ For "what meetings do I have today?", "am I in the X meeting today?",
 - **"With a specific number of people":** the model must NOT guess emails.
   It asks ("who are the 3 people? give me names or emails") and can match
   names against the senders Vesta already knows (the `people` table).
+- **Attendee autocomplete (owner request 2026-06-11):** when the manager
+  types attendees in the meeting confirmation card, suggest emails as he
+  types. Primary source: Vesta's OWN data — people/senders from his synced
+  mail, ranked by correspondence frequency (no new permission needed).
+  Optional richer source: Graph `/me/people` (Microsoft's frequent-contacts
+  ranking, incl. org colleagues never emailed from this mailbox) — needs the
+  extra `People.Read` scope. Ship local autocomplete first; add People.Read
+  only if the owner wants org-wide directory names.
 
 ## Order of work
 

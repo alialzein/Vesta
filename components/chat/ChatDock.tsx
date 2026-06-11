@@ -52,6 +52,7 @@ export function ChatDock({ open, onClose }: { open: boolean; onClose: () => void
       role: 'user',
       content: q,
       learned: [],
+      action: null,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);

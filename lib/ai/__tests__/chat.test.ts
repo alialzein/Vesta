@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  actionLabel,
   buildChatPrompt,
   isDuplicateMemory,
   parseChatReply,
@@ -58,6 +59,18 @@ describe('buildChatPrompt', () => {
     expect(user).toContain("Today's inbox brief");
     expect(user).toContain('Ali says:');
     expect(user).toContain('What should I focus on?');
+  });
+
+  it('lists work items with actionable [index] handles and the order rules', () => {
+    const { system, user } = buildChatPrompt({
+      context: makeContext(),
+      history: [],
+      message: 'Mark the Cedars item done',
+    });
+    expect(user).toContain('[0] "Cedars contract approval"');
+    expect(system).toContain('How to act (the "action" field)');
+    expect(system).toContain('You only PROPOSE');
+    expect(system).toContain('One action per turn');
   });
 
   it('tells the model to pay attention when there are no memories yet', () => {
@@ -129,6 +142,65 @@ describe('parseChatReply', () => {
   it('survives code fences around the JSON', () => {
     const parsed = parseChatReply('```json\n{"reply":"Hello Ali."}\n```');
     expect(parsed.reply).toBe('Hello Ali.');
+  });
+});
+
+describe('parseChatReply — actions', () => {
+  const wrap = (action: unknown) => JSON.stringify({ reply: 'Proposing.', action });
+
+  it('accepts each valid action kind', () => {
+    expect(parseChatReply(wrap({ kind: 'mark_done', itemIndex: 1 }), 3).action).toEqual({
+      kind: 'mark_done',
+      itemIndex: 1,
+    });
+    expect(
+      parseChatReply(wrap({ kind: 'snooze', itemIndex: 0, untilLocal: '2026-06-15 09:00' }), 3)
+        .action,
+    ).toEqual({ kind: 'snooze', itemIndex: 0, untilLocal: '2026-06-15 09:00' });
+    expect(
+      parseChatReply(wrap({ kind: 'create_task', title: 'Call Ahmad', dueLocal: '2026-06-12 15:00' }), 0)
+        .action,
+    ).toEqual({ kind: 'create_task', title: 'Call Ahmad', dueLocal: '2026-06-12 15:00' });
+    expect(
+      parseChatReply(wrap({ kind: 'draft_reply', itemIndex: 2, instruction: 'Say I can meet Thursday 2pm' }), 3)
+        .action,
+    ).toEqual({ kind: 'draft_reply', itemIndex: 2, instruction: 'Say I can meet Thursday 2pm' });
+  });
+
+  it('drops out-of-range indexes, bad times, and unknown kinds (reply survives)', () => {
+    expect(parseChatReply(wrap({ kind: 'mark_done', itemIndex: 5 }), 3).action).toBeNull();
+    expect(parseChatReply(wrap({ kind: 'mark_done', itemIndex: 0 }), 0).action).toBeNull();
+    expect(
+      parseChatReply(wrap({ kind: 'snooze', itemIndex: 0, untilLocal: 'tomorrow 9am' }), 3).action,
+    ).toBeNull();
+    expect(parseChatReply(wrap({ kind: 'delete_everything', itemIndex: 0 }), 3).action).toBeNull();
+    expect(parseChatReply(wrap('not an object'), 3).action).toBeNull();
+    expect(parseChatReply('{"reply":"No order here."}', 3).action).toBeNull();
+  });
+
+  it('create_task with an unparseable due time keeps the task, drops the time', () => {
+    const parsed = parseChatReply(
+      wrap({ kind: 'create_task', title: 'Call Ahmad', dueLocal: 'sometime' }),
+      0,
+    );
+    expect(parsed.action).toEqual({ kind: 'create_task', title: 'Call Ahmad', dueLocal: null });
+  });
+});
+
+describe('actionLabel', () => {
+  it('describes each kind with the real item title', () => {
+    expect(actionLabel({ kind: 'mark_done', itemIndex: 0 }, 'Cedars contract')).toBe(
+      'Mark "Cedars contract" as done',
+    );
+    expect(
+      actionLabel({ kind: 'snooze', itemIndex: 0, untilLocal: '2026-06-15 09:00' }, 'Cedars contract'),
+    ).toContain('until 2026-06-15 09:00');
+    expect(actionLabel({ kind: 'create_task', title: 'Call Ahmad', dueLocal: null })).toBe(
+      'Add task "Call Ahmad"',
+    );
+    expect(
+      actionLabel({ kind: 'draft_reply', itemIndex: 0, instruction: 'x' }, 'Cedars contract'),
+    ).toContain('for your approval');
   });
 });
 

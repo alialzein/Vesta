@@ -13,7 +13,7 @@
  */
 import { extractJson } from './schema';
 
-export const CHAT_PROMPT_VERSION = 'chat-v2';
+export const CHAT_PROMPT_VERSION = 'chat-v3';
 
 /** Memory types the chat may write — exactly the manager_memories vocabulary. */
 export const CHAT_MEMORY_TYPES = [
@@ -30,9 +30,23 @@ export type ChatMemoryType = (typeof CHAT_MEMORY_TYPES)[number];
 
 export type ChatMemoryProposal = { type: ChatMemoryType; text: string };
 
+/**
+ * Phase A chat orders — the model may PROPOSE one action per turn; it never
+ * executes. Items are referenced by index into the work list it was given
+ * (the briefing's anti-hallucination trick), local times as
+ * "YYYY-MM-DD HH:mm" in the manager's timezone. Everything is validated here
+ * and re-validated server-side; the manager confirms with a tap.
+ */
+export type ChatActionProposal =
+  | { kind: 'mark_done'; itemIndex: number }
+  | { kind: 'snooze'; itemIndex: number; untilLocal: string }
+  | { kind: 'create_task'; title: string; dueLocal: string | null }
+  | { kind: 'draft_reply'; itemIndex: number; instruction: string };
+
 export type ParsedChatReply = {
   reply: string;
   remember: ChatMemoryProposal[];
+  action: ChatActionProposal | null;
 };
 
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
@@ -71,7 +85,11 @@ const CHAT_JSON_HINT = `{
   "reply": "your answer to the manager, plain conversational text",
   "remember": [
     { "type": "personal" | "preference" | "vip" | "tone" | "delegation_rule" | "do_not_do" | "project_context" | "company_context", "text": "one durable fact, written so it is useful months from now" }
-  ]
+  ],
+  "action": null | { "kind": "mark_done", "itemIndex": 0 }
+          | { "kind": "snooze", "itemIndex": 0, "untilLocal": "YYYY-MM-DD HH:mm" }
+          | { "kind": "create_task", "title": "...", "dueLocal": "YYYY-MM-DD HH:mm" | null }
+          | { "kind": "draft_reply", "itemIndex": 0, "instruction": "what the reply should say" }
 }`;
 
 const HISTORY_CAP = 20; // turns sent back to the model
@@ -101,9 +119,16 @@ export function buildChatPrompt(input: {
     '- Be warm, sharp, and direct. Short answers for short questions. Never flattering filler.',
     `- Ground every claim in the context below (memories, rules, today's workload, today's briefing). Never invent emails, people, numbers, or news.`,
     '- If asked about something not in the context, say so plainly and point to where in Vesta it lives (Inbox, Waiting on Me, Draft Replies, Briefing, Memory & Rules).',
-    '- You cannot send email or change items from this chat yet. When asked to act, give the next step in the app instead (e.g. open the item and use Draft reply).',
     `- All time reasoning uses the manager's local time (given below). Be explicit about dates when deadlines are involved.`,
     '- Plain conversational text: short paragraphs, hyphen bullets when listing. No markdown headers, no asterisks, no emoji.',
+    '',
+    'How to act (the "action" field) — orders the manager gives you:',
+    `- When ${name} clearly tells you to DO one of these, propose it: mark an item done (mark_done), snooze an item until a time (snooze), create a task/reminder on the radar (create_task), or draft a reply on an item (draft_reply — the draft will wait for their approval, you never send).`,
+    '- You only PROPOSE: the manager confirms with a tap before anything happens. Your reply should state what you are proposing in one short sentence.',
+    '- Reference items ONLY by their [index] from the open-items list below. If you cannot tell which item they mean, or a time/date is missing, ask in the reply and set action to null.',
+    `- Times are the manager's LOCAL time as "YYYY-MM-DD HH:mm" (24h). Resolve words like "tomorrow 3pm" or "Monday morning" (morning=09:00, noon=12:00, afternoon=15:00, evening=18:00) from the local time given below.`,
+    '- One action per turn, only when explicitly ordered. Questions, opinions, and "should I…?" are NOT orders — answer them with action null.',
+    '- You cannot send email, schedule meetings, or email reminders to others yet. For those, say so honestly and point to the right screen.',
     '',
     'How to learn (the "remember" field) — this is what makes you THEIR Vesta:',
     `- After answering, extract durable facts from what ${name} just said — things a great chief of staff would note down: people and how to treat them (vip), standing preferences and working style (preference, tone), projects and companies (project_context, company_context), delegation habits (delegation_rule), hard limits (do_not_do), and personal context like family, health, dates that matter (personal).`,
@@ -130,7 +155,7 @@ export function buildChatPrompt(input: {
         ].join('\n')
       : '';
 
-  const workLines = ctx.workItems.slice(0, 15).map((w) => {
+  const workLines = ctx.workItems.slice(0, 15).map((w, i) => {
     const bits = [
       `"${cap(w.title, 90)}"`,
       w.category ? `[${w.category}]` : null,
@@ -140,7 +165,8 @@ export function buildChatPrompt(input: {
       w.reason ? cap(w.reason, 100) : null,
       w.suggestedAction ? `next: ${cap(w.suggestedAction, 100)}` : null,
     ].filter(Boolean);
-    return `- ${bits.join(' | ')}`;
+    // [i] is the actionable handle — actions may only reference these indexes.
+    return `[${i}] ${bits.join(' | ')}`;
   });
   const workBlock = [
     `Today's workload: ${ctx.workCounts.open} open items, ${ctx.workCounts.waiting} waiting on ${name}, ${ctx.workCounts.drafts} drafts pending review.`,
@@ -180,9 +206,44 @@ export function buildChatPrompt(input: {
   return { system, user };
 }
 
-/** Parse + validate the model's chat turn. Bad `remember` entries are dropped
- *  silently (learning is best-effort); a missing/empty reply throws. */
-export function parseChatReply(raw: string): ParsedChatReply {
+/** Local wall-time as the prompt requires it: "YYYY-MM-DD HH:mm". */
+const LOCAL_TIME_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+
+/** Validate one proposed action. Anything off-contract → null (the reply
+ *  still shows; the model was told to ask when unsure, so a dropped action
+ *  is always safe). `itemCount` = how many work items the model was shown. */
+function asAction(v: unknown, itemCount: number): ChatActionProposal | null {
+  if (!v || typeof v !== 'object') return null;
+  const a = v as Record<string, unknown>;
+  const kind = String(a.kind ?? '');
+  const idx = typeof a.itemIndex === 'number' ? a.itemIndex : Number(a.itemIndex);
+  const validIdx = Number.isInteger(idx) && idx >= 0 && idx < itemCount;
+
+  if (kind === 'mark_done') {
+    return validIdx ? { kind, itemIndex: idx } : null;
+  }
+  if (kind === 'snooze') {
+    const untilLocal = String(a.untilLocal ?? '').trim();
+    return validIdx && LOCAL_TIME_RE.test(untilLocal) ? { kind, itemIndex: idx, untilLocal } : null;
+  }
+  if (kind === 'create_task') {
+    const title = cap(String(a.title ?? ''), 200);
+    if (title.length < 3) return null;
+    const rawDue = a.dueLocal == null ? null : String(a.dueLocal).trim();
+    const dueLocal = rawDue && LOCAL_TIME_RE.test(rawDue) ? rawDue : null;
+    return { kind, title, dueLocal };
+  }
+  if (kind === 'draft_reply') {
+    const instruction = cap(String(a.instruction ?? ''), 500);
+    return validIdx && instruction.length >= 3 ? { kind, itemIndex: idx, instruction } : null;
+  }
+  return null;
+}
+
+/** Parse + validate the model's chat turn. Bad `remember` entries and
+ *  off-contract actions are dropped silently (proposing nothing is always
+ *  safe); a missing/empty reply throws. */
+export function parseChatReply(raw: string, itemCount = 0): ParsedChatReply {
   const obj = JSON.parse(extractJson(raw)) as Record<string, unknown>;
   const reply = String(obj.reply ?? '').trim();
   if (!reply) throw new Error('Chat reply was empty');
@@ -202,7 +263,25 @@ export function parseChatReply(raw: string): ParsedChatReply {
       remember.push({ type, text });
     }
   }
-  return { reply, remember };
+  return { reply, remember, action: asAction(obj.action, itemCount) };
+}
+
+/** The human-readable line a confirmation card shows for a proposal.
+ *  `itemTitle` is the REAL title resolved from the index server-side. */
+export function actionLabel(action: ChatActionProposal, itemTitle?: string | null): string {
+  const title = itemTitle ? `"${cap(itemTitle, 70)}"` : 'this item';
+  switch (action.kind) {
+    case 'mark_done':
+      return `Mark ${title} as done`;
+    case 'snooze':
+      return `Snooze ${title} until ${action.untilLocal}`;
+    case 'create_task':
+      return action.dueLocal
+        ? `Add task "${cap(action.title, 70)}" due ${action.dueLocal}`
+        : `Add task "${cap(action.title, 70)}"`;
+    case 'draft_reply':
+      return `Draft a reply on ${title} (for your approval)`;
+  }
 }
 
 /** A conversation title from the first message (used by the action + UI). */
