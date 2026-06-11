@@ -46,6 +46,9 @@ describe('buildChatPrompt', () => {
     expect(system).toContain("Ali's chief of staff");
     expect(system).toContain('Return ONLY a JSON object');
     expect(system).toContain('"remember"');
+    // The "Noted" bug (owner-reported): the model must not imply it saved
+    // anything on turns where remember is empty.
+    expect(system).toContain('When "remember" is empty, never say "Noted"');
     expect(user).toContain('Asia/Dubai');
     expect(user).toContain('Maya from Cedars Group is a VIP client.');
     expect(user).toContain('Never auto-send');
