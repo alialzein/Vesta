@@ -33,6 +33,9 @@ vi.mock('gsap', () => {
     fromTo: vi.fn(function (this: unknown) {
       return this;
     }),
+    set: vi.fn(function (this: unknown) {
+      return this;
+    }),
     kill: vi.fn(),
     scrollTrigger: null,
   };
@@ -42,7 +45,13 @@ vi.mock('gsap', () => {
       utils: { toArray: () => [] },
       fromTo: vi.fn(() => ({ scrollTrigger: null, kill: vi.fn() })),
       to: vi.fn(() => ({ scrollTrigger: null, kill: vi.fn() })),
+      set: vi.fn(),
       timeline: vi.fn(() => timeline),
+      // FeatureSpotlights builds its mock timelines inside a gsap.context.
+      context: vi.fn((fn?: () => void) => {
+        fn?.();
+        return { revert: vi.fn() };
+      }),
     },
   };
 });
@@ -88,23 +97,43 @@ describe('LandingPage', () => {
     for (const link of signIns) expect(link).toHaveAttribute('href', '/login');
   });
 
-  it('tells the four-step story of an email through Vesta', () => {
+  it('tells the six-step story of an email through Vesta', () => {
     renderLanding();
     for (const title of [
       'One connection',
       'Noise never reaches you',
+      'AI that shows its work',
       'A radar, not an inbox',
       'Reply with one approval',
+      'It keeps working',
     ]) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
   });
 
-  it('shows the feature grid and the approval-first safety strip', () => {
+  it('shows the three feature spotlight bands', () => {
     renderLanding();
-    expect(screen.getByText('Today’s Radar')).toBeInTheDocument();
-    expect(screen.getByText('Drafts in your tone')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Start where it matters/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'AI that shows its work.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Approve, don.t compose\./ })).toBeInTheDocument();
+  });
+
+  it('shows the toolkit grid and the approval-first safety strip', () => {
+    renderLanding();
+    expect(screen.getByText('“Waiting on them” tracking')).toBeInTheDocument();
+    expect(screen.getByText('Morning Brief')).toBeInTheDocument();
+    expect(screen.getByText('Senders with faces')).toBeInTheDocument();
     expect(screen.getByText(/Nothing is ever sent without your explicit approval/)).toBeInTheDocument();
+  });
+
+  it('shows the honest roadmap strip with Soon badges', () => {
+    renderLanding();
+    expect(screen.getByRole('heading', { name: 'Where Vesta goes next.' })).toBeInTheDocument();
+    expect(screen.getByText('Memory & Rules')).toBeInTheDocument();
+    expect(screen.getByText('AI Decision Desk')).toBeInTheDocument();
+    expect(screen.getAllByText('Soon')).toHaveLength(4);
   });
 
   it('has a working theme toggle button', () => {
