@@ -4,19 +4,19 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**PERSONAL INTELLIGENCE BRIEF v1 built on
-`feat/personal-briefing` — PR open. ⚠️ NEEDS THE MIGRATION RUN
-(`supabase/migrations/20260611190001_personal_briefing.sql`, owner-approved
-SQL) in the Supabase SQL editor before the feature works.** Owner decisions:
-real v1 in one go (skip demo phase); news engine is MANAGER-SELECTABLE
-(Google News RSS default / AI web-search with silent RSS fallback); lean
-2-table model. 394 tests green.)
-**Repo state:** `main` = #49–#53; briefing branch pushed.
-**Next: 1) owner merges the briefing PR + RUNS THE MIGRATION + verifies (see
-below) → 2) pick next: AI Decision Desk (Phase 12, discuss scope) / Teams /
-"Ask Vesta" chat real / reminder processor. Pre-launch checklist standing
-(rotate keys/passwords, re-enable email confirmation, remove dev user,
-Mail.Send on prod Azure app).**
+**Last updated:** 2026-06-11 (**PERSONAL INTELLIGENCE BRIEF v1 MERGED (#54)
+and the migration WAS RUN by the owner** (`20260611190001_personal_briefing`
+applied in Supabase). `main` = #49–#54. 394 tests green.)
+**Owner verify when convenient (both themes, after Vercel deploys):**
+sidebar → Briefing → set topics + a company → Save & build → items with real
+source links in seconds; Refresh rebuilds; Save survives to tomorrow's
+"Saved for later"; engine switch to AI web search works (or silently falls
+back to Google News); admin AI page shows `brief` rows.
+**Next: pick next track: AI Decision Desk (Phase 12, discuss scope first) /
+Teams (Phase 13) / "Ask Vesta" chat made real (reads 'personal' memories) /
+reminder processor + notifications bell (Phase 8 leftover). Pre-launch
+checklist standing (rotate keys/passwords, re-enable email confirmation,
+remove dev user, Mail.Send on prod Azure app).**
 
 ## 📰 Personal Intelligence Brief v1 (built 2026-06-11, `feat/personal-briefing`)
 
