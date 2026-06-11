@@ -4,20 +4,31 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**Briefing v1 MERGED (#54), migration applied,
-and the generation bug FIXED + MERGED (#55)** — upsert ON CONFLICT couldn't
-use the partial dedupe index → plain insert; Refresh delete now precedes the
-seen-check. `main` = #49–#55. 394 tests green.)
-**Owner verify when convenient (both themes, after Vercel deploys):**
-sidebar → Briefing → set topics + a company → Save & build → items with real
-source links in seconds; Refresh rebuilds; Save survives to tomorrow's
-"Saved for later"; engine switch to AI web search works (or silently falls
-back to Google News); admin AI page shows `brief` rows.
+**Last updated:** 2026-06-11 (**TWO PRs OPEN, awaiting owner merge:**
+**PR #56 `feat/briefing-alive`** — Briefing page brought to life: article
+og:images (Google News link decode), hero top story, publisher favicons,
+"NN% match" labeled score with tooltip, Saved-shelf explainer; no migration.
+**PR #57 `feat/ask-vesta`** — Ask Vesta chat made REAL (the superpower):
+full `/chat` page, grounded in memories + rules + today's radar + briefing +
+inbox brief, with a learning loop that writes durable facts to
+`manager_memories` (source 'chat', visible/deletable in Memory & Rules);
+demo drawer deleted; dashboard FAB now links to /chat.
+**⚠️ PR #57 needs its migration run in Supabase BEFORE testing:**
+`supabase/migrations/20260611220001_ask_vesta_chat.sql` (chat_conversations +
+chat_messages, own-rows RLS; owner pre-approved DB changes for this feature).
+Both branches pass 411 tests each; PRs are independent (both cut from
+#49–#55 main). If both merge, re-run the suite on main after the second
+merge (trivial overlap only: none expected — different files).
+**Owner verify after merge+migration (both themes):** Briefing → Refresh →
+cards show images (old items show gradient art until rebuilt; some sites
+block previews → that's the fallback, not a bug). Chat → sidebar Ask Vesta →
+starter chip answers from real radar; say "Remember that ..." → blue "Saved
+to memory" chip → confirm it appears in Memory & Rules and can be deleted;
+admin AI page shows `chat` rows.
 **Next: pick next track: AI Decision Desk (Phase 12, discuss scope first) /
-Teams (Phase 13) / "Ask Vesta" chat made real (reads 'personal' memories) /
-reminder processor + notifications bell (Phase 8 leftover). Pre-launch
-checklist standing (rotate keys/passwords, re-enable email confirmation,
-remove dev user, Mail.Send on prod Azure app).**
+Teams (Phase 13) / reminder processor + notifications bell (Phase 8
+leftover). Pre-launch checklist standing (rotate keys/passwords, re-enable
+email confirmation, remove dev user, Mail.Send on prod Azure app).**
 
 ## 📰 Personal Intelligence Brief v1 (built 2026-06-11, `feat/personal-briefing`)
 
