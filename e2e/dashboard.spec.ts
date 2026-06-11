@@ -90,16 +90,22 @@ test.describe('Dashboard shell', () => {
     ).toBeVisible();
   });
 
-  test('the floating Ask Vesta button opens the real chat page', async ({ page }) => {
+  test('the floating Ask Vesta button opens the mini chat dock over the radar', async ({ page }) => {
     await waitForDashboard(page);
 
-    // The old demo drawer is gone — Ask Vesta is a real route now.
-    const fab = page.getByRole('link', { name: 'Ask Vesta' }).last();
-    await expect(fab).toBeVisible();
+    await page.getByRole('button', { name: 'Ask Vesta' }).click();
+    // Non-modal dock: composer visible AND the radar still on screen.
+    await expect(page.getByPlaceholder('Ask Vesta anything…')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Today's Radar/i })).toBeVisible();
 
-    await fab.click();
-    await expect(page).toHaveURL(/\/chat/);
-    await expect(page.getByLabel('Message Vesta')).toBeVisible();
+    // The expand control leads to the full-screen chat page.
+    await expect(page.getByRole('link', { name: 'Open full chat view' })).toHaveAttribute(
+      'href',
+      '/chat',
+    );
+
+    await page.getByRole('button', { name: 'Close mini chat' }).click();
+    await expect(page.getByRole('button', { name: 'Ask Vesta' })).toBeVisible();
   });
 
   test('a quick action opens its demo preview drawer', async ({ page }) => {
