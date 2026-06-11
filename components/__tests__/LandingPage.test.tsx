@@ -122,18 +122,20 @@ describe('LandingPage', () => {
 
   it('shows the toolkit grid and the approval-first safety strip', () => {
     renderLanding();
+    // Memory & Rules shipped (Phase 10) — it lives in the toolkit grid now.
+    expect(screen.getByText('Memory & Rules')).toBeInTheDocument();
     expect(screen.getByText('“Waiting on them” tracking')).toBeInTheDocument();
     expect(screen.getByText('Morning Brief')).toBeInTheDocument();
     expect(screen.getByText('Senders with faces')).toBeInTheDocument();
     expect(screen.getByText(/Nothing is ever sent without your explicit approval/)).toBeInTheDocument();
   });
 
-  it('shows the honest roadmap strip with Soon badges', () => {
+  it('shows the honest roadmap strip with Soon badges (shipped features are not in it)', () => {
     renderLanding();
     expect(screen.getByRole('heading', { name: 'Where Vesta goes next.' })).toBeInTheDocument();
-    expect(screen.getByText('Memory & Rules')).toBeInTheDocument();
     expect(screen.getByText('AI Decision Desk')).toBeInTheDocument();
-    expect(screen.getAllByText('Soon')).toHaveLength(4);
+    expect(screen.getByText('Daily Brief & Focus Mode')).toBeInTheDocument();
+    expect(screen.getAllByText('Soon')).toHaveLength(3);
   });
 
   it('has a working theme toggle button', () => {

@@ -9,8 +9,9 @@ a glowing path carries an email through Vesta's pipeline as you scroll. Each sto
 is labeled right in the scene: **01 Inbox → 02 Filtering → 03 AI Analysis →
 04 Today's Radar → 05 Approve & Send**, and at the end the path **fans out** into
 everything Vesta keeps doing after you hit send — tracking who owes you an answer,
-your tasks, your morning brief — plus a "coming soon" horizon (Memory & Rules,
-Decision Desk, Teams) drawn as wireframes because they're designed, not built yet.
+your tasks, your morning brief, and the Memory & Rules you teach it — plus a
+"coming soon" horizon (Decision Desk, Teams) drawn as wireframes because they're
+designed, not built yet.
 
 Below the tour, the three headline features (the radar, the AI's readable reasons,
 and draft-with-approval) each get a live animated walkthrough, followed by the
