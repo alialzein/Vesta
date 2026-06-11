@@ -35,12 +35,21 @@ The first visit asks what you care about (this takes a minute):
 - Built **once per day** automatically (first visit of the day) and cached —
   it refreshes after your midnight (Settings → Timezone). **Refresh** rebuilds
   it on demand.
+- The **top story** appears as a large featured card; the rest follow in a
+  grid. Cards show the **article's own image** when the publisher provides
+  one; otherwise a colored category panel stands in (some sites block
+  previews — that's them, not a bug).
 - Each card shows: a category chip (**Must know**, Regulation & risk,
   Clients & competitors…), the de-clickbaited headline, a short factual
   summary, **Why it matters** written for *your* role and interests, a
-  **suggested action** when there is one, and the **source link** — always.
-- **Save** keeps an item on the "Saved for later" shelf (it survives across
-  days). **Dismiss** removes it. Stories you've already been shown won't
+  **suggested action** when there is one, and the **source link** — always,
+  with the publisher's logo next to the source name.
+- **The "% match" number** is Vesta's relevance score: how closely the story
+  matches *you* — your role, topics, and tracked companies. 100 means
+  "you'd regret missing this". Hover it for the explanation in-app.
+- **Save** keeps an item on the **"Saved for later" shelf at the bottom of
+  this same page** (it survives across days — read it whenever you have
+  time). **Dismiss** removes it. Stories you've already been shown won't
   repeat on later days.
 
 ## What it costs and what it shares

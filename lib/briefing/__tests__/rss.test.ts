@@ -50,6 +50,7 @@ describe('parseRssItems', () => {
     expect(items).toHaveLength(2);
     expect(items[0].title).toBe('New AI data regulation announced in the UAE');
     expect(items[0].sourceName).toBe('Gulf Times');
+    expect(items[0].sourceHomepage).toBe('https://gulftimes.example');
     expect(items[0].publishedAt).toBe('2026-06-11T06:00:00.000Z');
     expect(items[0].snippet).toContain('covering data storage rules');
     expect(items[0].snippet).not.toContain('<a');

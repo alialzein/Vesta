@@ -34,6 +34,10 @@ export type BriefingItemView = {
   sourceUrl: string | null;
   publishedAt: string | null;
   status: 'unread' | 'read' | 'saved' | 'dismissed';
+  /** Article social image (og:image), when generation could resolve one. */
+  imageUrl: string | null;
+  /** Publisher domain — used for the source favicon chip. */
+  sourceDomain: string | null;
 };
 
 export type PrefsRow = Database['public']['Tables']['briefing_preferences']['Row'];
@@ -67,6 +71,8 @@ export function toPrefs(row: PrefsRow | null): BriefingPrefs {
 }
 
 export function toItemView(r: ItemRow): BriefingItemView {
+  const meta = (r.metadata ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null);
   return {
     id: r.id,
     rank: r.rank,
@@ -82,6 +88,8 @@ export function toItemView(r: ItemRow): BriefingItemView {
     status: (['read', 'saved', 'dismissed'].includes(r.status)
       ? r.status
       : 'unread') as BriefingItemView['status'],
+    imageUrl: str(meta.image_url),
+    sourceDomain: str(meta.source_domain),
   };
 }
 
