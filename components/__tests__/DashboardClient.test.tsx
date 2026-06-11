@@ -5,6 +5,15 @@ import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { ThemeProvider } from '@/lib/theme';
 import { ToastProvider } from '@/components/ui/Toast';
 
+// The shell navigates (Ask Vesta FAB prefetch, collapsed-rail chat); jsdom has
+// no app router, so mock it (same pattern as the AppShell test).
+const push = vi.fn();
+const prefetch = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push, prefetch, refresh: vi.fn() }),
+  usePathname: () => '/',
+}));
+
 // AutoSync runs background server actions on mount; stub it out so this shell
 // test stays isolated (its logic is covered by lib/sync/__tests__/auto.test.ts).
 vi.mock('@/components/sync/AutoSync', () => ({ AutoSync: () => null }));
@@ -100,15 +109,11 @@ describe('DashboardClient shell', () => {
     expect(screen.queryByText("Today's Radar")).not.toBeInTheDocument();
   });
 
-  it('opens the chat drawer from the floating button and closes it', async () => {
-    const user = userEvent.setup();
+  it('Ask Vesta is a real link to the chat page (sidebar + floating button)', () => {
     renderDashboard();
-
-    await user.click(screen.getByRole('button', { name: /Open Vesta assistant/i }));
-    expect(screen.getByPlaceholderText('Ask the assistant anything…')).toBeVisible();
-
-    await user.click(screen.getByRole('button', { name: /Close assistant/i }));
-    expect(screen.getByRole('button', { name: /Open Vesta assistant/i })).toBeInTheDocument();
+    const links = screen.getAllByRole('link', { name: /Ask Vesta/i });
+    expect(links.length).toBeGreaterThanOrEqual(2); // sidebar item + FAB
+    for (const link of links) expect(link).toHaveAttribute('href', '/chat');
   });
 
   it('collapses and expands the sidebar without losing nav access', async () => {

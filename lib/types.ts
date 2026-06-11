@@ -209,10 +209,3 @@ export type MorningBrief = {
 
 /** Tabs in the Contextual AI Assistant Rail. */
 export type RailTab = 'action' | 'draft' | 'memory' | 'activity';
-
-/** A single chat message in the assistant panel (mock only in Phase 0). */
-export type ChatMessage = {
-  id: string;
-  author: 'ai' | 'user';
-  html: string;
-};

@@ -59,7 +59,6 @@ HTML mockup while staying idiomatic.
 │   │   ├── MemoryView.tsx        # Full-page "Memory & Rules" workspace (0.4):
 │   │   │                         #   add form, category tabs, list, help panel
 │   │   ├── ManagerMemoryPanel.tsx# Compact add/forget memory card (retained, reused)
-│   │   ├── AssistantChat.tsx     # Right-side chat drawer opened by a FAB (client)
 │   │   ├── VestaSplashScreen.tsx # Full-screen opaque branded init splash (0.5 rev)
 │   │   ├── DashboardAtmosphere.tsx# Subtle blue/cyan radial blooms (no grid) (0.5)
 │   │   └── HowItWorks.tsx        # 5-step explainer strip
@@ -103,8 +102,10 @@ HTML mockup while staying idiomatic.
   Action/Draft/Memory/Activity tabs. The topbar AI toggle collapses it to a slim
   64px icon strip (clicking an icon re-expands to that tab). Below `lg` it stacks
   below the main content.
-- **Assistant chat** is a floating "Ask Vesta" button (bottom-right) that opens a
-  right-side drawer with a backdrop; closes on the X, backdrop click, or Escape.
+- **Ask Vesta** is a floating button (bottom-right) and a sidebar item that both
+  navigate to the real `/chat` page (`components/chat/ChatView.tsx`,
+  `app/actions/chat.ts`) — the manager's second-brain chat with the learning
+  loop into `manager_memories`. (The old demo drawer is gone.)
 
 > Phase 0.1 ("dashboard polish") refreshed the light theme into a premium light
 > SaaS palette, added the topbar utility toolbar, AI Command Center, the
@@ -218,7 +219,7 @@ shapes) is the migration path for later phases.
 
 - Pure business logic lives in `lib/` as small testable functions.
 - Components are server components unless they need state/effects; those are
-  marked `'use client'` (Topbar, TodaysRadar, ManagerMemoryPanel, AssistantChat,
+  marked `'use client'` (Topbar, TodaysRadar, ManagerMemoryPanel, ChatView,
   DashboardClient, ThemeProvider).
 - Tests sit in `__tests__/` next to the code they cover; E2E lives in `e2e/`.
 - The `@/*` path alias maps to the repo root.

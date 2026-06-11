@@ -8,6 +8,7 @@ export type AiFeature =
   | 'reply_intent'
   | 'capture'
   | 'brief'
+  | 'chat'
   | 'triage'
   | 'other';
 

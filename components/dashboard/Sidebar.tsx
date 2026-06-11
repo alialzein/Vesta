@@ -29,6 +29,7 @@ function buildNav(counts: NavCounts): NavGroup[] {
     {
       heading: 'Intelligence',
       items: [
+        { label: 'Ask Vesta', icon: 'chat', href: '/chat' },
         // Delegation is roadmap (Phase 12) — shown honestly, not a dead click.
         { label: 'Delegation', icon: 'delegate', soon: true },
         { label: 'Memory & Rules', icon: 'brain', view: 'memory' },

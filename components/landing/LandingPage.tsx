@@ -125,6 +125,11 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
     title: 'Personal Briefing',
     body: 'Daily intelligence from YOUR topics — clients, competitors, regulations — each item with why it matters and a suggested move.',
   },
+  {
+    icon: 'chat',
+    title: 'Ask Vesta',
+    body: 'A second brain you talk to. It answers from your inbox, memory, and briefing — and learns you with every conversation, saving what matters to Memory & Rules.',
+  },
 ];
 
 const ROADMAP: { title: string; body: string }[] = [
