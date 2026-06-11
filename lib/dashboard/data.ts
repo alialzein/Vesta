@@ -23,6 +23,7 @@ import {
   senderDisplay,
 } from '@/lib/dashboard/present';
 import { priorityBand } from '@/lib/priority';
+import { todayInTz } from '@/lib/time/zone';
 
 /**
  * Real dashboard data (Phase 6-derived). Maps the manager's `work_items` (the
@@ -182,6 +183,8 @@ export type DashboardData = {
   brief: MorningBrief;
   /** The manager's Memory & Rules rows (active + paused + pending suggestions). */
   memories: MemoryRecord[];
+  /** The manager's IANA timezone (profiles.timezone; auto-detected, default UTC). */
+  timezone: string;
 };
 
 /** Raw manager_memories slice the dashboard reads. */
@@ -224,15 +227,20 @@ function memoryUsedFor(rows: MemoryDbRow[], sender?: SenderInfo): ManagerMemory[
  */
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = createClient();
-  const { data } = await supabase
-    .from('work_items')
-    .select(WORK_ITEM_COLS)
-    // Open items, plus snoozed ones whose snooze time has passed (those come back
-    // to the radar on their own — see the due filter below).
-    .in('status', ['open', 'snoozed'])
-    .order('priority_score', { ascending: false })
-    .order('updated_at', { ascending: false })
-    .limit(50);
+  const [{ data }, { data: tzProfile }] = await Promise.all([
+    supabase
+      .from('work_items')
+      .select(WORK_ITEM_COLS)
+      // Open items, plus snoozed ones whose snooze time has passed (those come back
+      // to the radar on their own — see the due filter below).
+      .in('status', ['open', 'snoozed'])
+      .order('priority_score', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .limit(50),
+    // The manager's timezone drives "today" for the daily brief cache.
+    supabase.from('profiles').select('timezone').limit(1).maybeSingle(),
+  ]);
+  const timezone = tzProfile?.timezone ?? 'UTC';
   const now = Date.now();
   const rows = ((data ?? []) as WorkItemRow[]).filter(
     (r) =>
@@ -305,11 +313,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       .order('created_at', { ascending: false })
       .limit(200),
     // Phase 11 — today's cached AI brief (generated once per day by
-    // generateDailyBrief; absent on the first load of the morning).
+    // generateDailyBrief; absent on the first load of the morning). "Today"
+    // is the manager's calendar date, so the brief rolls over at their
+    // midnight, not UTC's.
     supabase
       .from('daily_briefs')
       .select('title, summary, sections')
-      .eq('brief_date', new Date().toISOString().slice(0, 10))
+      .eq('brief_date', todayInTz(timezone))
       .maybeSingle(),
   ]);
   // Newest-first, so the first draft seen per item is the live one.
@@ -356,5 +366,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     kpis: buildKpis(workItems),
     brief,
     memories: memoryRows.map(toMemoryRecord),
+    timezone,
   };
 }

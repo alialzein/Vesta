@@ -20,8 +20,11 @@ function resolvedRow(
 }
 
 describe('windowStart', () => {
-  it('returns the ISO timestamp 7 days before now', () => {
-    expect(windowStart(NOW)).toBe('2026-06-04T12:00:00.000Z');
+  it("returns midnight (manager tz) of the oldest of the last 7 calendar days", () => {
+    // 7 calendar days ending Jun 11 → window opens Jun 5 at tz midnight.
+    expect(windowStart(NOW, 'UTC')).toBe('2026-06-05T00:00:00.000Z');
+    // Beirut (UTC+3): local midnight Jun 5 = 21:00 UTC Jun 4.
+    expect(windowStart(NOW, 'Asia/Beirut')).toBe('2026-06-04T21:00:00.000Z');
   });
 });
 
@@ -60,6 +63,21 @@ describe('buildWeeklyReview', () => {
     expect(review.perDay[6]).toMatchObject({ iso: '2026-06-11', label: 'Thu', count: 2 });
     // Days in between stay zero.
     expect(review.perDay.slice(1, 6).every((d) => d.count === 0)).toBe(true);
+  });
+
+  it("buckets by the MANAGER's calendar day, not the server's (tz)", () => {
+    // 22:00 UTC on Jun 10 = 01:00 Jun 11 in Beirut (UTC+3) → tomorrow's bucket.
+    const review = buildWeeklyReview({
+      resolved: [resolvedRow('a', '2026-06-10T22:00:00.000Z', 'done')],
+      sent: [],
+      inbound: [],
+      now: NOW,
+      tz: 'Asia/Beirut',
+    });
+    const jun10 = review.perDay.find((d) => d.iso === '2026-06-10');
+    const jun11 = review.perDay.find((d) => d.iso === '2026-06-11');
+    expect(jun10?.count).toBe(0);
+    expect(jun11?.count).toBe(1);
   });
 
   it('ranks the busiest senders (keyed by email, case-insensitive) and keeps the top 5', () => {

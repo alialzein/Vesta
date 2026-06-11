@@ -4,9 +4,10 @@
  * day-by-day completion rhythm, and the senders who took the most attention.
  *
  * Pure + unit-tested; the route page only fetches rows and renders this shape.
- * Days bucket on UTC for now — per-manager timezone (profiles.timezone) is a
- * queued improvement that should land here and in due_at together.
+ * Days bucket in the MANAGER's timezone (profiles.timezone, default UTC), so
+ * "Tuesday" means the manager's Tuesday — not the server's.
  */
+import { lastCalendarDays, todayInTz, weekdayShortOf, zonedTimeToUtc } from '@/lib/time/zone';
 
 export type ResolvedItemRow = {
   id: string;
@@ -47,9 +48,12 @@ export type WeeklyReview = {
   empty: boolean;
 };
 
-/** ISO timestamp `days` days before `now` — the review window's start. */
-export function windowStart(now: Date, days = 7): string {
-  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+/** The review window's start: midnight (manager's timezone) of the oldest of
+ *  the last `days` calendar days — so the window covers whole days, matching
+ *  the day-by-day buckets exactly. */
+export function windowStart(now: Date, tz?: string | null, days = 7): string {
+  const oldest = lastCalendarDays(tz, days, now)[0];
+  return zonedTimeToUtc(oldest, '00:00', tz).toISOString();
 }
 
 function resolvedMeta(row: ResolvedItemRow): { at: string | null; kind: 'done' | 'dismissed' } {
@@ -59,31 +63,33 @@ function resolvedMeta(row: ResolvedItemRow): { at: string | null; kind: 'done' |
   return { at: typeof meta.resolved_at === 'string' ? meta.resolved_at : null, kind };
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEKDAY = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' });
-
 export function buildWeeklyReview(input: {
   resolved: ResolvedItemRow[];
   sent: SentDraftRow[];
   inbound: InboundMessageRow[];
   now?: Date;
+  /** The manager's IANA timezone (profiles.timezone); defaults to UTC. */
+  tz?: string | null;
 }): WeeklyReview {
   const now = input.now ?? new Date();
+  const tz = input.tz ?? 'UTC';
 
   const resolved = input.resolved.map((r) => ({ row: r, ...resolvedMeta(r) }));
   const doneItems = resolved.filter((r) => r.kind === 'done');
   const dismissed = resolved.length - doneItems.length;
 
-  // 7 buckets, oldest → today, keyed by UTC date.
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const perDay: WeeklyDay[] = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(todayUtc - (6 - i) * DAY_MS);
-    return { label: WEEKDAY.format(day), iso: day.toISOString().slice(0, 10), count: 0 };
-  });
+  // 7 buckets, oldest → today, keyed by the MANAGER's calendar dates.
+  const perDay: WeeklyDay[] = lastCalendarDays(tz, 7, now).map((iso) => ({
+    label: weekdayShortOf(iso),
+    iso,
+    count: 0,
+  }));
   const bucketByIso = new Map(perDay.map((d) => [d.iso, d]));
   for (const r of doneItems) {
     if (!r.at) continue;
-    const bucket = bucketByIso.get(r.at.slice(0, 10));
+    const at = new Date(r.at);
+    if (Number.isNaN(at.getTime())) continue;
+    const bucket = bucketByIso.get(todayInTz(tz, at));
     if (bucket) bucket.count += 1;
   }
 

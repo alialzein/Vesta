@@ -7,6 +7,7 @@ import { buildBriefPrompt, parseBrief, BRIEF_PROMPT_VERSION, type BriefItem } fr
 import { getEffectiveAi } from '@/lib/ai/runtime';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
+import { longTodayInTz, todayInTz } from '@/lib/time/zone';
 import type { WorkItem } from '@/lib/types';
 
 /**
@@ -23,11 +24,6 @@ export type BriefResult =
   | { ok: true; headline: string; body: string; focusItemId: string | null; focusReason: string | null }
   | { ok: false; reason: string };
 
-/** UTC calendar date — matches the rest of the day-bucketing (manager-timezone
- *  support is a queued improvement that lands everywhere at once). */
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function toBriefItem(w: WorkItem): BriefItem {
   const fresh = w.lastActivityAt
@@ -49,7 +45,14 @@ function toBriefItem(w: WorkItem): BriefItem {
 export async function generateDailyBrief(): Promise<BriefResult> {
   const user = await requireUser();
   const supabase = createClient();
-  const briefDate = todayUtc();
+  // "Today" follows the manager's clock — the brief rolls over at THEIR midnight.
+  const { data: tzProfile } = await supabase
+    .from('profiles')
+    .select('timezone')
+    .eq('id', user.id)
+    .maybeSingle();
+  const tz = tzProfile?.timezone ?? 'UTC';
+  const briefDate = todayInTz(tz);
 
   // Already written today (another tab/device won the race)? Serve the cache.
   const { data: cached } = await supabase
@@ -80,13 +83,7 @@ export async function generateDailyBrief(): Promise<BriefResult> {
   const { cfg, client, rates } = eff;
 
   const items = workItems.slice(0, 12).map(toBriefItem);
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
+  const today = longTodayInTz(tz);
 
   try {
     const prompt = buildBriefPrompt({ items, today });

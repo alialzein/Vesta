@@ -9,6 +9,52 @@ import { getMe } from '@/lib/graph/client';
 import { syncOutlookForUser, reprocessMailForUser, type SyncResult } from '@/lib/sync/outlook';
 import { removeSubscriptionForMailbox } from '@/lib/sync/subscriptions';
 import type { TriageMode } from '@/lib/engine/triage';
+import { isValidTimeZone } from '@/lib/time/zone';
+
+/**
+ * Timezone (manager-timezone pass) — due dates, day buckets, the daily-brief
+ * date, and AI date labels all follow `profiles.timezone`. The browser reports
+ * the device zone on app load (TimezoneSync); a manual pick in Settings pins it
+ * (recorded as `tz_manual` in the auth user metadata — no schema change) and
+ * auto-detection then leaves it alone.
+ */
+
+/** Auto-detect (fire-and-forget from the client). Respects a manual pin. */
+export async function reportDetectedTimezone(tz: string): Promise<void> {
+  if (!isValidTimeZone(tz)) return;
+  const user = await requireUser();
+  if (user.user_metadata?.tz_manual === true) return; // pinned in Settings
+  const supabase = createClient();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('timezone')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (profile && profile.timezone !== tz) {
+    await supabase.from('profiles').update({ timezone: tz }).eq('id', user.id);
+  }
+}
+
+export type TimezoneResult = { ok: boolean; error?: string };
+
+/** Settings: pin a timezone manually, or return to following the device. */
+export async function setTimezonePreference(
+  mode: 'auto' | 'manual',
+  tz: string,
+): Promise<TimezoneResult> {
+  if (!isValidTimeZone(tz)) return { ok: false, error: 'That timezone is not recognized.' };
+  const user = await requireUser();
+  const supabase = createClient();
+  const { error: authError } = await supabase.auth.updateUser({
+    data: { tz_manual: mode === 'manual' },
+  });
+  if (authError) return { ok: false, error: authError.message };
+  const { error } = await supabase.from('profiles').update({ timezone: tz }).eq('id', user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath('/settings');
+  revalidatePath('/');
+  return { ok: true };
+}
 
 /** Re-run triage over stored mail and refresh the mail-facing views. */
 async function reprocessAndRevalidate(userId: string): Promise<SyncResult> {

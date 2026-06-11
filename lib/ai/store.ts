@@ -8,6 +8,7 @@ import { buildReplyIntentPrompt, parseReplyIntent } from './reply-intent';
 import { estimateCostUsd } from './cost';
 import { recordAiUsage } from './usage';
 import { getEffectiveAi } from './runtime';
+import { zonedTimeToUtc } from '@/lib/time/zone';
 
 type DbClient = SupabaseClient<Database>;
 type AnalysisInsert = Database['public']['Tables']['ai_analyses']['Insert'];
@@ -93,8 +94,9 @@ export async function analyzeMailboxWorkItems(
 
   // Phase 10 — the manager's memory, loaded ONCE per run (not per item): the
   // standing notes go into each analysis prompt, and VIP senders are flagged
-  // from people.is_vip plus any VIP memory naming the person/domain.
-  const [{ data: memRows }, { data: vipRows }] = await Promise.all([
+  // from people.is_vip plus any VIP memory naming the person/domain. The
+  // profile timezone rides along so deadlines become 9 AM the MANAGER's time.
+  const [{ data: memRows }, { data: vipRows }, { data: tzProfile }] = await Promise.all([
     db
       .from('manager_memories')
       .select('id, memory_type, memory_text, scope, scope_ref, is_active')
@@ -103,7 +105,9 @@ export async function analyzeMailboxWorkItems(
       .order('created_at', { ascending: false })
       .limit(200),
     db.from('people').select('email').eq('user_id', ctx.userId).eq('is_vip', true),
+    db.from('profiles').select('timezone').eq('id', ctx.userId).maybeSingle(),
   ]);
+  const managerTz = tzProfile?.timezone ?? 'UTC';
   const memories = (memRows ?? []) as MemoryRow[];
   const vipEmails = new Set(
     (vipRows ?? []).map((r) => r.email?.toLowerCase()).filter((e): e is string => !!e),
@@ -350,7 +354,11 @@ export async function analyzeMailboxWorkItems(
           priority_score: blendedPriority,
           suggested_action: analysis.nextAction,
           urgency_reason: analysis.reason,
-          due_at: analysis.deadline ? `${analysis.deadline}T09:00:00Z` : null,
+          // Deadline = 9:00 AM in the manager's timezone (was 9:00 UTC, which
+          // made deadlines land mid-day or pre-dawn depending on where you live).
+          due_at: analysis.deadline
+            ? zonedTimeToUtc(analysis.deadline, '09:00', managerTz).toISOString()
+            : null,
           last_analyzed_at: nowIso,
           analysis_version: 1,
         })

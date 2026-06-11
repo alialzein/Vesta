@@ -97,10 +97,25 @@ export async function snoozeWorkItem(
  * 3pm"). The due date/time is parsed deterministically (no AI). Stored as a
  * mailbox-independent work_item (source 'manual', category 'task') so it shows on
  * Today's Radar alongside email items and supports the same done/snooze actions.
+ *
+ * `parsed` is the CLIENT-side parse result (same pure parser, run in the
+ * browser) — there "tomorrow 3pm" resolves in the manager's own timezone. The
+ * server re-parses only as a fallback (its clock is UTC on Vercel).
  */
-export async function createManualTask(input: string): Promise<WorkItemActionResult> {
+export async function createManualTask(
+  input: string,
+  parsed?: { title: string; dueAt: string | null },
+): Promise<WorkItemActionResult> {
   const user = await requireUser();
-  const { title, dueAt } = parseQuickTask(input);
+  // Trust the pre-parsed values only when they're sane (it's the user's own
+  // task, but a bad date must never enter the radar's sorting).
+  const clientParse =
+    parsed &&
+    typeof parsed.title === 'string' &&
+    (parsed.dueAt === null || !Number.isNaN(new Date(parsed.dueAt ?? '').getTime()))
+      ? { title: parsed.title.trim().slice(0, 300), dueAt: parsed.dueAt }
+      : null;
+  const { title, dueAt } = clientParse ?? parseQuickTask(input);
   if (!title) return { ok: false, error: 'Please enter a task.' };
 
   const supabase = createClient();

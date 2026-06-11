@@ -28,6 +28,20 @@ effect right away. Full details in
 From here you can also **Review hidden mail** and see your **managed senders** (the
 allow/mute rules you've created), removing any you no longer want.
 
+## Your timezone
+
+Under **Preferences → Timezone**. Everything time-based follows this clock: task
+due times ("tomorrow" means *your* tomorrow morning), AI deadline dates, the
+Weekly Review's day-by-day bars, when your daily brief refreshes, and the dates
+the AI sees when writing replies.
+
+- **Automatic (default):** Vesta follows your device — sign in from anywhere
+  and it adjusts on its own. You don't have to do anything.
+- **Pin a timezone:** pick one from the list and it stays fixed no matter which
+  device you use, until you switch back to Automatic.
+
+The card always shows which timezone is currently in effect.
+
 ## Light & dark mode
 
 Vesta fully supports both **light** and **dark** themes on every screen. **Dark is

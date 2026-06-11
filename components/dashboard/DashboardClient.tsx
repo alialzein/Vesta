@@ -15,6 +15,7 @@ import {
   createTaskWithAi,
 } from '@/app/actions/work-items';
 import { generateDailyBrief } from '@/app/actions/brief';
+import { parseQuickTask } from '@/lib/tasks/parse';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
 import { useToast } from '@/components/ui/Toast';
@@ -39,6 +40,7 @@ import { CleanInboxDrawer } from './CleanInboxDrawer';
 import { VestaSplashScreen } from './VestaSplashScreen';
 import { DashboardAtmosphere } from './DashboardAtmosphere';
 import { AutoSync } from '@/components/sync/AutoSync';
+import { TimezoneSync } from '@/components/sync/TimezoneSync';
 import { Icon } from '@/components/ui/Icon';
 import type { AccountView } from '@/lib/supabase/account';
 import type { DraftCapabilities } from '@/lib/drafts/capabilities';
@@ -313,10 +315,12 @@ export function DashboardClient({
     });
   }
 
-  /** Quick-add a manual task; the radar refreshes from the server on success. */
+  /** Quick-add a manual task; the radar refreshes from the server on success.
+   *  Parsed HERE in the browser so "tomorrow 3pm" resolves in the manager's
+   *  timezone (the server clock is UTC). */
   function handleAddTask(input: string) {
     setActionBusy(true);
-    void createManualTask(input).then((res) => {
+    void createManualTask(input, parseQuickTask(input)).then((res) => {
       setActionBusy(false);
       showToast(res.ok ? 'Task added.' : (res.error ?? 'Could not add the task.'));
     });
@@ -358,6 +362,8 @@ export function DashboardClient({
 
       {/* Background auto-sync (Phase 5): keeps mail fresh without manual "Sync now". */}
       <AutoSync />
+      {/* Keeps profiles.timezone following the device (unless pinned in Settings). */}
+      <TimezoneSync />
 
       {/* Subtle Vesta atmosphere behind everything (decorative, z-0). */}
       <DashboardAtmosphere />
