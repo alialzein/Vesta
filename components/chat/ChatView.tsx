@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteChatConversation, sendChatMessage } from '@/app/actions/chat';
 import type { ChatConversationView, ChatData, ChatMessageView } from '@/lib/chat/data';
+import { CHAT_STARTERS, MessageBubble, ThinkingIndicator } from './parts';
 import { Icon } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
 import { useToast } from '@/components/ui/Toast';
@@ -14,77 +15,13 @@ import { useToast } from '@/components/ui/Toast';
  * think out loud: Vesta answers from their memories, rules, today's workload,
  * and briefing, and shows a "Saved to memory" chip whenever it learned
  * something from the turn (every learned fact lives in Memory & Rules, where
- * it can be deleted).
+ * it can be deleted). The bubbles/chips/starters are shared with the
+ * dashboard mini chat (see ./parts and ./ChatDock).
  *
  * Conversations are listed in a left rail (Link-prefetched, per the nav
  * rule); a brand-new chat creates its conversation on the first send and
  * swaps the URL in place (no refetch, no lost thread).
  */
-
-const STARTERS = [
-  'What should I focus on right now?',
-  "Who's waiting on me?",
-  "What's in my briefing today?",
-  'Remember that I prefer short, direct emails.',
-];
-
-function LearnedChips({ learned }: { learned: string[] }) {
-  if (learned.length === 0) return null;
-  return (
-    <div className="mt-[6px] flex flex-col gap-[4px]">
-      {learned.map((text) => (
-        <Link
-          key={text}
-          href="/?view=memory"
-          prefetch
-          title="Vesta saved this to Memory & Rules — open to review or delete it"
-          className="inline-flex max-w-full items-start gap-[6px] self-start rounded-[10px] bg-accent-soft px-[10px] py-[6px] text-[11.5px] font-medium leading-snug text-accent transition hover:brightness-110"
-        >
-          <Icon name="brain" className="mt-px h-[12px] w-[12px] flex-none" />
-          <span>
-            <b>Saved to memory:</b> {text}
-          </span>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-function MessageBubble({ msg }: { msg: ChatMessageView }) {
-  const isAi = msg.role === 'assistant';
-  return (
-    <div className={`flex max-w-[86%] flex-col ${isAi ? 'self-start' : 'self-end'}`}>
-      <div
-        className={[
-          'animate-rise whitespace-pre-wrap rounded-[15px] border border-line px-[14px] py-[11px] text-[13.5px] leading-relaxed text-ink',
-          isAi
-            ? 'rounded-bl-[5px] bg-[color:var(--chat-bubble-ai)]'
-            : 'rounded-br-[5px] bg-[color:var(--chat-bubble-user)]',
-        ].join(' ')}
-      >
-        {msg.content}
-      </div>
-      {isAi && <LearnedChips learned={msg.learned} />}
-    </div>
-  );
-}
-
-function Thinking() {
-  return (
-    <div className="flex items-center gap-2 self-start rounded-[15px] rounded-bl-[5px] border border-line bg-[color:var(--chat-bubble-ai)] px-[14px] py-[11px]">
-      <span className="flex gap-[4px]">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="h-[6px] w-[6px] animate-bounce rounded-full bg-accent"
-            style={{ animationDelay: `${i * 150}ms` }}
-          />
-        ))}
-      </span>
-      <span className="text-[12px] text-muted">Vesta is thinking…</span>
-    </div>
-  );
-}
 
 export function ChatView({ data }: { data: ChatData }) {
   const router = useRouter();
@@ -238,7 +175,7 @@ export function ChatView({ data }: { data: ChatData }) {
                 projects; it keeps what matters.
               </p>
               <div className="mt-1 flex flex-wrap justify-center gap-[7px]">
-                {STARTERS.map((s) => (
+                {CHAT_STARTERS.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -255,7 +192,7 @@ export function ChatView({ data }: { data: ChatData }) {
               {messages.map((m) => (
                 <MessageBubble key={m.id} msg={m} />
               ))}
-              {sending && <Thinking />}
+              {sending && <ThinkingIndicator />}
             </>
           )}
         </div>

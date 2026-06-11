@@ -45,6 +45,13 @@ vi.mock('@/app/actions/brief', () => ({
   generateDailyBrief: vi.fn(async () => ({ ok: false, reason: 'mocked out' })),
 }));
 
+// The chat dock talks to the real chat backend; stub it (its logic is covered
+// by lib/ai/__tests__/chat.test.ts and the ChatDock/ChatView suites).
+vi.mock('@/app/actions/chat', () => ({
+  sendChatMessage: vi.fn(async () => ({ ok: false, error: 'mocked out' })),
+  deleteChatConversation: vi.fn(async () => ({ ok: true })),
+}));
+
 // MemoryView + the rail's Memory tab import the Phase 10 memory actions.
 vi.mock('@/app/actions/memories', () => ({
   addMemory: vi.fn(async () => ({ ok: true })),
@@ -109,11 +116,21 @@ describe('DashboardClient shell', () => {
     expect(screen.queryByText("Today's Radar")).not.toBeInTheDocument();
   });
 
-  it('Ask Vesta is a real link to the chat page (sidebar + floating button)', () => {
+  it('the floating button opens the mini chat dock over the dashboard', async () => {
+    const user = userEvent.setup();
     renderDashboard();
-    const links = screen.getAllByRole('link', { name: /Ask Vesta/i });
-    expect(links.length).toBeGreaterThanOrEqual(2); // sidebar item + FAB
-    for (const link of links) expect(link).toHaveAttribute('href', '/chat');
+
+    // The sidebar Ask Vesta item stays a real link to the full-screen view.
+    expect(screen.getByRole('link', { name: /Ask Vesta/i })).toHaveAttribute('href', '/chat');
+
+    await user.click(screen.getByRole('button', { name: 'Ask Vesta' }));
+    // The dock is open with its composer — and the radar is still on screen
+    // behind it (non-modal: the manager can keep acting on items).
+    expect(screen.getByPlaceholderText('Ask Vesta anything…')).toBeVisible();
+    expect(screen.getByRole('heading', { name: /Today's Radar/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Close mini chat' }));
+    expect(screen.getByRole('button', { name: 'Ask Vesta' })).toBeInTheDocument();
   });
 
   it('collapses and expands the sidebar without losing nav access', async () => {

@@ -8,8 +8,15 @@ remembers from then on.
 
 ## Where to find it
 
-- Left sidebar → **Intelligence → Ask Vesta**, or
-- the floating **Ask Vesta** button at the bottom-right of the dashboard.
+Two ways, for two situations:
+
+- **Left sidebar → Intelligence → Ask Vesta** — the full-screen chat, with
+  your whole conversation history on the left. Best for longer thinking.
+- **The floating Ask Vesta button** (bottom-right of the dashboard) — a
+  small chat panel that opens **over** your radar without covering it: the
+  dashboard stays clickable, so you can ask "who's waiting on me?" and act
+  on the items right behind the panel. The expand button in its header opens
+  the same conversation in the full-screen view.
 
 ## What to ask (start with these)
 
