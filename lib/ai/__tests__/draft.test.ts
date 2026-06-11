@@ -151,4 +151,37 @@ describe('buildDraftPrompt', () => {
     expect(user).toContain('- Maya: Sending the Q3 budget for approval.');
     expect(user).toContain('Latest message to reply to:');
   });
+
+  it('is time-aware (draft-v4): today, the message age, and per-message dates are in the prompt', () => {
+    const { system, user } = buildDraftPrompt({
+      subject: 'Techinal Meeting',
+      recipientName: 'Zahraa Daher',
+      managerName: 'Vesta Dev',
+      latestMessage: 'Should the technical meeting happen today or tomorrow?',
+      tone: 'professional',
+      today: 'Thursday, June 11, 2026',
+      receivedAt: 'Tue, Jun 9, 8:39 PM UTC (2 days ago)',
+      threadContext: [
+        { from: 'Zahraa Daher', at: 'Jun 9', body: 'Should the meeting happen today or tomorrow?' },
+      ],
+    });
+    // The rule that stops "happy to do today or tomorrow" replies to stale mail.
+    expect(system).toContain('TIME AWARENESS');
+    expect(system).toMatch(/Never accept, confirm, or propose a time that has already passed/);
+    expect(user).toContain('Today is Thursday, June 11, 2026.');
+    expect(user).toContain('(received Tue, Jun 9, 8:39 PM UTC (2 days ago)):');
+    expect(user).toContain('- [Jun 9] Zahraa Daher:');
+  });
+
+  it('omits the date lines when not provided (older callers stay valid)', () => {
+    const { user } = buildDraftPrompt({
+      subject: null,
+      recipientName: null,
+      managerName: null,
+      latestMessage: 'hi',
+      tone: 'professional',
+    });
+    expect(user).not.toContain('Today is');
+    expect(user).toContain('Latest message to reply to:');
+  });
 });
