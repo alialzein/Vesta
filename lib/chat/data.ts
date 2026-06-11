@@ -7,12 +7,46 @@ import type { Database } from '@/lib/database.types';
  * file: 'use server' modules may only export async functions.)
  */
 
+export type ChatActionKind = 'mark_done' | 'snooze' | 'create_task' | 'draft_reply';
+export type ChatActionStatus = 'proposed' | 'done' | 'failed' | 'cancelled';
+
+const ACTION_KINDS: ChatActionKind[] = ['mark_done', 'snooze', 'create_task', 'draft_reply'];
+const ACTION_STATUSES: ChatActionStatus[] = ['proposed', 'done', 'failed', 'cancelled'];
+
+/** A chat-order proposal as stored on the assistant message
+ *  (chat_messages.metadata.action). Nothing runs until the manager confirms. */
+export type StoredChatAction = {
+  kind: ChatActionKind;
+  status: ChatActionStatus;
+  /** Human-readable line for the confirmation card. */
+  label: string;
+  /** Manager timezone at proposal time (local times resolve against it). */
+  tz: string;
+  item_id: string | null;
+  item_title: string | null;
+  until_local: string | null;
+  task_title: string | null;
+  due_local: string | null;
+  instruction: string | null;
+  /** Result line after execution (or the failure reason). */
+  result?: string | null;
+};
+
+export type ChatActionView = {
+  kind: ChatActionKind;
+  status: ChatActionStatus;
+  label: string;
+  result: string | null;
+};
+
 export type ChatMessageView = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   /** Facts Vesta saved to Memory & Rules from this turn. */
   learned: string[];
+  /** A proposed/settled chat order attached to this turn, when any. */
+  action: ChatActionView | null;
   createdAt: string;
 };
 
@@ -30,11 +64,30 @@ export function toMessageView(r: MessageRow): ChatMessageView {
   const learned = Array.isArray(meta.learned)
     ? (meta.learned as unknown[]).filter((x): x is string => typeof x === 'string')
     : [];
+
+  let action: ChatActionView | null = null;
+  const a = meta.action as Partial<StoredChatAction> | null | undefined;
+  if (
+    a &&
+    typeof a === 'object' &&
+    ACTION_KINDS.includes(a.kind as ChatActionKind) &&
+    ACTION_STATUSES.includes(a.status as ChatActionStatus) &&
+    typeof a.label === 'string'
+  ) {
+    action = {
+      kind: a.kind as ChatActionKind,
+      status: a.status as ChatActionStatus,
+      label: a.label,
+      result: typeof a.result === 'string' ? a.result : null,
+    };
+  }
+
   return {
     id: r.id,
     role: r.role === 'assistant' ? 'assistant' : 'user',
     content: r.content,
     learned,
+    action,
     createdAt: r.created_at,
   };
 }

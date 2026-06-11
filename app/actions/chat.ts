@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/database.types';
 import {
+  actionLabel,
   buildChatPrompt,
   isDuplicateMemory,
   parseChatReply,
@@ -12,11 +13,18 @@ import {
   type ChatContext,
   type ChatTurn,
 } from '@/lib/ai/chat';
-import { toMessageView, type ChatMessageView, type MessageRow } from '@/lib/chat/data';
+import {
+  toMessageView,
+  type ChatMessageView,
+  type MessageRow,
+  type StoredChatAction,
+} from '@/lib/chat/data';
 import { getEffectiveAi } from '@/lib/ai/runtime';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
-import { safeTz, todayInTz } from '@/lib/time/zone';
+import { safeTz, todayInTz, zonedTimeToUtc } from '@/lib/time/zone';
+import { createManualTask, resolveWorkItem, snoozeWorkItem } from './work-items';
+import { generateDraft } from './drafts';
 
 /**
  * Ask Vesta chat — server actions.
@@ -25,6 +33,13 @@ import { safeTz, todayInTz } from '@/lib/time/zone';
  * real workload, today's briefing + inbox brief), one AI call, store both
  * turns, and write whatever Vesta chose to remember into manager_memories
  * (source='chat') so it is visible — and deletable — in Memory & Rules.
+ *
+ * Chat orders (Phase A): the model may PROPOSE one action per turn (mark
+ * done / snooze / create task / draft reply). The proposal is stored on the
+ * assistant message (metadata.action, status 'proposed') and NOTHING runs
+ * until the manager taps Confirm — executeChatAction then re-validates and
+ * calls the very same server actions the dashboard buttons use.
+ *
  * Privacy: context goes only to the configured AI provider, exactly like
  * analysis/drafting; nothing else leaves the app.
  */
@@ -96,7 +111,7 @@ export async function sendChatMessage(input: {
       .limit(10),
     supabase
       .from('work_items')
-      .select('title, summary, category, priority_score, due_at, suggested_action, urgency_reason, status, snoozed_until')
+      .select('id, title, summary, category, priority_score, due_at, suggested_action, urgency_reason, status, snoozed_until')
       .in('status', ['open', 'snoozed'])
       .order('priority_score', { ascending: false })
       .limit(60),
@@ -183,7 +198,29 @@ export async function sendChatMessage(input: {
 
   try {
     const res = await client.complete(prompt);
-    const parsed = parseChatReply(res.content);
+    const shownItems = visible.slice(0, 15);
+    const parsed = parseChatReply(res.content, shownItems.length);
+
+    // Resolve a proposed action's item index to the REAL row id + title NOW
+    // (the radar may reorder later; the proposal must stay pinned to what the
+    // model actually meant). Stored on the message; nothing executes here.
+    let storedAction: StoredChatAction | null = null;
+    if (parsed.action) {
+      const a = parsed.action;
+      const item = 'itemIndex' in a ? shownItems[a.itemIndex] : undefined;
+      storedAction = {
+        kind: a.kind,
+        status: 'proposed',
+        label: actionLabel(a, item?.title),
+        tz,
+        item_id: item?.id ?? null,
+        item_title: item?.title ?? null,
+        until_local: a.kind === 'snooze' ? a.untilLocal : null,
+        task_title: a.kind === 'create_task' ? a.title : null,
+        due_local: a.kind === 'create_task' ? a.dueLocal : null,
+        instruction: a.kind === 'draft_reply' ? a.instruction : null,
+      };
+    }
 
     // ---- Learning: save new facts into Memory & Rules ----------------------
     const existingTexts = (memoryRows ?? []).map((m) => m.memory_text);
@@ -213,9 +250,10 @@ export async function sendChatMessage(input: {
         content: parsed.reply,
         metadata: {
           learned,
+          action: storedAction,
           model: cfg.model,
           prompt_version: CHAT_PROMPT_VERSION,
-        } as Json,
+        } as unknown as Json,
       })
       .select('*')
       .single();
@@ -265,6 +303,107 @@ export async function deleteChatConversation(
   await requireUser();
   const supabase = createClient();
   const { error } = await supabase.from('chat_conversations').delete().eq('id', conversationId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export type ExecuteChatActionResult =
+  | { ok: true; result: string }
+  | { ok: false; error: string };
+
+/**
+ * Run a CONFIRMED chat-order proposal — the manager tapped Confirm on the
+ * action card. Re-validates the stored proposal (own message, still pending)
+ * and executes through the same server actions the dashboard buttons use.
+ */
+export async function executeChatAction(messageId: string): Promise<ExecuteChatActionResult> {
+  await requireUser();
+  const supabase = createClient();
+
+  const { data: msg } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('id', messageId)
+    .maybeSingle();
+  if (!msg || msg.role !== 'assistant') return { ok: false, error: 'Action not found.' };
+  const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+  const action = meta.action as StoredChatAction | null;
+  if (!action || action.status !== 'proposed') {
+    return { ok: false, error: 'This action is no longer pending.' };
+  }
+
+  const persist = async (status: StoredChatAction['status'], result: string | null) => {
+    await supabase
+      .from('chat_messages')
+      .update({ metadata: { ...meta, action: { ...action, status, result } } as unknown as Json })
+      .eq('id', messageId);
+  };
+
+  /** "YYYY-MM-DD HH:mm" in the manager's tz → UTC ISO (DST-safe). */
+  const localToIso = (local: string) => {
+    const [d, t] = local.split(' ');
+    return zonedTimeToUtc(d, t, action.tz).toISOString();
+  };
+
+  let exec: { ok: boolean; error?: string } = { ok: false, error: 'Unknown action.' };
+  let result = '';
+  switch (action.kind) {
+    case 'mark_done':
+      if (!action.item_id) break;
+      exec = await resolveWorkItem(action.item_id, 'done');
+      result = `Done — "${action.item_title}" is marked complete.`;
+      break;
+    case 'snooze':
+      if (!action.item_id || !action.until_local) break;
+      exec = await snoozeWorkItem(action.item_id, localToIso(action.until_local));
+      result = `Snoozed "${action.item_title}" until ${action.until_local} — it will resurface then.`;
+      break;
+    case 'create_task': {
+      if (!action.task_title) break;
+      const dueAt = action.due_local ? localToIso(action.due_local) : null;
+      exec = await createManualTask(action.task_title, { title: action.task_title, dueAt });
+      result = `Added "${action.task_title}" to your radar${action.due_local ? `, due ${action.due_local}` : ''}.`;
+      break;
+    }
+    case 'draft_reply':
+      if (!action.item_id) break;
+      exec = await generateDraft(action.item_id, {
+        instruction: action.instruction ?? undefined,
+      });
+      result = `Draft ready for "${action.item_title}" — review and approve it in Draft Replies. Nothing sends without you.`;
+      break;
+  }
+
+  if (!exec.ok) {
+    const error = exec.error ?? 'The item this action points at is gone.';
+    await persist('failed', error);
+    return { ok: false, error };
+  }
+  await persist('done', result);
+  return { ok: true, result };
+}
+
+/** Dismiss a pending chat-order proposal without running it. */
+export async function cancelChatAction(
+  messageId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  await requireUser();
+  const supabase = createClient();
+  const { data: msg } = await supabase
+    .from('chat_messages')
+    .select('id, role, metadata')
+    .eq('id', messageId)
+    .maybeSingle();
+  if (!msg || msg.role !== 'assistant') return { ok: false, error: 'Action not found.' };
+  const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+  const action = meta.action as StoredChatAction | null;
+  if (!action || action.status !== 'proposed') return { ok: true }; // already settled
+  const { error } = await supabase
+    .from('chat_messages')
+    .update({
+      metadata: { ...meta, action: { ...action, status: 'cancelled', result: null } } as unknown as Json,
+    })
+    .eq('id', messageId);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }

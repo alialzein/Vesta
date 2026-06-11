@@ -56,6 +56,7 @@ export function ChatView({ data }: { data: ChatData }) {
       role: 'user',
       content: q,
       learned: [],
+      action: null,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);

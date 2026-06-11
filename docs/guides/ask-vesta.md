@@ -43,6 +43,26 @@ anything it learned — you stay in control of what Vesta knows.
 From then on, everything Vesta does gets smarter: chat answers, email
 analysis, and draft replies all read the same memory.
 
+## How to give it orders (new)
+
+Tell Vesta to do something, in plain words. It proposes the action as a small
+card in the chat — **nothing happens until you tap Confirm** on that card.
+
+- `Mark the Cedars item as done.`
+- `Snooze the TeamViewer thread until Monday 9am.`
+- `Remind me to call Ahmad tomorrow at 3pm.` — adds a task to your radar.
+- `Draft a reply to Zahraa: I can meet Thursday at 2pm.` — the draft waits in
+  **Draft Replies** for your approval. Chat never sends email.
+
+**What you'll see:** Vesta's reply plus a card like *"Snooze 'TeamViewer
+access' until 2026-06-15 09:00 — [Confirm] [Cancel]"*. Confirm runs it (the
+card turns green with the result); Cancel dismisses it. If Vesta isn't sure
+which item or time you mean, it asks instead of guessing.
+
+Not yet possible from chat (coming next): scheduling Teams meetings, and
+sending reminder emails to other people on a schedule — Vesta will tell you
+so honestly if you ask.
+
 ## Conversations
 
 - Each chat is saved — the list lives on the left of the chat page. Click one
@@ -54,9 +74,8 @@ analysis, and draft replies all read the same memory.
 
 - Vesta only answers from your real data — if it doesn't know, it says so and
   points you to the right screen instead of guessing.
-- It can't send emails or change items from chat (yet). When you ask it to
-  act, it tells you the exact next step in the app — and your approval gates
-  stay untouched.
+- Orders always go through your **Confirm** tap — Vesta proposes, you decide.
+  Email never sends from chat; drafts always wait for your approval.
 - Each turn is one AI call (visible in the admin AI page under **chat**).
   Your messages go only to the configured AI provider — the same one that
   already analyzes your email — and nowhere else.

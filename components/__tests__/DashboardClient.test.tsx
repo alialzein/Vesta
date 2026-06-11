@@ -50,6 +50,8 @@ vi.mock('@/app/actions/brief', () => ({
 vi.mock('@/app/actions/chat', () => ({
   sendChatMessage: vi.fn(async () => ({ ok: false, error: 'mocked out' })),
   deleteChatConversation: vi.fn(async () => ({ ok: true })),
+  executeChatAction: vi.fn(async () => ({ ok: true, result: 'done' })),
+  cancelChatAction: vi.fn(async () => ({ ok: true })),
 }));
 
 // MemoryView + the rail's Memory tab import the Phase 10 memory actions.
