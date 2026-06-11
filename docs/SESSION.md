@@ -4,19 +4,21 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**#56 Briefing-alive + #57 Ask Vesta both
-MERGED** — `main` = #49–#57, 428 tests green on merged main.
-#58 (briefing row cards, no placeholder art) also MERGED — `main` = #49–#58.
-**PR #59 `fix/chat-ack-only-when-learned` OPEN, awaiting owner merge:**
-owner-reported "Noted — I'll keep that in mind" on turns where nothing was
-saved → chat-v2 prompt forbids the acknowledgment when `remember` is empty.
-Owner also asked about chat cost / learning algorithm / future "orders" —
-answered in chat 2026-06-11; chat-actions (orders) is a candidate next phase.
-**⚠️ Ask Vesta migration:** owner was running
-`supabase/migrations/20260611220001_ask_vesta_chat.sql` in the Supabase SQL
-editor at session end (chat_conversations + chat_messages, own-rows RLS) —
-**confirm it's applied before testing /chat**; until then sendChatMessage
-fails with a missing-table error.)
+**Last updated:** 2026-06-11 (`main` = #49–#59 all MERGED (Ask Vesta chat,
+briefing images/rows, chat-v2 ack fix); chat migration applied by owner.
+**PR #60 `feat/chat-dock` OPEN, awaiting owner merge:** the dashboard FAB
+now opens a small NON-modal mini chat (no backdrop — radar stays clickable);
+sidebar Ask Vesta stays full-screen; shared chat parts extracted; expand
+button continues the same conversation in /chat. 432 tests green.
+**Owner approved next big track: CHAT ORDERS** — full phased design in
+`docs/plans/chat-actions-plan.md`: Phase A in-app orders (done/snooze/task/
+draft via intent + Confirm card — can start now), Phase B reminders engine
+(needs `reminders` migration approval + Vercel cron, draft SQL in plan;
+"email me hourly 3 times about thread X"), Phase C calendar/Teams meetings
+(**blocked on owner adding Calendars.ReadWrite to the Azure app +
+re-consent**). Decision recorded: deleting a chat does NOT delete learned
+memories (they live in Memory & Rules; metadata.conversation_id enables a
+future "forget what you learned here" option).)
 **Owner verify (both themes, after Vercel deploys + migration):**
 Briefing → Refresh → cards show article images, hero top story, "NN% match"
 chips (old items show gradient art until rebuilt; some sites block previews
