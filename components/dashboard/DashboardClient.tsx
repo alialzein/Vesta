@@ -14,6 +14,7 @@ import {
   createManualTask,
   createTaskWithAi,
 } from '@/app/actions/work-items';
+import { generateDailyBrief } from '@/app/actions/brief';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
 import { useToast } from '@/components/ui/Toast';
@@ -32,7 +33,7 @@ import { DraftComposer } from './DraftComposer';
 import { CollapsedRail } from './CollapsedRail';
 import { MemoryView } from './MemoryView';
 import { AssistantChat } from './AssistantChat';
-import { FocusModeDrawer } from './FocusModeDrawer';
+import { FocusMode } from './FocusMode';
 import { MeetingPrepDrawer } from './MeetingPrepDrawer';
 import { CleanInboxDrawer } from './CleanInboxDrawer';
 import { VestaSplashScreen } from './VestaSplashScreen';
@@ -157,10 +158,48 @@ export function DashboardClient({
     Boolean(initialComposer && linkedItem?.canDraft),
   );
 
-  // Quick-action preview drawers (demo only).
+  // Focus Mode ("Clear My Day") — real, full-screen (Phase 11).
   const [focusOpen, setFocusOpen] = useState(false);
+  // Remaining quick-action preview drawers (demo only).
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [cleanOpen, setCleanOpen] = useState(false);
+
+  // Phase 11 — the AI daily brief. The server provides today's cached brief
+  // when it exists; otherwise we ask for it ONCE on mount (one AI call/day)
+  // while the deterministic brief stays on screen.
+  const [briefState, setBriefState] = useState<MorningBriefData>(brief);
+  useEffect(() => setBriefState(brief), [brief]);
+  const [briefGenerating, setBriefGenerating] = useState(false);
+  useEffect(() => {
+    if (brief.aiGenerated || workItems.length === 0 || !capabilities.aiEnabled) return;
+    let cancelled = false;
+    setBriefGenerating(true);
+    void generateDailyBrief()
+      .then((res) => {
+        if (cancelled || !res.ok) return;
+        setBriefState((prev) => ({
+          ...prev,
+          headline: res.headline,
+          summaryLine: res.body,
+          aiGenerated: true,
+          focusItemId: res.focusItemId,
+          focusReason: res.focusReason,
+        }));
+      })
+      .finally(() => {
+        if (!cancelled) setBriefGenerating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // One shot per dashboard load; the daily cache makes repeats free anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The brief's "start here" pick, resolved against the live items.
+  const focusItem = briefState.focusItemId
+    ? items.find((i) => i.id === briefState.focusItemId)
+    : undefined;
 
   /** Called when the splash finishes its timed sequence. */
   function handleSplashDone() {
@@ -370,11 +409,26 @@ export function DashboardClient({
             {onToday ? (
               <>
                 <MorningBrief
-                  brief={brief}
+                  brief={briefState}
+                  generating={briefGenerating}
+                  focusTitle={focusItem?.title}
+                  onStartFocus={
+                    focusItem
+                      ? () => {
+                          // Jump straight to the suggested first item.
+                          setSelected(focusItem);
+                          expandRail('action');
+                        }
+                      : undefined
+                  }
                   onAction={(action) => {
-                    if (action === 'focus')
-                      showToast('Clear My Day / Focus Mode arrives in Phase 11.');
-                    else if (action === 'drafts') openComposer();
+                    if (action === 'focus') {
+                      if (items.length === 0) {
+                        showToast('Nothing to clear — your day is already clean.');
+                        return;
+                      }
+                      setFocusOpen(true);
+                    } else if (action === 'drafts') openComposer();
                     else showToast('Meeting Prep arrives after calendar integration (Phase 12).');
                   }}
                 />
@@ -469,8 +523,35 @@ export function DashboardClient({
         onSent={handleSent}
       />
 
+      {/* Focus Mode (Phase 11) — full-screen Clear-My-Day over the real queue.
+          Its actions reuse the same optimistic handlers as the radar/rail; the
+          draft composer (z-100) opens above it. */}
+      <FocusMode
+        open={focusOpen}
+        onClose={() => setFocusOpen(false)}
+        items={items}
+        initialItemId={briefState.focusItemId}
+        busy={actionBusy}
+        onDone={(item) =>
+          void applyItemAction(item.id, () => resolveWorkItem(item.id, 'done'), 'Marked done.')
+        }
+        onSnooze={(item) => {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(9, 0, 0, 0);
+          void applyItemAction(
+            item.id,
+            () => snoozeWorkItem(item.id, tomorrow.toISOString()),
+            'Snoozed until tomorrow 9 AM.',
+          );
+        }}
+        onDraft={(item) => {
+          setSelected(item);
+          setComposerOpen(true);
+        }}
+      />
+
       {/* Quick-action preview drawers (demo only) */}
-      <FocusModeDrawer open={focusOpen} onClose={() => setFocusOpen(false)} items={demoWorkItems} />
       <MeetingPrepDrawer open={meetingOpen} onClose={() => setMeetingOpen(false)} />
       <CleanInboxDrawer open={cleanOpen} onClose={() => setCleanOpen(false)} />
     </>

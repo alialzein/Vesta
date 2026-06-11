@@ -53,7 +53,7 @@ HTML mockup while staying idiomatic.
 │   │   ├── WorkItemRow.tsx       # A radar row (source, person, reason, action chips)
 │   │   ├── AiAssistantRail.tsx   # Contextual AI rail: Action/Draft/Memory/Activity
 │   │   ├── CollapsedRail.tsx     # Slim vertical icon strip for the collapsed rail
-│   │   ├── FocusModeDrawer.tsx   # "Clear My Day" preview drawer (demo)
+│   │   ├── FocusMode.tsx         # Full-screen "Clear My Day" pass (Phase 11, real)
 │   │   ├── MeetingPrepDrawer.tsx # "Meeting Prep" preview drawer (demo)
 │   │   ├── CleanInboxDrawer.tsx  # "Clean Inbox" preview drawer (demo)
 │   │   ├── MemoryView.tsx        # Full-page "Memory & Rules" workspace (0.4):

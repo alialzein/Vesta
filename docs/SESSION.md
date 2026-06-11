@@ -4,29 +4,64 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**sidebar pass #49 MERGED; follow-up: APP-SHELL
-rework built on `feat/app-shell-pages` — PR open, awaiting owner review.**
-354 tests green, typecheck/lint/build clean.)
-**Repo state:** `main` = #49 (left-sidebar buttons) + Phase 10; branch
-`feat/app-shell-pages` pushed.
-**Owner decisions (2026-06-11 Q&A):** 1) Follow-ups sidebar button REMOVED
-(redundant with the radar chip) — owner asked after merging #49; 2) routed
-pages must be full-screen → chose **"App shell everywhere"** (persistent
-sidebar + topbar on Inbox / Waiting on Me / Drafts / Hidden / Weekly Review /
-Settings); 3) Phase 11 confusion cleared: it's the brief about the manager's
-OWN inbox (Daily Brief & Focus Mode) — NOT the internet-news idea (that's the
-separate Personal Intelligence Brief track, deliberately later). Owner picked
-**Phase 11 as planned** for after this layout work.
-**Next: 1) owner merges the app-shell PR after testing (see Verify below) →
-2) Phase 11 — Daily Brief & Focus Mode, which should FOLD IN the right-rail
-placeholder pass ("Delegate" SOON toast, "Ask Vesta" demo shell, Morning
-Brief demo drawers — the brief/focus work makes most of them real). Open
-Phase 11 scope decisions to settle with the owner before coding: AI-written
-brief once/day (recommended) vs deterministic; cached brief storage (a tiny
-`daily_briefs` table needs migration approval) vs metadata; Focus Mode as
-drawer vs full-screen. Smaller queued: due_at + Weekly Review day-buckets in
-manager timezone (profiles.timezone); chat assistant reads 'personal'
-memories.**
+**Last updated:** 2026-06-11 (**#49 + #50 MERGED (sidebar pass, app shell);
+PHASE 11 — Daily Brief & Focus Mode BUILT on `feat/phase-11-daily-brief-focus`
+— PR open, awaiting owner review.** 366 tests green, typecheck/lint/build
+clean.)
+**Repo state:** `main` = app shell everywhere (#50) + sidebar pass (#49) +
+Phase 10; Phase 11 branch pushed.
+**Owner decisions (2026-06-11 Q&A):** AI-written brief once/morning (cached);
+storage = `daily_briefs` — **already existed from Phase 1, NO migration
+needed**; Focus Mode = full-screen. Also clarified: Phase 11 is about the
+manager's OWN inbox — the internet-news idea is the separate Personal
+Intelligence Brief track (later).
+**Next: 1) owner merges the Phase 11 PR after testing (see Verify below) →
+2) pick next: Phase 12 candidates (AI Decision Desk / Teams / Promise
+tracker) or polish. Remaining honest placeholders (all toast/labelled): rail
+"Delegate" (Phase 8 toast), "Ask Vesta" chat (demo shell), Meeting Prep
+(Phase 12 toast), CleanInbox drawer (flag-gated off). Smaller queued: due_at
++ Weekly Review day-buckets + brief_date in manager timezone
+(profiles.timezone); chat assistant reads 'personal' memories.**
+
+## 🌅 Phase 11 — Daily Brief & Focus Mode (built 2026-06-11, on branch)
+
+**No migration** — `daily_briefs` existed since Phase 1 (own-rows RLS already
+granted; `ai_usage.feature` already had `'brief'`).
+
+- **AI daily brief:** `lib/ai/brief.ts` (prompt `brief-v1` + parser; focus id
+  validated against given items — the model can't invent one) +
+  `app/actions/brief.ts` `generateDailyBrief()` — reads the SAME enriched
+  items the radar shows (getDashboardData), calls `getEffectiveAi(user,
+  'analysis')` (admin model/caps/pause respected), caches to `daily_briefs`
+  upsert on `(user_id, brief_date)` (UTC date — tz queued), records ai_usage
+  feature `brief` with cost. Every failure → ok:false and the deterministic
+  brief stays (the feature can never break the morning).
+- **Dashboard flow:** getDashboardData overlays today's cached brief
+  (headline/summaryLine + focus pick, only while the focus item is still
+  open); DashboardClient fires generateDailyBrief ONCE on mount when no
+  cache + AI enabled + items exist, showing "Vesta is writing today's
+  brief…" under the deterministic brief; MorningBrief card gained the
+  **"Start here: <item> — reason"** row (click = select item + open rail).
+- **Focus Mode (real, full-screen):** `components/dashboard/FocusMode.tsx`
+  replaces the demo drawer (deleted). Queue = open items by priority, brief's
+  pick first; per item: Mark done / Draft reply (follow-up label for
+  waiting_on_them; composer z-100 opens above) / Tomorrow (9 AM snooze) /
+  Skip; progress bar; "Go through skips" second pass; "Day cleared." end
+  state; Esc exits; same optimistic applyItemAction handlers as the radar.
+- **Landing sync (5b):** "Daily Brief & Focus Mode" REMOVED from the roadmap
+  Soon strip (2 cards left) and the grid card upgraded (was "Morning Brief");
+  scene already had the shipped MORNING BRIEF island — no scene change.
+- Tests 366: lib/ai/brief suite, FocusMode suite, DashboardClient Clear-My-Day
+  test now asserts the real dialog; guides: NEW
+  `docs/guides/daily-brief-and-focus.md` + README + dashboard guide;
+  phases.md Phase 11 → Done.
+- ⚠️ **Verify live (both themes):** morning dashboard → "writing today's
+  brief…" → headline becomes personal within seconds (reload = instant, same
+  brief; check ai_usage in admin shows ONE `brief` row for today); "Start
+  here" selects that item; **Clear My Day** → full-screen pass: Done slides
+  on, Draft opens composer above it, Tomorrow snoozes, Skip cycles, finish →
+  "Day cleared."; with AI paused (admin) the card quietly keeps the standard
+  brief.
 
 ## 🖼️ App shell everywhere (built 2026-06-11, `feat/app-shell-pages`)
 

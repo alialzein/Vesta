@@ -125,7 +125,8 @@ describe('LandingPage', () => {
     // Memory & Rules shipped (Phase 10) — it lives in the toolkit grid now.
     expect(screen.getByText('Memory & Rules')).toBeInTheDocument();
     expect(screen.getByText('“Waiting on them” tracking')).toBeInTheDocument();
-    expect(screen.getByText('Morning Brief')).toBeInTheDocument();
+    // Shipped in Phase 11 — promoted from the roadmap into the toolkit grid.
+    expect(screen.getByText('Daily Brief & Focus Mode')).toBeInTheDocument();
     expect(screen.getByText('Senders with faces')).toBeInTheDocument();
     // Weekly Review shipped with the sidebar button pass — it's in the grid now.
     expect(screen.getByText('Weekly Review')).toBeInTheDocument();
@@ -136,8 +137,9 @@ describe('LandingPage', () => {
     renderLanding();
     expect(screen.getByRole('heading', { name: 'Where Vesta goes next.' })).toBeInTheDocument();
     expect(screen.getByText('AI Decision Desk')).toBeInTheDocument();
-    expect(screen.getByText('Daily Brief & Focus Mode')).toBeInTheDocument();
-    expect(screen.getAllByText('Soon')).toHaveLength(3);
+    expect(screen.getByText('Microsoft Teams')).toBeInTheDocument();
+    // Daily Brief & Focus Mode shipped (Phase 11) — only 2 Soon cards remain.
+    expect(screen.getAllByText('Soon')).toHaveLength(2);
   });
 
   it('has a working theme toggle button', () => {

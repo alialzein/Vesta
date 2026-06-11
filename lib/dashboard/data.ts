@@ -290,7 +290,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   // item's "memory used" in the rail.
   const itemIds = rows.map((r) => r.id);
   const draftByItem = new Map<string, DraftView>();
-  const [draftsRes, memoriesRes] = await Promise.all([
+  const [draftsRes, memoriesRes, briefRes] = await Promise.all([
     itemIds.length > 0
       ? supabase
           .from('draft_replies')
@@ -304,6 +304,13 @@ export async function getDashboardData(): Promise<DashboardData> {
       .select(MEMORY_COLS)
       .order('created_at', { ascending: false })
       .limit(200),
+    // Phase 11 — today's cached AI brief (generated once per day by
+    // generateDailyBrief; absent on the first load of the morning).
+    supabase
+      .from('daily_briefs')
+      .select('title, summary, sections')
+      .eq('brief_date', new Date().toISOString().slice(0, 10))
+      .maybeSingle(),
   ]);
   // Newest-first, so the first draft seen per item is the live one.
   for (const d of ((draftsRes.data ?? []) as DraftRow[])) {
@@ -324,10 +331,30 @@ export async function getDashboardData(): Promise<DashboardData> {
       memoryUsedFor(memoryRows, sender),
     );
   });
+
+  // Overlay today's cached AI brief onto the deterministic one (counts and the
+  // top-priority chip stay live; the AI supplies the words + the focus pick).
+  const brief = buildBrief(workItems);
+  const aiBrief = briefRes.data;
+  if (aiBrief?.title && aiBrief.summary && workItems.length > 0) {
+    const sections =
+      (aiBrief.sections as { focus_item_id?: string | null; focus_reason?: string | null } | null) ?? {};
+    // The focus pick only survives while that item is still on the radar.
+    const focusItemId =
+      sections.focus_item_id && workItems.some((w) => w.id === sections.focus_item_id)
+        ? sections.focus_item_id
+        : null;
+    brief.headline = aiBrief.title;
+    brief.summaryLine = aiBrief.summary;
+    brief.aiGenerated = true;
+    brief.focusItemId = focusItemId;
+    brief.focusReason = focusItemId ? (sections.focus_reason ?? null) : null;
+  }
+
   return {
     workItems,
     kpis: buildKpis(workItems),
-    brief: buildBrief(workItems),
+    brief,
     memories: memoryRows.map(toMemoryRecord),
   };
 }

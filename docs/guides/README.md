@@ -25,6 +25,7 @@ manual. Each guide is self-contained and matches the product as it actually ship
 | [How Vesta's AI reads your email](ai-analysis.md) | What the AI produces (summary, priority, deadline, next action), what it reads, cost & privacy |
 | [Draft replies](draft-replies.md) | Let Vesta write a reply — or a follow-up nudge — edit it, and approve & send; nothing sends without you |
 | [Memory & Rules](memory-and-rules.md) | Teach Vesta VIPs, tone, delegation, and hard limits — used in every ranking and draft; suggestions wait for your approval |
+| [Daily Brief & Focus Mode](daily-brief-and-focus.md) | The AI-written morning brief about your own queue, the "Start here" pick, and the full-screen Clear-My-Day pass |
 | [Weekly Review](weekly-review.md) | Your week at a glance — what you finished, replies sent, noise dismissed, and who took your attention |
 | [Settings & appearance](settings-and-themes.md) | Managing your mailbox connection, filter mode, and light/dark theme |
 | [Admin panel (operator)](admin-panel.md) | ⚙️ **Operator-only** — the `/admin` console: users, mailboxes/sync, email retention, and AI cost control |

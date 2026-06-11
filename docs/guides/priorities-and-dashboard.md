@@ -7,8 +7,10 @@ how items get there.
 ## Today's Radar (the dashboard)
 
 Your **Today** dashboard leads with **Today's Radar** — a focused list of the items
-waiting on you, highest priority first. Above it sits a short **Morning Brief**
-summarizing how many things are waiting and what the top one is, plus a compact strip
+waiting on you, highest priority first. Above it sits the **Morning Brief** — an
+AI-written daily summary of your queue with a "Start here" pick and the
+**Clear My Day** Focus Mode button (see
+[Daily Brief & Focus Mode](daily-brief-and-focus.md)) — plus a compact strip
 of metrics (**Overdue**, waiting on you, high priority, open items, follow-ups, top
 score). **Click a metric tile to filter the Radar** to that slice — e.g. click
 **Overdue** to see only what's already past its deadline.
