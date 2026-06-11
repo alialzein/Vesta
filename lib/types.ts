@@ -189,7 +189,8 @@ export type MemoryRecord = {
   createdAt: string;
 };
 
-/** Morning brief hero content. Later sourced from daily_briefs. */
+/** Morning brief hero content. Deterministic by default; overlaid with the
+ *  cached AI brief from daily_briefs when one exists for today (Phase 11). */
 export type MorningBrief = {
   headline: string;
   /** Long-form HTML body (kept for future/expanded views). */
@@ -198,6 +199,12 @@ export type MorningBrief = {
   summaryLine: string;
   /** Highest priority score in the queue — shown as a compact "Top priority" chip. */
   topUrgencyScore: number;
+  /** True when headline/summaryLine came from the AI daily brief (cached for today). */
+  aiGenerated?: boolean;
+  /** The AI's "start here" pick — a work item id, when that item is still open. */
+  focusItemId?: string | null;
+  /** One sentence: why start there. */
+  focusReason?: string | null;
 };
 
 /** Tabs in the Contextual AI Assistant Rail. */

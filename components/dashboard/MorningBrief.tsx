@@ -22,9 +22,18 @@ const ACTIONS: { id: BriefAction; label: string; icon: IconName; primary?: boole
 export function MorningBrief({
   brief,
   onAction,
+  generating = false,
+  focusTitle,
+  onStartFocus,
 }: {
   brief: MorningBriefData;
   onAction: (action: BriefAction) => void;
+  /** True while the AI is writing today's brief (first load of the morning). */
+  generating?: boolean;
+  /** Title of the AI's "start here" item (resolved by the dashboard). */
+  focusTitle?: string;
+  /** Jump into the suggested first item (selects it / starts Focus Mode). */
+  onStartFocus?: () => void;
 }) {
   return (
     <section className="relative isolate z-[1] rounded-[var(--radius)] border border-line-strong bg-panel p-[18px] shadow-glow">
@@ -82,6 +91,39 @@ export function MorningBrief({
             {brief.headline}
           </h2>
           <p className="mt-[5px] text-[13px] leading-snug text-ink-soft">{brief.summaryLine}</p>
+
+          {/* While the once-a-day AI brief is being written (first load of the
+              morning) the deterministic brief stays visible — this is only a
+              small honest status line, never a blank card. */}
+          {generating && (
+            <p className="mt-[6px] flex items-center gap-[6px] text-[12px] font-medium text-accent">
+              <Icon name="sparkle" className="h-[13px] w-[13px] animate-vesta-pulse" />
+              Vesta is writing today&rsquo;s brief…
+            </p>
+          )}
+
+          {/* The AI's "start here" pick — one click jumps to that item. */}
+          {!generating && brief.focusItemId && focusTitle && onStartFocus && (
+            <button
+              type="button"
+              onClick={onStartFocus}
+              className="group mt-[10px] flex w-full items-start gap-[9px] rounded-[12px] border border-line bg-panel-2 p-[10px] text-left transition hover:border-accent"
+            >
+              <span className="mt-[1px] grid h-6 w-6 flex-none place-items-center rounded-full bg-accent-soft text-accent">
+                <Icon name="arrow" className="h-[13px] w-[13px]" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-semibold text-ink">
+                  Start here: <span className="text-accent">{focusTitle}</span>
+                </span>
+                {brief.focusReason && (
+                  <span className="mt-[2px] block text-[12px] leading-snug text-muted">
+                    {brief.focusReason}
+                  </span>
+                )}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Quick actions */}

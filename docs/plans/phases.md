@@ -510,17 +510,22 @@ Deliverables:
 
 ## Phase 11 — Daily Brief and Focus Mode
 
-Goal:
+Status: **Done.** Built 2026-06-11. The morning brief is AI-written once per
+day from the manager's own open queue and cached in `daily_briefs` (no
+migration — the Phase 1 table); Focus Mode is a real full-screen
+one-item-at-a-time pass over the queue.
 
-- Morning brief and Clear My Day flow.
-
-Deliverables:
-
-- Daily brief generator.
-- Brief card.
-- Focus queue.
-- Suggested first action.
-- Dashboard polish.
+- Daily brief generator. ✅ (`lib/ai/brief.ts` prompt/parser `brief-v1` +
+  `app/actions/brief.ts` — one call/user/day, cached by `(user_id,
+  brief_date)`, ai_usage feature `brief`, deterministic fallback always)
+- Brief card. ✅ (MorningBrief shows the AI headline/body; "writing today's
+  brief…" status on first load; counts/top-priority chip stay live)
+- Focus queue. ✅ (`components/dashboard/FocusMode.tsx` — full-screen, Done /
+  Draft / Tomorrow / Skip, progress bar, second pass over skips, "Day
+  cleared." end state; reuses the radar's optimistic actions)
+- Suggested first action. ✅ ("Start here" pick + reason on the card; goes
+  first in the Focus queue; click selects the item + opens the rail)
+- Dashboard polish. ✅ (demo Focus drawer deleted; Clear My Day is real)
 
 ## Phase 12 — New Differentiating Features
 

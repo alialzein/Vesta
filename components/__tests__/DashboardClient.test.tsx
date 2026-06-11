@@ -28,6 +28,12 @@ vi.mock('@/app/actions/drafts', () => ({
   discardDraft: vi.fn(async () => ({ ok: true })),
 }));
 
+// Phase 11 — the daily-brief server action fires once on mount; keep it inert
+// here (its prompt/parser logic is covered by lib/ai/__tests__/brief.test.ts).
+vi.mock('@/app/actions/brief', () => ({
+  generateDailyBrief: vi.fn(async () => ({ ok: false, reason: 'mocked out' })),
+}));
+
 // MemoryView + the rail's Memory tab import the Phase 10 memory actions.
 vi.mock('@/app/actions/memories', () => ({
   addMemory: vi.fn(async () => ({ ok: true })),
@@ -165,12 +171,19 @@ describe('DashboardClient shell', () => {
     expect(screen.queryByText('Board meeting preparation')).not.toBeInTheDocument();
   });
 
-  it('shows an honest "coming soon" message from the "Clear My Day" quick action', async () => {
+  it('"Clear My Day" opens the real full-screen Focus Mode and Escape exits it', async () => {
     const user = userEvent.setup();
     renderDashboard();
 
     await user.click(screen.getByRole('button', { name: 'Clear My Day' }));
-    expect(screen.getByText(/Focus Mode arrives in Phase 11/i)).toBeInTheDocument();
+    const focus = screen.getByRole('dialog', { name: /Focus Mode/ });
+    expect(focus).toBeInTheDocument();
+    // One item at a time, with the real action set.
+    expect(within(focus).getByRole('button', { name: /Mark done/ })).toBeInTheDocument();
+    expect(within(focus).getByText(/of \d+ handled/)).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: /Focus Mode/ })).not.toBeInTheDocument();
   });
 
   it('shows an honest "coming soon" message when a rail action button is used', async () => {

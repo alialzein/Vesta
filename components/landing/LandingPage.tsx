@@ -102,8 +102,8 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
   },
   {
     icon: 'sun',
-    title: 'Morning Brief',
-    body: 'One headline when you arrive — how many things actually need you today, and which one to hit first.',
+    title: 'Daily Brief & Focus Mode',
+    body: 'An AI-written morning brief — what needs you, what to start with and why — then Clear My Day walks you through it, one item at a time.',
   },
   {
     icon: 'people',
@@ -123,10 +123,6 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
 ];
 
 const ROADMAP: { title: string; body: string }[] = [
-  {
-    title: 'Daily Brief & Focus Mode',
-    body: 'A morning briefing worth reading, then a Clear-My-Day queue that walks you through what’s left.',
-  },
   {
     title: 'AI Decision Desk',
     body: 'Pending decisions distilled to options, stakes, and a recommendation you can challenge.',
