@@ -6,19 +6,23 @@
 
 **Last updated:** 2026-06-11 (`main` = #49–#60 all MERGED (Ask Vesta chat +
 dock, briefing images/rows, chat-v2 ack fix); chat migration applied.
-**PR #61 `feat/chat-orders` OPEN, awaiting owner merge — Phase A CHAT
-ORDERS (chat-v3):** mark_done / snooze / create_task / draft_reply via
-model intent proposals ([index]-validated, local-time format-checked) →
-Confirm/Cancel card in both chat surfaces → executeChatAction reuses the
-dashboard's own server actions; audit in chat_messages.metadata.action.
-439 tests green. No migration.
-**Next after #61: Phase B reminders engine** — needs owner approval of the
-`reminders` migration (draft SQL in `docs/plans/chat-actions-plan.md`) +
-a Vercel cron `/api/cron/reminders`. **Then Phase C calendar/Teams:** owner
-agreed to add `Calendars.ReadWrite` to the Azure app (+ re-consent the
-mailbox); attendee autocomplete design recorded in the plan (local
-people/senders ranking first — no new scope; Graph /me/people + People.Read
-optional later). Decision recorded: deleting a chat does NOT delete learned
+#61 (Phase A chat orders) MERGED; owner granted Calendars.ReadWrite in
+Azure (Phase C unblocked — mailbox re-consent still needed when C ships).
+**PR #62 `feat/reminders-engine` OPEN, awaiting owner merge — Phase B
+EMAIL REMINDERS (chat-v4):** create_reminder order ("email me about this
+thread at 3pm, hourly, 3 times") → Confirm card → row in the EXTENDED
+Phase 1 `reminders` table (title=subject, remind_at=next firing) →
+/api/cron/reminders sends via the manager's own mailbox (sendNewMail,
+Mail.Send), series advances drift-free; Settings → Scheduled reminders
+panel lists + cancels. Guards: ≥15min interval, ≤10 sends, 5-failure cap,
+model can't invent recipient emails. 452 tests green.
+**⚠️ After #62 merges, owner must: (1) run
+`supabase/migrations/20260611230001_reminders.sql` (ALTER TABLE only);
+(2) schedule `/api/cron/reminders` every 5 min (same CRON_SECRET pattern
+as the sync cron) — until then reminders queue but don't send.**
+**Next: Phase C calendar/Teams meetings** (Calendars.ReadWrite granted;
+needs mailbox re-consent; attendee autocomplete = local people ranking
+first per plan). Decision recorded: deleting a chat does NOT delete learned
 memories (metadata.conversation_id enables a future "forget" option).)
 **Owner verify (both themes, after Vercel deploys + migration):**
 Briefing → Refresh → cards show article images, hero top story, "NN% match"
