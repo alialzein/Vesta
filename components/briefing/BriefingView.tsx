@@ -6,7 +6,7 @@ import { generateBriefing, setBriefingItemStatus } from '@/app/actions/briefing'
 import type { BriefingData, BriefingItemView } from '@/lib/briefing/data';
 import { faviconUrl } from '@/lib/briefing/images';
 import { PreferencesPanel } from './PreferencesPanel';
-import { Icon, type IconName } from '@/components/ui/Icon';
+import { Icon } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
 import { useToast } from '@/components/ui/Toast';
 
@@ -15,10 +15,10 @@ import { useToast } from '@/components/ui/Toast';
  * Refresh forces a re-run), save/dismiss controls, a Saved-for-later shelf,
  * and the preferences panel (shown inline on first run).
  *
- * Visuals: the top story renders as a full-width hero; every card carries the
- * article's og:image when generation resolved one, or a deterministic
- * category-gradient panel when it didn't (self-contained artwork — reads the
- * same in light and dark). Source favicons come from Google's s2 service.
+ * Layout (owner's call, 2026-06-11): one story per row, newspaper-style.
+ * When the article page yielded an og:image it sits embedded on the LEFT of
+ * the row; when it didn't, the card is simply text-only — no placeholder
+ * artwork. Source favicons come from Google's s2 service.
  */
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -41,35 +41,11 @@ const CATEGORY_CHIP: Record<string, string> = {
   other: 'bg-panel-2 text-muted',
 };
 
-/** Fallback artwork per category — fixed gradients (image-like content that
- *  is identical in both themes) + a large translucent icon. */
-const CATEGORY_ART: Record<string, { bg: string; icon: IconName }> = {
-  must_know: { bg: 'linear-gradient(135deg,#b91c1c,#f97316)', icon: 'sparkle' },
-  regulation_risk: { bg: 'linear-gradient(135deg,#92400e,#f59e0b)', icon: 'shield' },
-  client_competitor: { bg: 'linear-gradient(135deg,#5b21b6,#8b5cf6)', icon: 'people' },
-  technology: { bg: 'linear-gradient(135deg,#1d4ed8,#06b6d4)', icon: 'sparkle' },
-  industry: { bg: 'linear-gradient(135deg,#334155,#64748b)', icon: 'trend' },
-  market: { bg: 'linear-gradient(135deg,#065f46,#10b981)', icon: 'trend' },
-  other: { bg: 'linear-gradient(135deg,#1e3a5f,#3b82f6)', icon: 'sun' },
-};
-
-function CategoryArt({ category, className }: { category: string | null; className: string }) {
-  const art = CATEGORY_ART[category ?? 'other'] ?? CATEGORY_ART.other;
-  return (
-    <div
-      aria-hidden="true"
-      className={`grid place-items-center ${className}`}
-      style={{ backgroundImage: art.bg }}
-    >
-      <Icon name={art.icon} className="h-10 w-10 text-white/40" />
-    </div>
-  );
-}
-
-/** Article image with graceful fallback to the category art on load failure. */
-function CardVisual({ item, className }: { item: BriefingItemView; className: string }) {
+/** The article's own image, embedded at the left of the row. No image (or a
+ *  failed load) renders nothing — text-only card, no placeholder artwork. */
+function CardVisual({ item }: { item: BriefingItemView }) {
   const [failed, setFailed] = useState(false);
-  if (!item.imageUrl || failed) return <CategoryArt category={item.category} className={className} />;
+  if (!item.imageUrl || failed) return null;
   return (
     // News images come from arbitrary publisher domains; next/image needs a fixed allowlist.
     // eslint-disable-next-line @next/next/no-img-element
@@ -79,7 +55,7 @@ function CardVisual({ item, className }: { item: BriefingItemView; className: st
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className={`object-cover ${className}`}
+      className="h-44 w-full flex-none object-cover md:h-auto md:w-[260px]"
     />
   );
 }
@@ -198,14 +174,10 @@ function CardMeta({ item }: { item: BriefingItemView }) {
   );
 }
 
-function CardBody({ item, hero }: { item: BriefingItemView; hero?: boolean }) {
+function CardBody({ item }: { item: BriefingItemView }) {
   return (
     <>
-      <h3
-        className={`m-0 mt-2 font-semibold leading-snug tracking-tight text-ink ${
-          hero ? 'font-display text-[19px]' : 'text-[15px]'
-        }`}
-      >
+      <h3 className="m-0 mt-2 text-[15.5px] font-semibold leading-snug tracking-tight text-ink">
         {item.title}
       </h3>
       {item.summary && (
@@ -229,42 +201,27 @@ function CardBody({ item, hero }: { item: BriefingItemView; hero?: boolean }) {
   );
 }
 
+/** One story = one full-width row. Image (when any) embedded on the left;
+ *  otherwise the text fills the row. */
 function ItemCard({
   item,
-  hero = false,
   onStatus,
   busy,
 }: {
   item: BriefingItemView;
-  /** Top story: full-width, side-by-side image layout on desktop. */
-  hero?: boolean;
   onStatus: (id: string, status: 'saved' | 'dismissed' | 'unread') => void;
   busy: boolean;
 }) {
-  if (hero) {
-    return (
-      <article className="overflow-hidden rounded-[14px] border border-line bg-panel shadow-soft transition hover:border-line-strong xl:col-span-2">
-        <div className="flex flex-col md:flex-row">
-          <CardVisual item={item} className="h-44 w-full flex-none md:h-auto md:min-h-[230px] md:w-[42%]" />
-          <div className="flex min-w-0 flex-1 flex-col p-4">
-            <CardMeta item={item} />
-            <CardBody item={item} hero />
-            <div className="mt-auto">
-              <CardActions item={item} onStatus={onStatus} busy={busy} />
-            </div>
-          </div>
-        </div>
-      </article>
-    );
-  }
   return (
-    <article className="flex flex-col overflow-hidden rounded-[14px] border border-line bg-panel shadow-soft transition hover:border-line-strong">
-      <CardVisual item={item} className="h-36 w-full flex-none" />
-      <div className="flex flex-1 flex-col p-4">
-        <CardMeta item={item} />
-        <CardBody item={item} />
-        <div className="mt-auto">
-          <CardActions item={item} onStatus={onStatus} busy={busy} />
+    <article className="overflow-hidden rounded-[14px] border border-line bg-panel shadow-soft transition hover:border-line-strong">
+      <div className="flex flex-col md:flex-row">
+        <CardVisual item={item} />
+        <div className="flex min-w-0 flex-1 flex-col p-4">
+          <CardMeta item={item} />
+          <CardBody item={item} />
+          <div className="mt-auto">
+            <CardActions item={item} onStatus={onStatus} busy={busy} />
+          </div>
         </div>
       </div>
     </article>
@@ -356,8 +313,6 @@ export function BriefingView({ data }: { data: BriefingData }) {
     );
   }
 
-  const [top, ...rest] = items;
-
   return (
     <div className="flex flex-col gap-4">
       {/* Toolbar */}
@@ -399,7 +354,7 @@ export function BriefingView({ data }: { data: BriefingData }) {
         />
       )}
 
-      {/* Today's items — top story as a hero, the rest in a two-column grid. */}
+      {/* Today's items — one story per row. */}
       {items.length === 0 && !generating ? (
         <div className="rounded-[var(--radius)] border border-dashed border-line-strong bg-panel-2 p-10 text-center">
           <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-accent">
@@ -414,9 +369,8 @@ export function BriefingView({ data }: { data: BriefingData }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-          {top && <ItemCard item={top} hero onStatus={handleStatus} busy={busy} />}
-          {rest.map((item) => (
+        <div className="flex flex-col gap-3">
+          {items.map((item) => (
             <ItemCard key={item.id} item={item} onStatus={handleStatus} busy={busy} />
           ))}
         </div>
@@ -432,7 +386,7 @@ export function BriefingView({ data }: { data: BriefingData }) {
           <p className="m-0 mb-2 mt-1 text-[12px] text-muted">
             Stories you saved — they stay on this shelf across days until you dismiss them.
           </p>
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <div className="flex flex-col gap-3">
             {saved.map((item) => (
               <ItemCard key={item.id} item={item} onStatus={handleStatus} busy={busy} />
             ))}

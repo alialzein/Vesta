@@ -126,14 +126,16 @@ describe('BriefingView', () => {
     expect(chip).toHaveAttribute('title', expect.stringMatching(/relevant.*to you/i));
   });
 
-  it('renders the article image when present and category art when absent', () => {
+  it('renders the article image when present and NO placeholder when absent', () => {
     const second: BriefingItemView = { ...ITEM, id: 'b2', rank: 1, imageUrl: null };
     const { container } = renderView(makeData({ items: [ITEM, second] }));
     const imgs = Array.from(container.querySelectorAll('img')).map((i) => i.getAttribute('src'));
     expect(imgs).toContain('https://img.example/story.jpg');
-    // The no-image card falls back to a gradient panel (inline backgroundImage).
-    const art = container.querySelector('[style*="linear-gradient"]');
-    expect(art).not.toBeNull();
+    // The no-image card stays text-only: no gradient art, and the only other
+    // imgs on the page are the tiny source favicons.
+    expect(container.querySelector('[style*="linear-gradient"]')).toBeNull();
+    const nonFavicon = imgs.filter((src) => !(src ?? '').includes('s2/favicons'));
+    expect(nonFavicon).toEqual(['https://img.example/story.jpg']);
   });
 
   it('shows the publisher favicon chip from the source domain', () => {

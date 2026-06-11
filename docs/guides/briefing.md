@@ -35,10 +35,10 @@ The first visit asks what you care about (this takes a minute):
 - Built **once per day** automatically (first visit of the day) and cached —
   it refreshes after your midnight (Settings → Timezone). **Refresh** rebuilds
   it on demand.
-- The **top story** appears as a large featured card; the rest follow in a
-  grid. Cards show the **article's own image** when the publisher provides
-  one; otherwise a colored category panel stands in (some sites block
-  previews — that's them, not a bug).
+- Stories appear **one per row**, newspaper-style. When the publisher
+  provides an image it sits **embedded at the left of the row**; when it
+  doesn't, the card is simply text-only (some sites block previews — that's
+  them, not a bug).
 - Each card shows: a category chip (**Must know**, Regulation & risk,
   Clients & competitors…), the de-clickbaited headline, a short factual
   summary, **Why it matters** written for *your* role and interests, a
