@@ -4,21 +4,22 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (`main` = #49–#59 all MERGED (Ask Vesta chat,
-briefing images/rows, chat-v2 ack fix); chat migration applied by owner.
-**PR #60 `feat/chat-dock` OPEN, awaiting owner merge:** the dashboard FAB
-now opens a small NON-modal mini chat (no backdrop — radar stays clickable);
-sidebar Ask Vesta stays full-screen; shared chat parts extracted; expand
-button continues the same conversation in /chat. 432 tests green.
-**Owner approved next big track: CHAT ORDERS** — full phased design in
-`docs/plans/chat-actions-plan.md`: Phase A in-app orders (done/snooze/task/
-draft via intent + Confirm card — can start now), Phase B reminders engine
-(needs `reminders` migration approval + Vercel cron, draft SQL in plan;
-"email me hourly 3 times about thread X"), Phase C calendar/Teams meetings
-(**blocked on owner adding Calendars.ReadWrite to the Azure app +
-re-consent**). Decision recorded: deleting a chat does NOT delete learned
-memories (they live in Memory & Rules; metadata.conversation_id enables a
-future "forget what you learned here" option).)
+**Last updated:** 2026-06-11 (`main` = #49–#60 all MERGED (Ask Vesta chat +
+dock, briefing images/rows, chat-v2 ack fix); chat migration applied.
+**PR #61 `feat/chat-orders` OPEN, awaiting owner merge — Phase A CHAT
+ORDERS (chat-v3):** mark_done / snooze / create_task / draft_reply via
+model intent proposals ([index]-validated, local-time format-checked) →
+Confirm/Cancel card in both chat surfaces → executeChatAction reuses the
+dashboard's own server actions; audit in chat_messages.metadata.action.
+439 tests green. No migration.
+**Next after #61: Phase B reminders engine** — needs owner approval of the
+`reminders` migration (draft SQL in `docs/plans/chat-actions-plan.md`) +
+a Vercel cron `/api/cron/reminders`. **Then Phase C calendar/Teams:** owner
+agreed to add `Calendars.ReadWrite` to the Azure app (+ re-consent the
+mailbox); attendee autocomplete design recorded in the plan (local
+people/senders ranking first — no new scope; Graph /me/people + People.Read
+optional later). Decision recorded: deleting a chat does NOT delete learned
+memories (metadata.conversation_id enables a future "forget" option).)
 **Owner verify (both themes, after Vercel deploys + migration):**
 Briefing → Refresh → cards show article images, hero top story, "NN% match"
 chips (old items show gradient art until rebuilt; some sites block previews
