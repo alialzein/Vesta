@@ -5,11 +5,19 @@ Vesta is a private workspace tied to your account. This guide covers getting in.
 ## The front door
 
 Visiting Vesta while signed out shows the **welcome page** — an animated tour where
-a glowing path carries an email through Vesta's pipeline as you scroll: one
-connection → the noise gate → your radar → approve & send. It works in light and
-dark mode (the toggle is in the top bar) and on phones. **Get started** or
-**Sign in** takes you to the login screen; once you're signed in, Vesta always
-skips the welcome page and goes straight to your dashboard.
+a glowing path carries an email through Vesta's pipeline as you scroll. Each stop
+is labeled right in the scene: **01 Inbox → 02 Filtering → 03 AI Analysis →
+04 Today's Radar → 05 Approve & Send**, and at the end the path **fans out** into
+everything Vesta keeps doing after you hit send — tracking who owes you an answer,
+your tasks, your morning brief — plus a "coming soon" horizon (Memory & Rules,
+Decision Desk, Teams) drawn as wireframes because they're designed, not built yet.
+
+Below the tour, the three headline features (the radar, the AI's readable reasons,
+and draft-with-approval) each get a live animated walkthrough, followed by the
+rest of the toolkit and an honest roadmap. It all works in light and dark mode
+(the toggle is in the top bar) and on phones. **Get started** or **Sign in** takes
+you to the login screen; once you're signed in, Vesta always skips the welcome
+page and goes straight to your dashboard.
 
 ## Signing in
 

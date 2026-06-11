@@ -7,23 +7,24 @@ import type { Theme } from '@/lib/theme';
 /**
  * Landing-page 3D world (Three.js) — "the journey of one email through Vesta".
  *
- * An isometric world of four stations that literally tell the product story:
+ * v4: SIX labeled beats. An isometric world whose stations literally tell the
+ * product story, each carrying crisp in-world mono labels:
  *
- *   01 the ENVELOPE monument (mail arrives) ─▶ 02 the SCANNER GATE (noise is
- *   diverted down a grey spur into the open Hidden tray) ─▶ 03 the RADAR DIAL
- *   (colored priority blips + a ranked score bar-chart — the dashboard itself)
- *   ─▶ 04 the SEND ANTENNA (a paper plane launches: the approved reply).
+ *   01 · INBOX        the envelope monument (mail arrives)
+ *   02 · FILTERING    the scanner gate — noise diverts into the HIDDEN TRAY
+ *   03 · AI ANALYSIS  the thinking core — reads, scores 0–100, writes reasons
+ *   04 · TODAY'S RADAR the dial — colored priority blips + ranked score bars
+ *   05 · APPROVE & SEND the antenna — a paper plane launches (your approval)
+ *   06 · IT KEEPS WORKING the fan-out finale: the single path SPLITS into
+ *        colored streams flowing to shipped islands (waiting-on-them, tasks,
+ *        morning brief) while a violet wireframe horizon teases what's coming
+ *        (memory & rules, decision desk, Teams). The camera pulls up and back
+ *        for the wide delta reveal.
  *
  * The glowing path draws itself slightly AHEAD of the camera and the camera
- * rides the path (scroll = travel), so the scene continuously changes — the
- * VECTR feel. Buildings line the whole corridor and dotted ground patches
- * light up as the path passes, so the journey never crosses empty space.
- * The pointer is alive too: hovering anywhere blooms a dotted ripple, and the
- * camera parallaxes a touch toward the cursor.
- *
- * Scroll drives everything via the handle given to `onReady` (a callback, not
- * a ref — `next/dynamic` drops refs). Theme-aware (both palettes re-tint
- * live), DPR-capped, pauses offscreen, honors prefers-reduced-motion.
+ * rides the path (scroll = travel). Labels are canvas-texture sprites in the
+ * app's mono font, redrawn on theme toggle so both palettes stay crisp.
+ * Theme-aware, DPR-capped, pauses offscreen, honors prefers-reduced-motion.
  */
 
 export type VestaSceneHandle = {
@@ -56,6 +57,7 @@ type Palette = {
   accent: number;
   accent2: number;
   grey: number;
+  ink: number;
   ringOpacity: number;
   dotOpacity: number;
   shadowOpacity: number;
@@ -75,13 +77,14 @@ const PALETTES: Record<Theme, Palette> = {
     accent: 0x5ba8f5,
     accent2: 0x67e8d8,
     grey: 0x4b5870,
+    ink: 0xe4eefb,
     ringOpacity: 0.28,
     dotOpacity: 0.5,
     shadowOpacity: 0.3,
     ambient: 1.0,
     directional: 0.9,
-    fogNear: 60,
-    fogFar: 150,
+    fogNear: 70,
+    fogFar: 175,
   },
   light: {
     bg: 0xeef5ff,
@@ -92,44 +95,68 @@ const PALETTES: Record<Theme, Palette> = {
     accent: 0x2f7deb,
     accent2: 0x36b8e8,
     grey: 0xb9c6d8,
+    ink: 0x182a44,
     ringOpacity: 0.55,
     dotOpacity: 0.55,
     shadowOpacity: 0.16,
     ambient: 1.05,
     directional: 0.75,
-    fogNear: 70,
-    fogFar: 180,
+    fogNear: 80,
+    fogFar: 210,
   },
 };
 
 // Status colors (same in both themes — they match the app's priority tokens).
 const STATUS = { red: 0xe5484d, amber: 0xeb9d2a, green: 0x3fa066 } as const;
+// "Future" color for the coming-soon horizon — readable on both backgrounds.
+const VIOLET = 0x8b7cf6;
 
 /* ------------------------------ world layout ------------------------------ */
 
-// Stations are spaced so each scroll step is a real arrival — but close
-// enough that the corridor between them stays populated.
-const TOWER = new THREE.Vector3(-24, 0, -18);
-const GATE = new THREE.Vector3(-8, 0, -6);
-const RADAR = new THREE.Vector3(9, 0, 7);
-const ANTENNA = new THREE.Vector3(27, 0, 20);
+// Five stations spaced so each scroll beat is a real arrival, plus a fan-out
+// finale zone past the antenna.
+const TOWER = new THREE.Vector3(-30, 0, -24);
+const GATE = new THREE.Vector3(-15, 0, -11.5);
+const AICORE = new THREE.Vector3(-1, 0, -0.5);
+const RADAR = new THREE.Vector3(13, 0, 10.5);
+const ANTENNA = new THREE.Vector3(27, 0, 21.5);
 
 const PATH_Y = 0.22;
+
+// Fan-out basis: forward continues the route's diagonal, sideways spreads the
+// streams into the delta.
+const FAN_DIR = new THREE.Vector3(14, 0, 11).normalize();
+const FAN_NORMAL = new THREE.Vector3(-FAN_DIR.z, 0, FAN_DIR.x);
+function fanPoint(forward: number, side: number): THREE.Vector3 {
+  return ANTENNA.clone().addScaledVector(FAN_DIR, forward).addScaledVector(FAN_NORMAL, side);
+}
+const FAN_ORIGIN = fanPoint(2.6, 0);
+const FAN_CENTER = fanPoint(11.5, 0);
+const ISLAND_WAIT = fanPoint(11, -9.5);
+const ISLAND_TASKS = fanPoint(13, 0);
+const ISLAND_BRIEF = fanPoint(11, 9.5);
+const SOON_MEMORY = fanPoint(19, -12);
+const SOON_DESK = fanPoint(21, 0);
+const SOON_TEAMS = fanPoint(19, 12);
 
 function mainCurve(): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3(
     [
       new THREE.Vector3(TOWER.x + 1.4, PATH_Y, TOWER.z + 1.6),
-      new THREE.Vector3(-19, PATH_Y, -15.5),
-      new THREE.Vector3(-16, PATH_Y, -9.5),
+      new THREE.Vector3(-25, PATH_Y, -20.5),
+      new THREE.Vector3(-22, PATH_Y, -15.5),
       new THREE.Vector3(GATE.x - 2.0, PATH_Y, GATE.z - 1.8),
       new THREE.Vector3(GATE.x + 1.6, PATH_Y, GATE.z + 1.4),
-      new THREE.Vector3(-1.5, PATH_Y, -0.5),
-      new THREE.Vector3(3.5, PATH_Y, 3.8),
+      new THREE.Vector3(-9.5, PATH_Y, -6.5),
+      new THREE.Vector3(-5, PATH_Y, -3.8),
+      new THREE.Vector3(AICORE.x - 2.0, PATH_Y, AICORE.z - 1.0),
+      new THREE.Vector3(AICORE.x + 2.0, PATH_Y, AICORE.z + 1.6),
+      new THREE.Vector3(4.5, PATH_Y, 4.2),
+      new THREE.Vector3(8.5, PATH_Y, 7.2),
       new THREE.Vector3(RADAR.x - 2.0, PATH_Y, RADAR.z - 0.8),
       new THREE.Vector3(RADAR.x + 2.2, PATH_Y, RADAR.z + 1.8),
-      new THREE.Vector3(17, PATH_Y, 11.5),
-      new THREE.Vector3(21.5, PATH_Y, 16.5),
+      new THREE.Vector3(19.5, PATH_Y, 15),
+      new THREE.Vector3(23, PATH_Y, 18.5),
       new THREE.Vector3(ANTENNA.x - 0.8, PATH_Y, ANTENNA.z - 1.0),
     ],
     false,
@@ -157,9 +184,16 @@ function windowT(p: number, from: number, to: number): number {
   return smooth((p - from) / (to - from));
 }
 
-/** Activation of a station whose path-fraction is `frac` (1 = camera there). */
+/** Activation of a station whose path-fraction is `frac` (1 = camera there).
+ *  Tighter window than v3 (5 stations now share the route). */
 function stationActivation(pathT: number, frac: number): number {
-  return smooth(1 - Math.abs(pathT - frac) / 0.3);
+  return smooth(1 - Math.abs(pathT - frac) / 0.24);
+}
+
+/** Labels use an even tighter window so neighbors' text never bleeds into an
+ *  arrival — only the station being visited speaks. */
+function labelActivation(pathT: number, frac: number): number {
+  return smooth(1 - Math.abs(pathT - frac) / 0.17);
 }
 
 /** Path fraction (arc-length t) where the curve passes closest to `target`. */
@@ -255,6 +289,70 @@ function glowTexture(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(c);
 }
 
+/* --------------------------- in-world text labels --------------------------- */
+
+const MONO_STACK = `'JetBrains Mono', ui-monospace, monospace`;
+
+type LabelDriver = 'path' | 'fan' | 'soon';
+
+type LabelEntry = {
+  sprite: THREE.Sprite;
+  mat: THREE.SpriteMaterial;
+  tex: THREE.CanvasTexture;
+  canvas: HTMLCanvasElement;
+  text: string;
+  station: boolean;
+  driver: LabelDriver;
+  frac: number;
+  height: number;
+  baseW: number;
+  maxOpacity: number;
+  soonSuffix: boolean;
+};
+
+function setLabelFont(ctx: CanvasRenderingContext2D, px: number) {
+  ctx.font = `600 ${px}px ${MONO_STACK}`;
+  // Chromium supports canvas letter-spacing; elsewhere this is a harmless no-op.
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing =
+    `${Math.round(px * 0.13)}px`;
+}
+
+/** (Re)draws a label's canvas — crisp 2x text with an accent bullet for
+ *  station tags and a violet "· SOON" suffix for the roadmap monuments. */
+function drawLabel(l: LabelEntry, ink: string, accent: string, violet: string) {
+  const px = l.station ? 66 : 46;
+  const pad = Math.round(px * 0.4);
+  const gap = Math.round(px * 0.36);
+  const bullet = l.station ? Math.round(px * 0.4) : 0;
+  const suffix = l.soonSuffix ? ' · SOON' : '';
+  const measure = l.canvas.getContext('2d')!;
+  setLabelFont(measure, px);
+  const wMain = measure.measureText(l.text).width;
+  const wSuffix = suffix ? measure.measureText(suffix).width : 0;
+  l.canvas.width = Math.max(2, Math.ceil(pad * 2 + (bullet ? bullet + gap : 0) + wMain + wSuffix));
+  l.canvas.height = Math.ceil(px * 1.75);
+  const ctx = l.canvas.getContext('2d')!; // resizing reset the context state
+  setLabelFont(ctx, px);
+  ctx.textBaseline = 'middle';
+  const midY = l.canvas.height / 2;
+  let x = pad;
+  if (bullet) {
+    ctx.fillStyle = accent;
+    ctx.fillRect(x, Math.round(midY - bullet / 2), bullet, bullet);
+    x += bullet + gap;
+  }
+  ctx.fillStyle = ink;
+  ctx.fillText(l.text, x, midY + px * 0.04);
+  if (suffix) {
+    ctx.fillStyle = violet;
+    ctx.fillText(suffix, x + wMain, midY + px * 0.04);
+  }
+  l.tex.needsUpdate = true;
+  // Base world size; the render loop applies a narrow-screen factor on top.
+  l.baseW = l.height * (l.canvas.width / l.canvas.height);
+  l.sprite.scale.set(l.baseW, l.height, 1);
+}
+
 /* ------------------------------ build helpers ----------------------------- */
 
 function box(
@@ -347,11 +445,23 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     const matRed = new THREE.MeshBasicMaterial({ color: STATUS.red });
     const matAmber = new THREE.MeshBasicMaterial({ color: STATUS.amber });
     const matGreen = new THREE.MeshBasicMaterial({ color: STATUS.green });
+    const matViolet = new THREE.MeshBasicMaterial({ color: VIOLET });
     const matPlane = new THREE.MeshLambertMaterial({ transparent: true });
     const matPathBase = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.18 });
     const matPathGlow = new THREE.MeshBasicMaterial({ transparent: true, opacity: 1 });
     const matSpur = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 });
     const matRing = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide });
+    const matCoreWire = new THREE.MeshBasicMaterial({
+      wireframe: true,
+      transparent: true,
+      opacity: 0.7,
+    });
+    const matSoonWire = new THREE.MeshBasicMaterial({
+      color: VIOLET,
+      wireframe: true,
+      transparent: true,
+      opacity: 0,
+    });
     const matSweep = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0.2,
@@ -373,7 +483,7 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     const headTex = glowTexture();
 
     /* ground ------------------------------------------------------------------- */
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(140, 72), matGround);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(170, 72), matGround);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.01;
     scene.add(ground);
@@ -385,14 +495,21 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       scene.add(m);
     }
 
-    /** Dotted halo — brightens as the path passes its fraction of the route. */
+    /** Dotted halo — brightens with its driver (path pass / fan reveal). */
     const dotFields: {
       mesh: THREE.Mesh;
       mat: THREE.MeshBasicMaterial;
       frac: number;
       weight: number;
+      driver: LabelDriver;
     }[] = [];
-    function dotField(center: THREE.Vector3, radius: number, frac: number, weight = 1) {
+    function dotField(
+      center: THREE.Vector3,
+      radius: number,
+      frac: number,
+      weight = 1,
+      driver: LabelDriver = 'path',
+    ) {
       const mat = new THREE.MeshBasicMaterial({
         map: dotTex,
         transparent: true,
@@ -403,7 +520,51 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       m.rotation.x = -Math.PI / 2;
       m.position.set(center.x, 0.02, center.z);
       scene.add(m);
-      dotFields.push({ mesh: m, mat, frac, weight });
+      dotFields.push({ mesh: m, mat, frac, weight, driver });
+    }
+
+    /* labels --------------------------------------------------------------------- */
+    const labels: LabelEntry[] = [];
+    function makeLabel(
+      text: string,
+      pos: THREE.Vector3,
+      opts: {
+        station?: boolean;
+        driver?: LabelDriver;
+        frac?: number;
+        height?: number;
+        maxOpacity?: number;
+        soon?: boolean;
+      } = {},
+    ) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 2;
+      const tex = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({
+        map: tex,
+        transparent: true,
+        opacity: 0,
+        depthTest: false,
+        depthWrite: false,
+      });
+      const sprite = new THREE.Sprite(mat);
+      sprite.position.copy(pos);
+      sprite.renderOrder = 60;
+      scene.add(sprite);
+      labels.push({
+        sprite,
+        mat,
+        tex,
+        canvas,
+        text,
+        station: !!opts.station,
+        driver: opts.driver ?? 'path',
+        frac: opts.frac ?? 0,
+        height: opts.height ?? (opts.station ? 1.45 : 0.8),
+        baseW: 1,
+        maxOpacity: opts.maxOpacity ?? (opts.station ? 0.95 : 0.85),
+        soonSuffix: !!opts.soon,
+      });
     }
 
     /* the route (built early so districts can hug it) --------------------------- */
@@ -411,6 +572,7 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     const FRAC = {
       tower: closestT(curve, TOWER),
       gate: closestT(curve, GATE),
+      ai: closestT(curve, AICORE),
       radar: closestT(curve, RADAR),
       antenna: closestT(curve, ANTENNA),
     };
@@ -440,6 +602,13 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     scene.add(envelope);
     dropShadow(TOWER.x, TOWER.z, 9);
     dotField(TOWER, 7, FRAC.tower);
+    makeLabel('01 · INBOX', new THREE.Vector3(TOWER.x, 5.0, TOWER.z), {
+      station: true,
+      frac: FRAC.tower,
+    });
+    makeLabel('OUTLOOK', new THREE.Vector3(TOWER.x + 2.6, 3.4, TOWER.z + 2.6), {
+      frac: FRAC.tower,
+    });
     // Floating letter sheets drifting toward the path (mail materializing).
     const sheets: { mesh: THREE.Mesh; phase: number }[] = [];
     const sheetSpots: [number, number, number][] = [
@@ -482,6 +651,10 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     scene.add(gateGroup);
     dropShadow(GATE.x, GATE.z, 7);
     dotField(GATE, 7.5, FRAC.gate);
+    makeLabel('02 · FILTERING', new THREE.Vector3(GATE.x, 6.2, GATE.z), {
+      station: true,
+      frac: FRAC.gate,
+    });
     // The Hidden tray: an open-top bin the grey packets sink into (reviewable,
     // not deleted — that's the product promise).
     const tray = new THREE.Group();
@@ -493,6 +666,9 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     tray.position.set(GATE.x + 3.9, 0, GATE.z - 5.7);
     scene.add(tray);
     dropShadow(tray.position.x, tray.position.z, 5);
+    makeLabel('HIDDEN TRAY', new THREE.Vector3(tray.position.x, 2.1, tray.position.z), {
+      frac: FRAC.gate,
+    });
     // Container yard: noise already filed away.
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 2; j++) {
@@ -503,8 +679,104 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
         );
       }
     }
+    makeLabel('NOISE', new THREE.Vector3(GATE.x + 6.4, 2.3, GATE.z - 4.1), {
+      frac: FRAC.gate,
+      maxOpacity: 0.6,
+    });
 
-    // 03 — the radar dial: the dashboard itself. Concentric rings, a live
+    // 03 — the AI analysis core: the thinking station. A faceted core breathes
+    // over a ring platform while thought-sheets orbit it; it emits colored
+    // priority tokens that fly back onto the path (emails become scored items),
+    // fills a 0–100 score pylon, and writes plain-word reason lines on a slab.
+    const aiGroup = new THREE.Group();
+    const aiPlatform = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.4, 3.6, 0.4, 48),
+      matBuildingSoft,
+    );
+    aiPlatform.position.y = 0.2;
+    aiGroup.add(aiPlatform);
+    const aiRing = new THREE.Mesh(new THREE.RingGeometry(2.5, 2.62, 64), matRing);
+    aiRing.rotation.x = -Math.PI / 2;
+    aiRing.position.y = 0.42;
+    aiGroup.add(aiRing);
+    const coreInner = new THREE.Mesh(new THREE.IcosahedronGeometry(0.95, 0), matAccent2);
+    coreInner.position.y = 2.7;
+    const coreWire = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4, 0), matCoreWire);
+    coreWire.position.y = 2.7;
+    aiGroup.add(coreInner, coreWire);
+    aiGroup.position.copy(AICORE);
+    scene.add(aiGroup);
+    dropShadow(AICORE.x, AICORE.z, 11);
+    dotField(AICORE, 8, FRAC.ai);
+    makeLabel('03 · AI ANALYSIS', new THREE.Vector3(AICORE.x, 6.6, AICORE.z), {
+      station: true,
+      frac: FRAC.ai,
+    });
+    // Orbiting thought-sheets (the AI reading pages around the core).
+    const aiSheets: { mesh: THREE.Mesh; phase: number; r: number; y: number }[] = [];
+    for (let i = 0; i < 3; i++) {
+      const s = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 0.58), matPaper);
+      scene.add(s);
+      aiSheets.push({ mesh: s, phase: (i / 3) * Math.PI * 2, r: 2.1 + i * 0.25, y: 2.3 + i * 0.5 });
+    }
+    // Score pylon: a 0–100 bar that fills as the core analyzes.
+    const scoreShellPos = new THREE.Vector3(AICORE.x + 4.6, 0, AICORE.z - 2.2);
+    scene.add(box(0.9, 0.3, 0.9, matBuildingSoft, scoreShellPos.x, 0.15, scoreShellPos.z));
+    const scoreFill = box(0.55, 3.0, 0.55, matAccent, scoreShellPos.x, 0.3 + 1.5, scoreShellPos.z);
+    scene.add(scoreFill);
+    dropShadow(scoreShellPos.x, scoreShellPos.z, 3.4);
+    makeLabel('SCORE 0–100', new THREE.Vector3(scoreShellPos.x, 4.3, scoreShellPos.z), {
+      frac: FRAC.ai,
+    });
+    // Reason slab: a paper card whose plain-word lines draw themselves in.
+    const reasonGroup = new THREE.Group();
+    reasonGroup.add(box(2.8, 1.9, 0.16, matPaper, 0, 1.35, 0));
+    const reasonLines: THREE.Mesh[] = [];
+    for (let i = 0; i < 3; i++) {
+      const line = box(2.0 - i * 0.35, 0.14, 0.04, i === 0 ? matAccent : matAccent2, -0.1 - (i * 0.35) / 2, 1.85 - i * 0.42, 0.11);
+      reasonGroup.add(line);
+      reasonLines.push(line);
+    }
+    reasonGroup.rotation.y = Math.PI / 4; // face the camera
+    reasonGroup.position.set(AICORE.x - 4.4, 0, AICORE.z + 2.8);
+    scene.add(reasonGroup);
+    dropShadow(reasonGroup.position.x, reasonGroup.position.z, 6);
+    makeLabel(
+      'REASONS YOU CAN READ',
+      new THREE.Vector3(reasonGroup.position.x, 3.4, reasonGroup.position.z),
+      { frac: FRAC.ai },
+    );
+    // Priority tokens: red/amber/green octahedra rise out of the core and fly
+    // back down to the path — analyzed emails leaving as scored work items.
+    const aiExit = curve.getPointAt(Math.min(1, FRAC.ai + 0.055));
+    const tokenFlight = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(AICORE.x, 2.7, AICORE.z),
+      new THREE.Vector3((AICORE.x + aiExit.x) / 2, 4.6, (AICORE.z + aiExit.z) / 2),
+      new THREE.Vector3(aiExit.x, PATH_Y + 0.3, aiExit.z),
+    );
+    const aiTokens: { mesh: THREE.Mesh; offset: number }[] = [];
+    [matRed, matAmber, matGreen].forEach((mat, i) => {
+      const t = new THREE.Mesh(new THREE.OctahedronGeometry(0.26), mat);
+      t.visible = false;
+      scene.add(t);
+      aiTokens.push({ mesh: t, offset: i / 3 });
+    });
+    // A small analysis district.
+    const aiBlocks: [number, number, number, number, number][] = [
+      [-3.8, -2.6, 1.5, 2.4, 1.5],
+      [3.4, 2.8, 1.3, 1.9, 1.3],
+      [-1.0, -4.6, 1.4, 1.6, 1.4],
+    ];
+    aiBlocks.forEach(([dx, dz, w, h, d], i) => {
+      riser(
+        box(w, h, d, i % 2 ? matBuilding : matBuildingSoft, AICORE.x + dx, h / 2, AICORE.z + dz),
+        FRAC.ai,
+        h,
+      );
+      dropShadow(AICORE.x + dx, AICORE.z + dz, Math.max(w, d) * 2.6);
+    });
+
+    // 04 — the radar dial: the dashboard itself. Concentric rings, a live
     // sweep, colored priority blips, and a ranked score bar-chart beside it.
     const radarGroup = new THREE.Group();
     const platform = new THREE.Mesh(new THREE.CylinderGeometry(5.0, 5.2, 0.4, 56), matBuildingSoft);
@@ -541,6 +813,14 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     scene.add(radarGroup);
     dropShadow(RADAR.x, RADAR.z, 13);
     dotField(RADAR, 8.5, FRAC.radar);
+    makeLabel("04 · TODAY'S RADAR", new THREE.Vector3(RADAR.x, 6.4, RADAR.z), {
+      station: true,
+      frac: FRAC.radar,
+    });
+    makeLabel('OVERDUE', new THREE.Vector3(RADAR.x + 1.6, 2.3, RADAR.z + 0.7), {
+      frac: FRAC.radar,
+      maxOpacity: 0.7,
+    });
     // Ranked score bars (the 0–100 priority scores, highest first).
     const barBase = box(3.4, 0.3, 1.4, matBuildingSoft, RADAR.x + 5.6, 0.15, RADAR.z - 2.6);
     scene.add(barBase);
@@ -557,6 +837,10 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       );
     });
     dropShadow(RADAR.x + 5.6, RADAR.z - 2.6, 6);
+    makeLabel('RANKED', new THREE.Vector3(RADAR.x + 5.6, 4.0, RADAR.z - 2.6), {
+      frac: FRAC.radar,
+      maxOpacity: 0.7,
+    });
     // Vesta HQ slab with a glowing accent band (the command center).
     const hq = new THREE.Group();
     hq.add(box(3.4, 2.4, 2.2, matBuilding, 0, 1.2, 0));
@@ -566,7 +850,7 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     scene.add(hq);
     dropShadow(hq.position.x, hq.position.z, 8);
 
-    // 04 — the send antenna: the approved reply goes out. A paper plane
+    // 05 — the send antenna: the approved reply goes out. A paper plane
     // launches along an arc while broadcast rings expand.
     const antennaGroup = new THREE.Group();
     antennaGroup.add(box(1.8, 0.8, 1.8, matBuilding, 0, 0.4, 0));
@@ -588,6 +872,14 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     scene.add(antennaGroup);
     dropShadow(ANTENNA.x, ANTENNA.z, 6);
     dotField(ANTENNA, 7.5, FRAC.antenna);
+    makeLabel('05 · APPROVE & SEND', new THREE.Vector3(ANTENNA.x, 7.4, ANTENNA.z), {
+      station: true,
+      frac: FRAC.antenna,
+    });
+    makeLabel('APPROVED', new THREE.Vector3(ANTENNA.x + 3.4, 8.4, ANTENNA.z + 2.5), {
+      frac: FRAC.antenna,
+      maxOpacity: 0.7,
+    });
     // The paper plane (cone nose-forward) + its flight arc.
     const plane = new THREE.Mesh(new THREE.ConeGeometry(0.34, 1.0, 4), matPlane);
     plane.visible = false;
@@ -613,6 +905,215 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       dropShadow(ANTENNA.x + dx, ANTENNA.z + dz, 2.6);
     }
 
+    /* 06 — the fan-out finale: streams to shipped islands + a SOON horizon. ---- */
+    makeLabel('06 · IT KEEPS WORKING', new THREE.Vector3(FAN_CENTER.x, 9.0, FAN_CENTER.z), {
+      station: true,
+      driver: 'fan',
+      height: 2.4,
+    });
+
+    // Streams: the single path splits into colored flows (a new visual
+    // language for "after the send"). Vivid streams reach shipped islands;
+    // thinner violet streams reach the wireframe SOON monuments.
+    type Stream = {
+      tube: THREE.Mesh;
+      mat: THREE.MeshBasicMaterial;
+      indexCount: number;
+      curve: THREE.CatmullRomCurve3;
+      particles: { mesh: THREE.Mesh; offset: number }[];
+      head: THREE.Sprite | null;
+      vivid: boolean;
+      order: number;
+    };
+    const streams: Stream[] = [];
+    const particleGeo = new THREE.SphereGeometry(0.13, 10, 10);
+    function addStream(
+      target: THREE.Vector3,
+      side: number,
+      color: number,
+      vivid: boolean,
+      order: number,
+      particleMat: THREE.MeshBasicMaterial,
+    ) {
+      const mid = fanPoint(vivid ? 6.5 : 9, side * 0.5);
+      const dirT = target.clone().sub(FAN_ORIGIN).normalize();
+      const end = target.clone().addScaledVector(dirT, -1.8);
+      const c = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(FAN_ORIGIN.x, PATH_Y, FAN_ORIGIN.z),
+        new THREE.Vector3(mid.x, PATH_Y + 0.12, mid.z),
+        new THREE.Vector3(end.x, PATH_Y, end.z),
+      ]);
+      const mat = new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: vivid ? 0.95 : 0.5,
+      });
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(c, 120, vivid ? 0.07 : 0.045, 8, false), mat);
+      const indexCount = tube.geometry.index!.count;
+      tube.geometry.setDrawRange(0, 0);
+      scene.add(tube);
+      const particles: { mesh: THREE.Mesh; offset: number }[] = [];
+      const count = vivid ? 2 : 1;
+      for (let i = 0; i < count; i++) {
+        const m = new THREE.Mesh(particleGeo, particleMat);
+        m.visible = false;
+        scene.add(m);
+        particles.push({ mesh: m, offset: i / count });
+      }
+      let head: THREE.Sprite | null = null;
+      if (vivid) {
+        head = new THREE.Sprite(
+          new THREE.SpriteMaterial({ map: headTex, color, transparent: true, depthWrite: false }),
+        );
+        head.scale.setScalar(2.2);
+        head.visible = false;
+        scene.add(head);
+      }
+      streams.push({ tube, mat, indexCount, curve: c, particles, head, vivid, order });
+    }
+    const matAmberP = new THREE.MeshBasicMaterial({ color: STATUS.amber });
+    const matGreenP = new THREE.MeshBasicMaterial({ color: STATUS.green });
+    const matCyanP = new THREE.MeshBasicMaterial(); // accent2, theme-tinted
+    addStream(ISLAND_WAIT, -9.5, STATUS.amber, true, 0, matAmberP);
+    addStream(ISLAND_TASKS, 0, STATUS.green, true, 1, matGreenP);
+    addStream(ISLAND_BRIEF, 9.5, PALETTES.dark.accent2, true, 2, matCyanP);
+    const cyanStream = streams[2]; // re-tinted on theme change
+    addStream(SOON_MEMORY, -12, VIOLET, false, 3, matViolet);
+    addStream(SOON_DESK, 0, VIOLET, false, 4, matViolet);
+    addStream(SOON_TEAMS, 12, VIOLET, false, 5, matViolet);
+
+    // Island: WAITING ON THEM — a standing clock with turning hands and an
+    // amber pressure bar that climbs (the longer the silence, the higher).
+    const waitGroup = new THREE.Group();
+    waitGroup.add(box(2.6, 0.4, 2.6, matBuildingSoft, 0, 0.2, 0));
+    const clockPylon = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 2.2, 10), matBuilding);
+    clockPylon.position.y = 1.5;
+    waitGroup.add(clockPylon);
+    // The clock face: ring + two hands on pivots, turned to face the iso camera.
+    const clockFace = new THREE.Group();
+    clockFace.position.y = 3.4;
+    clockFace.rotation.y = Math.PI / 4;
+    clockFace.add(new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.09, 10, 48), matBuilding));
+    const handLongPivot = new THREE.Group();
+    handLongPivot.add(box(0.1, 0.85, 0.1, matAmber, 0, 0.42, 0.06));
+    const handShortPivot = new THREE.Group();
+    handShortPivot.add(box(0.1, 0.6, 0.1, matAmber, 0, 0.3, 0.06));
+    clockFace.add(handLongPivot, handShortPivot);
+    waitGroup.add(clockFace);
+    const pressure = box(0.5, 1.8, 0.5, matAmber, 1.7, 0.4 + 0.9, 1.0);
+    waitGroup.add(pressure);
+    waitGroup.scale.setScalar(1.25);
+    waitGroup.position.copy(ISLAND_WAIT);
+    scene.add(waitGroup);
+    dropShadow(ISLAND_WAIT.x, ISLAND_WAIT.z, 7);
+    dotField(ISLAND_WAIT, 5, 0, 0.8, 'fan');
+    makeLabel('WAITING ON THEM', new THREE.Vector3(ISLAND_WAIT.x, 6.4, ISLAND_WAIT.z), {
+      driver: 'fan',
+      height: 1.0,
+    });
+
+    // Island: TASKS — a checklist slab where green tick-cubes pop in.
+    const tasksGroup = new THREE.Group();
+    tasksGroup.add(box(2.8, 0.4, 2.8, matBuildingSoft, 0, 0.2, 0));
+    tasksGroup.add(box(2.0, 2.2, 0.18, matPaper, 0, 1.6, 0));
+    const taskCubes: THREE.Mesh[] = [];
+    for (let i = 0; i < 3; i++) {
+      const c = box(0.34, 0.34, 0.34, matGreen, -0.55, 2.3 - i * 0.62, 0.2);
+      tasksGroup.add(c);
+      taskCubes.push(c);
+      tasksGroup.add(box(1.0, 0.12, 0.06, matGrey, 0.25, 2.3 - i * 0.62, 0.14));
+    }
+    tasksGroup.rotation.y = Math.PI / 4;
+    tasksGroup.scale.setScalar(1.25);
+    tasksGroup.position.copy(ISLAND_TASKS);
+    scene.add(tasksGroup);
+    dropShadow(ISLAND_TASKS.x, ISLAND_TASKS.z, 7);
+    dotField(ISLAND_TASKS, 5, 0, 0.8, 'fan');
+    makeLabel('TASKS', new THREE.Vector3(ISLAND_TASKS.x, 5.6, ISLAND_TASKS.z), {
+      driver: 'fan',
+      height: 1.0,
+    });
+
+    // Island: MORNING BRIEF — a sun rising over a horizon slab with rays.
+    const briefGroup = new THREE.Group();
+    briefGroup.add(box(3.0, 0.4, 2.6, matBuildingSoft, 0, 0.2, 0));
+    briefGroup.add(box(2.6, 0.5, 0.3, matBuilding, 0, 0.65, 0));
+    const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(0.85, 32, 0, Math.PI), matAmber);
+    sunDisc.position.y = 0.9;
+    briefGroup.add(sunDisc);
+    const rays: THREE.Mesh[] = [];
+    for (let i = 0; i < 3; i++) {
+      const a = Math.PI * (0.25 + i * 0.25);
+      const ray = box(0.08, 0.6, 0.04, matAmber, Math.cos(a) * 1.5, 0.9 + Math.sin(a) * 1.5, 0);
+      ray.rotation.z = a - Math.PI / 2;
+      briefGroup.add(ray);
+      rays.push(ray);
+    }
+    briefGroup.rotation.y = Math.PI / 4;
+    briefGroup.scale.setScalar(1.25);
+    briefGroup.position.copy(ISLAND_BRIEF);
+    scene.add(briefGroup);
+    dropShadow(ISLAND_BRIEF.x, ISLAND_BRIEF.z, 7);
+    dotField(ISLAND_BRIEF, 5, 0, 0.8, 'fan');
+    makeLabel('MORNING BRIEF', new THREE.Vector3(ISLAND_BRIEF.x, 5.6, ISLAND_BRIEF.z), {
+      driver: 'fan',
+      height: 1.0,
+    });
+
+    // The SOON horizon: violet wireframe monuments — designed but not built,
+    // which is exactly what they are.
+    const soonMonuments: THREE.Group[] = [];
+    function soonMonument(pos: THREE.Vector3, build: (g: THREE.Group) => void, label: string) {
+      const g = new THREE.Group();
+      build(g);
+      g.position.copy(pos);
+      scene.add(g);
+      soonMonuments.push(g);
+      makeLabel(label, new THREE.Vector3(pos.x, 4.6, pos.z), {
+        driver: 'soon',
+        height: 0.9,
+        soon: true,
+        maxOpacity: 0.8,
+      });
+    }
+    soonMonument(
+      SOON_MEMORY,
+      (g) => {
+        // Memory & rules: a vault of stacked slabs.
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 1.9), matSoonWire).translateY(0.35));
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 1.6), matSoonWire).translateY(1.1));
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.7, 1.3), matSoonWire).translateY(1.85));
+      },
+      'MEMORY & RULES',
+    );
+    soonMonument(
+      SOON_DESK,
+      (g) => {
+        // Decision desk: a balance — beam over a column, a pan on each side.
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.4, 2.4, 0.4), matSoonWire).translateY(1.2));
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.22, 0.4), matSoonWire).translateY(2.5));
+        const panL = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.9), matSoonWire);
+        panL.position.set(-1.35, 1.7, 0);
+        const panR = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.9), matSoonWire);
+        panR.position.set(1.35, 2.1, 0);
+        g.add(panL, panR);
+      },
+      'DECISION DESK',
+    );
+    soonMonument(
+      SOON_TEAMS,
+      (g) => {
+        // Teams: a chat-bubble tower.
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.5, 0.5), matSoonWire).translateY(1.9));
+        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.5), matSoonWire);
+        tail.position.set(-0.6, 0.9, 0);
+        g.add(tail);
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.18, 0.52), matSoonWire).translateY(2.1));
+      },
+      'TEAMS',
+    );
+    for (const g of soonMonuments) g.rotation.y = Math.PI / 4;
+
     // Corridor city: blocks hug the whole route (deterministic placement), so
     // the camera always travels over content — never an empty void.
     {
@@ -621,16 +1122,16 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       const normal = new THREE.Vector3();
       const up = new THREE.Vector3(0, 1, 0);
       const stationFracs = Object.values(FRAC);
-      for (let i = 0; i < 22; i++) {
-        const t = 0.03 + (i / 21) * 0.94;
-        if (stationFracs.some((f) => Math.abs(t - f) < 0.07)) continue; // keep arrivals clear
+      for (let i = 0; i < 26; i++) {
+        const t = 0.03 + (i / 25) * 0.94;
+        if (stationFracs.some((f) => Math.abs(t - f) < 0.055)) continue; // keep arrivals clear
         curve.getPointAt(t, pt);
         curve.getTangentAt(t, tangent);
         normal.crossVectors(up, tangent).normalize();
         const side = i % 2 ? 1 : -1;
-        const lateral = 4.5 + ((i * 37) % 23) / 23 * 3.5;
-        const h = 0.9 + ((i * 53) % 17) / 17 * 2.0;
-        const w = 1.2 + ((i * 29) % 11) / 11 * 0.8;
+        const lateral = 4.5 + (((i * 37) % 23) / 23) * 3.5;
+        const h = 0.9 + (((i * 53) % 17) / 17) * 2.0;
+        const w = 1.2 + (((i * 29) % 11) / 11) * 0.8;
         const x = pt.x + normal.x * side * lateral;
         const z = pt.z + normal.z * side * lateral;
         scene.add(box(w, h, w, i % 3 ? matBuildingSoft : matBuilding, x, h / 2, z));
@@ -638,18 +1139,20 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       }
       // Dotted ground patches along the route — they light up as the path
       // passes (frac = their position), so the land wakes under the journey.
-      for (const t of [0.16, 0.45, 0.76]) {
+      for (const t of [0.13, 0.37, 0.61, 0.85]) {
         curve.getPointAt(t, pt);
         dotField(new THREE.Vector3(pt.x, 0, pt.z), 4.5, t, 0.55);
       }
-      // A few far landmarks for depth.
+      // A few far landmarks for depth (some past the fan zone).
       const far: [number, number, number, number][] = [
-        [-30, -28, 2.0, 3.2],
-        [-14, 6, 1.6, 2.2],
-        [2, -14, 1.7, 2.6],
+        [-36, -32, 2.0, 3.2],
+        [-20, 0, 1.6, 2.2],
+        [-2, -18, 1.7, 2.6],
         [22, 2, 1.6, 2.4],
-        [36, 30, 1.8, 2.8],
-        [14, 22, 1.5, 2.0],
+        [14, 26, 1.5, 2.0],
+        [50, 36, 1.8, 2.8],
+        [46, 14, 1.6, 2.3],
+        [24, 40, 1.5, 2.1],
       ];
       for (const [x, z, w, h] of far) {
         scene.add(box(w, h, w, matBuildingSoft, x, h / 2, z));
@@ -708,11 +1211,11 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     /* packets ----------------------------------------------------------------------- */
     const packetGeo = new THREE.BoxGeometry(0.38, 0.24, 0.52);
     const packets: { mesh: THREE.Mesh; offset: number }[] = [];
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 10; i++) {
       const mesh = new THREE.Mesh(packetGeo, i % 2 ? matAccent2 : matAccent);
       mesh.visible = false;
       scene.add(mesh);
-      packets.push({ mesh, offset: i / 9 });
+      packets.push({ mesh, offset: i / 10 });
     }
     const greyPackets: { mesh: THREE.Mesh; offset: number }[] = [];
     for (let i = 0; i < 3; i++) {
@@ -751,9 +1254,12 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
 
     function onPointerMove(e: PointerEvent) {
       const rect = host.getBoundingClientRect();
+      // Clamp: when the host is scrolled far off-screen the raw mapping
+      // explodes (rect.top is thousands of px away) and would shove the
+      // parallax camera target way off the world.
       pointerNdc.set(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -(((e.clientY - rect.top) / rect.height) * 2 - 1),
+        Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1)),
+        Math.max(-1, Math.min(1, -(((e.clientY - rect.top) / rect.height) * 2 - 1))),
       );
       if (reducedMotion) return;
       const now = performance.now();
@@ -772,6 +1278,7 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     window.addEventListener('pointermove', onPointerMove);
 
     /* theme ---------------------------------------------------------------------------- */
+    const hexOf = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
     function applyTheme(t: Theme) {
       const p = PALETTES[t];
       scene.background = new THREE.Color(p.bg);
@@ -783,6 +1290,10 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       matPlane.color.set(p.paper);
       matAccent.color.set(p.accent);
       matAccent2.color.set(p.accent2);
+      matCyanP.color.set(p.accent2);
+      matCoreWire.color.set(p.accent);
+      cyanStream.mat.color.set(p.accent2);
+      if (cyanStream.head) (cyanStream.head.material as THREE.SpriteMaterial).color.set(p.accent2);
       matGrey.color.set(p.grey);
       matPathBase.color.set(p.accent);
       matPathGlow.color.set(p.accent);
@@ -797,9 +1308,19 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       (headGlow.material as THREE.SpriteMaterial).color.set(p.accent);
       ambient.intensity = p.ambient;
       sun.intensity = p.directional;
+      // Crisp text labels are canvas-drawn — redraw them in the new palette.
+      for (const l of labels) drawLabel(l, hexOf(p.ink), hexOf(p.accent), hexOf(VIOLET));
     }
     applyTheme(themeRef.current);
     let appliedTheme: Theme = themeRef.current;
+    // The mono font may load after the first draw — redraw once it's ready.
+    let fontsRedrawn = false;
+    document.fonts?.ready.then(() => {
+      if (!fontsRedrawn) {
+        fontsRedrawn = true;
+        applyTheme(appliedTheme);
+      }
+    });
 
     /* animation loop --------------------------------------------------------------------- */
     let raf = 0;
@@ -810,7 +1331,8 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     const camTarget = new THREE.Vector3(0, 0, 0);
     const followPt = new THREE.Vector3();
     const tmp = new THREE.Vector3();
-    const OVERVIEW_TARGET = new THREE.Vector3(0, 0, 0);
+    const OVERVIEW_TARGET = new THREE.Vector3(-2, 0, -2);
+    const REDUCED_TARGET = new THREE.Vector3(8, 0, 6);
 
     function render() {
       const dt = Math.min(clock.getDelta(), 0.05);
@@ -825,9 +1347,11 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       shown += (target - shown) * Math.min(1, dt * 7);
       const p = reducedMotion ? 1 : shown;
 
-      // Travel: the camera RIDES the path (linear, so captions stay in sync);
-      // the glow draws slightly ahead so the path always leads (VECTR feel).
-      const pathT = Math.min(1, Math.max(0, (p - 0.06) / 0.9));
+      // Travel: the camera RIDES the path (linear, so captions stay in sync)
+      // until ~p=.78, then the finale window pulls up and back over the fan.
+      const pathT = Math.min(1, Math.max(0, (p - 0.05) / 0.73));
+      const fin = reducedMotion ? 1 : windowT(p, 0.8, 0.97);
+      const soonAct = reducedMotion ? 1 : windowT(p, 0.87, 1.0);
       const reveal = reducedMotion ? 1 : Math.min(1, pathT + 0.05);
       curve.getPointAt(Math.min(0.999, Math.max(0.001, pathT)), followPt);
 
@@ -835,18 +1359,24 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       const arrival = Math.max(
         stationActivation(pathT, FRAC.tower),
         stationActivation(pathT, FRAC.gate),
+        stationActivation(pathT, FRAC.ai),
         stationActivation(pathT, FRAC.radar),
         stationActivation(pathT, FRAC.antenna),
       );
 
-      const intro = windowT(p, 0.0, 0.1); // overview → follow blend
+      const intro = windowT(p, 0.0, 0.09); // overview → follow blend
       if (reducedMotion) {
-        camTarget.copy(OVERVIEW_TARGET);
-        camZoom = 0.55;
+        camTarget.copy(REDUCED_TARGET);
+        camZoom = 0.42;
       } else {
         camTarget.copy(OVERVIEW_TARGET).lerp(followPt, intro);
-        const followZoom = 1.34 + 0.24 * arrival;
-        camZoom = 0.58 + (followZoom - 0.58) * intro;
+        // The finale: target drifts to the fan center while the zoom widens.
+        camTarget.lerp(FAN_CENTER, fin);
+        const followZoom = 1.32 + 0.22 * arrival;
+        let zoom = 0.55 + (followZoom - 0.55) * intro;
+        const finaleZoom = vw / vh < 0.9 ? 0.46 : 0.56;
+        zoom += (finaleZoom - zoom) * fin;
+        camZoom = zoom;
         // Pointer parallax — the world leans gently toward the cursor.
         parallax.x += (pointerNdc.x - parallax.x) * Math.min(1, dt * 3);
         parallax.y += (pointerNdc.y - parallax.y) * Math.min(1, dt * 3);
@@ -892,13 +1422,33 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       // District wake-ups: dotted halos brighten, props rise.
       const dotBase = PALETTES[appliedTheme].dotOpacity;
       for (const f of dotFields) {
-        const act = reducedMotion ? 0.7 : stationActivation(pathT, f.frac);
+        const act = reducedMotion
+          ? 0.7
+          : f.driver === 'fan'
+            ? fin
+            : stationActivation(pathT, f.frac);
         f.mat.opacity = dotBase * f.weight * (0.18 + 0.82 * act);
       }
       for (const r of risers) {
         const act = reducedMotion ? 1 : 0.8 + 0.2 * stationActivation(pathT, r.frac);
         r.mesh.scale.y = act;
-        r.mesh.position.y = (r.h * act) / 2 + (r.mesh.userData.baseLift ?? 0);
+        r.mesh.position.y = (r.h * act) / 2;
+      }
+
+      // Labels fade in with their drivers (station pass / fan reveal / soon).
+      // Path labels also fade OUT as the finale takes over, and all labels
+      // shrink a touch on narrow screens so long tags never crop.
+      const labelScale = vw / vh < 0.9 ? 0.62 : 1;
+      for (const l of labels) {
+        const act = reducedMotion
+          ? 1
+          : l.driver === 'fan'
+            ? fin
+            : l.driver === 'soon'
+              ? soonAct
+              : labelActivation(pathT, l.frac) * (1 - 0.9 * fin);
+        l.mat.opacity = l.maxOpacity * act;
+        l.sprite.scale.set(l.baseW * labelScale, l.height * labelScale, 1);
       }
 
       // 01 — the envelope floats; sheets drift around it.
@@ -906,8 +1456,7 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       envBody.position.y = Math.sin(elapsed * 1.2) * 0.1 * (0.4 + 0.6 * towerAct);
       envBody.rotation.y = Math.PI / 4 + Math.sin(elapsed * 0.5) * 0.06;
       for (const s of sheets) {
-        s.mesh.position.y =
-          (s.phase % 2 ? 2.4 : 2.9) + Math.sin(elapsed * 1.6 + s.phase) * 0.18;
+        s.mesh.position.y = (s.phase % 2 ? 2.4 : 2.9) + Math.sin(elapsed * 1.6 + s.phase) * 0.18;
         s.mesh.rotation.y += dt * 0.4;
       }
 
@@ -929,7 +1478,45 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
         }
       }
 
-      // 03 — radar: sweep turns, blips pulse like live work items.
+      // 03 — the AI core thinks: breathes, spins, orbits its reading sheets,
+      // fills the score pylon, writes reason lines, emits priority tokens.
+      const aiAct = reducedMotion ? 1 : stationActivation(pathT, FRAC.ai);
+      coreInner.rotation.y += dt * 0.6;
+      coreInner.scale.setScalar(1 + Math.sin(elapsed * 2.2) * 0.08 * (0.3 + 0.7 * aiAct));
+      coreWire.rotation.y -= dt * 0.35;
+      coreWire.rotation.x = Math.sin(elapsed * 0.4) * 0.25;
+      matCoreWire.opacity = 0.35 + 0.4 * aiAct;
+      for (const s of aiSheets) {
+        const a = s.phase + elapsed * (0.5 + aiAct * 0.5);
+        s.mesh.position.set(
+          AICORE.x + Math.cos(a) * s.r,
+          s.y + Math.sin(elapsed * 1.4 + s.phase) * 0.15,
+          AICORE.z + Math.sin(a) * s.r,
+        );
+        s.mesh.rotation.y = -a;
+      }
+      const scoreT = reducedMotion ? 1 : 0.12 + 0.88 * smooth(aiAct);
+      scoreFill.scale.y = scoreT;
+      scoreFill.position.y = 0.3 + (3.0 * scoreT) / 2;
+      reasonLines.forEach((line, i) => {
+        const lt = reducedMotion ? 1 : windowT(aiAct, 0.25 + i * 0.18, 0.7 + i * 0.12);
+        line.scale.x = Math.max(0.001, lt);
+      });
+      for (const tk of aiTokens) {
+        if (aiAct > 0.3 && !reducedMotion) {
+          const t = (tk.offset + elapsed * 0.22) % 1;
+          tk.mesh.visible = true;
+          tokenFlight.getPointAt(t, tmp);
+          tk.mesh.position.copy(tmp);
+          tk.mesh.rotation.y = elapsed * 2 + tk.offset * 7;
+          const pop = Math.min(1, t * 4) * Math.min(1, (1 - t) * 4 + 0.4);
+          tk.mesh.scale.setScalar(Math.max(0.001, pop * aiAct));
+        } else {
+          tk.mesh.visible = false;
+        }
+      }
+
+      // 04 — radar: sweep turns, blips pulse like live work items.
       const radarAct = reducedMotion ? 1 : stationActivation(pathT, FRAC.radar);
       sweep.rotation.z = -elapsed * (0.5 + radarAct * 1.1);
       for (const b of blips) {
@@ -938,7 +1525,7 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
         b.mesh.rotation.y = elapsed * 0.8 + b.phase;
       }
 
-      // 04 — the antenna fires: rings expand and the paper plane launches.
+      // 05 — the antenna fires: rings expand and the paper plane launches.
       const sendAct = reducedMotion ? 1 : stationActivation(pathT, FRAC.antenna);
       beacon.scale.setScalar(1 + sendAct * (0.3 + Math.sin(elapsed * 4) * 0.2));
       stationRipples.forEach((r, i) => {
@@ -949,7 +1536,8 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
         r.visible = true;
         const phase = (elapsed * 0.55 + i * 0.5) % 1;
         r.scale.setScalar(1 + phase * 10);
-        matRippleStation.opacity = 0.5 * (1 - phase) * sendAct;
+        // Damped during the finale so the rings don't clutter the fan reveal.
+        matRippleStation.opacity = 0.5 * (1 - phase) * sendAct * (1 - 0.85 * fin);
       });
       if (sendAct > 0.25 && !reducedMotion) {
         const cycle = (elapsed % 3) / 2.1; // fly ~2.1s, rest ~0.9s
@@ -966,6 +1554,63 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
         }
       } else {
         plane.visible = false;
+      }
+
+      // 06 — the fan-out: streams draw outward in sequence, particles flow,
+      // islands animate, and the SOON wireframes materialize on the horizon.
+      for (const st of streams) {
+        const sReveal = reducedMotion
+          ? 1
+          : windowT(p, 0.8 + st.order * 0.018, 0.9 + st.order * 0.018);
+        st.tube.geometry.setDrawRange(0, Math.floor(st.indexCount * sReveal));
+        if (st.head) {
+          if (sReveal > 0.02 && sReveal < 0.98 && !reducedMotion) {
+            st.head.visible = true;
+            st.curve.getPointAt(Math.min(0.999, sReveal), tmp);
+            st.head.position.set(tmp.x, PATH_Y + 0.3, tmp.z);
+            (st.head.material as THREE.SpriteMaterial).opacity = 0.8;
+          } else {
+            st.head.visible = false;
+          }
+        }
+        for (const pt of st.particles) {
+          if (sReveal > 0.5) {
+            const t = (pt.offset + elapsed * (st.vivid ? 0.06 : 0.04)) % 1;
+            if (t < sReveal) {
+              pt.mesh.visible = true;
+              st.curve.getPointAt(t, tmp);
+              pt.mesh.position.copy(tmp);
+              pt.mesh.position.y += 0.1;
+              pt.mesh.scale.setScalar(1 + Math.sin(elapsed * 4 + pt.offset * 8) * 0.25);
+            } else {
+              pt.mesh.visible = false;
+            }
+          } else {
+            pt.mesh.visible = false;
+          }
+        }
+      }
+      // Waiting island: hands turn; the amber pressure bar climbs and resets.
+      handLongPivot.rotation.z = -elapsed * 0.9;
+      handShortPivot.rotation.z = -elapsed * 0.32;
+      const climb = reducedMotion ? 0.8 : 0.25 + 0.75 * ((elapsed * 0.18) % 1);
+      pressure.scale.y = climb * fin + 0.001;
+      pressure.position.y = 0.4 + (1.8 * pressure.scale.y) / 2;
+      // Tasks island: tick cubes pop one after another, then reset.
+      taskCubes.forEach((c, i) => {
+        const cycle = reducedMotion ? 1 : Math.min(1, Math.max(0, ((elapsed * 0.5) % 2.4) - i * 0.5));
+        const pop = smooth(Math.min(1, cycle * 2));
+        c.scale.setScalar(Math.max(0.001, pop * (0.2 + 0.8 * fin)));
+      });
+      // Brief island: the sun rises with the reveal and gently pulses.
+      sunDisc.position.y = 0.65 + 0.45 * fin + Math.sin(elapsed * 1.1) * 0.05 * fin;
+      rays.forEach((ray, i) => {
+        ray.scale.y = Math.max(0.001, fin * (1 + Math.sin(elapsed * 2 + i) * 0.15));
+      });
+      // SOON monuments: wireframes fade in and rise as the horizon wakes.
+      matSoonWire.opacity = 0.55 * soonAct;
+      for (const g of soonMonuments) {
+        g.scale.y = 0.65 + 0.35 * soonAct;
       }
 
       // Pointer ripples bloom out and fade.
@@ -1023,6 +1668,7 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
 
     return () => {
       running = false;
+      fontsRedrawn = true; // a late font-ready must not redraw a disposed scene
       cancelAnimationFrame(raf);
       io.disconnect();
       window.removeEventListener('resize', onResize);
@@ -1035,11 +1681,20 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       });
       [
         matGround, matBuilding, matBuildingSoft, matPaper, matAccent, matAccent2, matGrey,
-        matRed, matAmber, matGreen, matPlane,
+        matRed, matAmber, matGreen, matViolet, matPlane, matCoreWire, matSoonWire,
+        matAmberP, matGreenP, matCyanP,
         matPathBase, matPathGlow, matSpur, matRing, matSweep, matRippleStation, matShadow,
       ].forEach((m) => m.dispose());
       for (const f of dotFields) f.mat.dispose();
       for (const r of ripplePool) r.mat.dispose();
+      for (const st of streams) {
+        st.mat.dispose();
+        if (st.head) (st.head.material as THREE.SpriteMaterial).dispose();
+      }
+      for (const l of labels) {
+        l.mat.dispose();
+        l.tex.dispose();
+      }
       (headGlow.material as THREE.SpriteMaterial).dispose();
       dotTex.dispose();
       ripTex.dispose();

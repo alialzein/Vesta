@@ -7,6 +7,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useTheme } from '@/lib/theme';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { FeatureSpotlights } from './FeatureSpotlights';
 import type { VestaSceneHandle } from './VestaScene';
 
 // WebGL only exists in the browser — load the scene client-side, with a calm
@@ -25,7 +26,7 @@ const VestaScene = dynamic(() => import('./VestaScene').then((m) => m.VestaScene
  * Both themes; honors prefers-reduced-motion (static scene, no pinning tricks).
  */
 
-const STORY_VH = 450; // height of the pinned story, in viewport-heights (~20% faster travel)
+const STORY_VH = 600; // height of the pinned story, in viewport-heights (6 beats)
 
 const FINALE_LETTERS = ['V', 'E', 'S', 'T', 'A'] as const;
 
@@ -44,43 +45,41 @@ const STEPS: Step[] = [
   },
   {
     n: '03',
-    title: 'A radar, not an inbox',
-    body: 'Everything that needs you is scored 0–100 and ranked — who is waiting, what is overdue, what to do next — with the AI’s reasoning in plain words.',
+    title: 'AI that shows its work',
+    body: 'Vesta reads each thread, scores it 0–100, finds the deadline, and writes the why in plain words. Reasoning you can read — never a black box.',
   },
   {
     n: '04',
+    title: 'A radar, not an inbox',
+    body: 'Everything that needs you, ranked — who is waiting, what is overdue, what to do next. One glance instead of an excavation.',
+  },
+  {
+    n: '05',
     title: 'Reply with one approval',
-    body: 'Vesta drafts replies and follow-up nudges in your tone. Nothing sends until you approve — and it keeps tracking whoever still owes you an answer.',
+    body: 'Vesta drafts replies and follow-up nudges in your tone, threaded into the real conversation. Nothing sends until you approve.',
+  },
+  {
+    n: '06',
+    title: 'It keeps working',
+    body: 'After you hit send, Vesta tracks who owes you an answer, watches your tasks and morning brief — and memory, decisions, and Teams are on the way.',
   },
 ];
 
 /** Map story progress (0..1) to the active step index (-1 = hero).
  *  Boundaries sit midway between the stations the camera rides past
- *  (tower ≈ .08, gate ≈ .36, radar ≈ .62, antenna ≈ .93 of raw progress). */
+ *  (envelope ≈ .07, gate ≈ .24, AI core ≈ .42, radar ≈ .59, antenna ≈ .77,
+ *  fan-out finale ≈ .85+ of raw progress). */
 function stepAt(p: number): number {
-  if (p < 0.06) return -1;
-  if (p < 0.22) return 0;
-  if (p < 0.49) return 1;
-  if (p < 0.78) return 2;
-  return 3;
+  if (p < 0.05) return -1;
+  if (p < 0.16) return 0;
+  if (p < 0.33) return 1;
+  if (p < 0.505) return 2;
+  if (p < 0.68) return 3;
+  if (p < 0.83) return 4;
+  return 5;
 }
 
 const FEATURES: { icon: IconName; title: string; body: string }[] = [
-  {
-    icon: 'activity',
-    title: 'Today’s Radar',
-    body: 'A ranked list of the few things that actually need you — not another inbox. Overdue is red, senders have faces, one click resolves.',
-  },
-  {
-    icon: 'sparkle',
-    title: 'Reasons you can read',
-    body: 'Every priority comes with the AI’s plain-language why — summary, deadline, next best action. No black boxes.',
-  },
-  {
-    icon: 'edit',
-    title: 'Drafts in your tone',
-    body: 'Replies and follow-up chases written for you, threaded into the real Outlook conversation. You edit, you approve, then it sends.',
-  },
   {
     icon: 'refresh',
     title: '“Waiting on them” tracking',
@@ -95,6 +94,40 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
     icon: 'plus',
     title: 'Tasks in plain words',
     body: '“Call the vendor tomorrow 3pm” becomes a scheduled radar item. The ✨ button reads even messier notes.',
+  },
+  {
+    icon: 'sun',
+    title: 'Morning Brief',
+    body: 'One headline when you arrive — how many things actually need you today, and which one to hit first.',
+  },
+  {
+    icon: 'people',
+    title: 'Senders with faces',
+    body: 'Every card shows who is asking. Click a face to see everything that person is waiting on — and clear it in one pass.',
+  },
+  {
+    icon: 'snooze',
+    title: 'Snooze, done & resurface',
+    body: 'Done means done — until they reply. Snoozed items return exactly when due. Nothing silently disappears.',
+  },
+];
+
+const ROADMAP: { title: string; body: string }[] = [
+  {
+    title: 'Memory & Rules',
+    body: 'Teach Vesta once — VIPs, tone, delegation, topics to never touch. It remembers and applies it everywhere.',
+  },
+  {
+    title: 'Daily Brief & Focus Mode',
+    body: 'A morning briefing worth reading, then a Clear-My-Day queue that walks you through what’s left.',
+  },
+  {
+    title: 'AI Decision Desk',
+    body: 'Pending decisions distilled to options, stakes, and a recommendation you can challenge.',
+  },
+  {
+    title: 'Microsoft Teams',
+    body: 'The same radar, reading Teams — mentions, asks, and promises, not just email.',
   },
 ];
 
@@ -112,7 +145,6 @@ export function LandingPage() {
   const heroRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<VestaSceneHandle | null>(null);
   const progressRef = useRef(0); // latest story progress, replayed when the scene loads
-  const stepLineRef = useRef<HTMLDivElement | null>(null);
   const finaleRef = useRef<HTMLElement | null>(null);
   const [activeStep, setActiveStep] = useState(-1);
   const [pastStory, setPastStory] = useState(false); // header gains a backdrop in the content half
@@ -226,13 +258,14 @@ export function LandingPage() {
         if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
       });
 
-      // The 3-step connector draws itself across — the path language continued.
-      if (stepLineRef.current) {
-        const tween = gsap.to(stepLineRef.current, {
+      // Connector lines draw themselves across — the path language continued
+      // (the 3-step section and the roadmap strip both use one).
+      gsap.utils.toArray<HTMLElement>('[data-drawline]').forEach((el) => {
+        const tween = gsap.to(el, {
           clipPath: 'inset(0 0% 0 0)',
           ease: 'none',
           scrollTrigger: {
-            trigger: stepLineRef.current,
+            trigger: el,
             scroller,
             scrub: true,
             start: 'top 92%',
@@ -240,7 +273,48 @@ export function LandingPage() {
           },
         });
         if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
-      }
+      });
+
+      // Feature cards open like envelopes: a clip-path unfold from the icon
+      // corner with a rising stagger, then the icon chip pops in.
+      gsap.utils.toArray<HTMLElement>('[data-cardgrid]').forEach((group) => {
+        const cards = Array.from(group.children) as HTMLElement[];
+        if (!cards.length) return;
+        const open = gsap.fromTo(
+          cards,
+          { opacity: 0, y: 30, clipPath: 'inset(10% 60% 60% 10% round 18px)' },
+          {
+            opacity: 1,
+            y: 0,
+            clipPath: 'inset(0% 0% 0% 0% round 18px)',
+            duration: 0.75,
+            ease: 'power3.out',
+            stagger: 0.1,
+            scrollTrigger: { trigger: group, scroller, start: 'top 85%' },
+          },
+        );
+        if (open.scrollTrigger) triggers.push(open.scrollTrigger);
+        const icons = cards
+          .map((c) => c.querySelector<HTMLElement>('[data-cardicon]'))
+          .filter((el): el is HTMLElement => !!el);
+        if (icons.length) {
+          const pop = gsap.fromTo(
+            icons,
+            { scale: 0.35, rotate: -14, opacity: 0 },
+            {
+              scale: 1,
+              rotate: 0,
+              opacity: 1,
+              duration: 0.55,
+              ease: 'back.out(2.2)',
+              stagger: 0.1,
+              delay: 0.25,
+              scrollTrigger: { trigger: group, scroller, start: 'top 85%' },
+            },
+          );
+          if (pop.scrollTrigger) triggers.push(pop.scrollTrigger);
+        }
+      });
 
       // Finale: the glowing line arrives from above and draws the giant VESTA
       // stroke by stroke as the last screens scroll in; then the letters fill.
@@ -449,9 +523,9 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ----------------------------- features ---------------------------- */}
-      <section className="relative border-t border-line bg-bg px-5 py-20 sm:py-28">
-        <div className="mx-auto max-w-[1100px]">
+      {/* ------------------- the command center (hero features) ------------------- */}
+      <section className="relative border-t border-line bg-bg px-5 pt-20 sm:pt-28">
+        <div className="mx-auto max-w-[1320px] pb-4 sm:pb-8">
           <div data-parallax className="max-w-[640px]">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-accent">
               The command center
@@ -462,13 +536,33 @@ export function LandingPage() {
               Nothing that doesn&apos;t.
             </h2>
           </div>
-          <div data-stagger className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        </div>
+      </section>
+
+      {/* Full-bleed spotlight bands: radar / readable reasons / drafts. */}
+      <FeatureSpotlights reduced={reduced} />
+
+      {/* --------------------- the rest of the toolkit (grid) --------------------- */}
+      <section className="relative border-t border-line bg-bg px-5 py-20 sm:py-28">
+        <div className="mx-auto max-w-[1320px]">
+          <div data-parallax className="max-w-[640px]">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-accent">
+              And the rest of the toolkit
+            </p>
+            <h2 className="mt-3 font-display text-[30px] font-semibold leading-tight tracking-tight sm:text-[40px]">
+              Small things that add up to calm.
+            </h2>
+          </div>
+          <div data-cardgrid className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <article
                 key={f.title}
                 className="rounded-[var(--radius)] border border-line bg-panel p-6 shadow-soft transition hover:-translate-y-1 hover:border-line-strong"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-accent-soft text-accent">
+                <span
+                  data-cardicon
+                  className="grid h-10 w-10 place-items-center rounded-[12px] bg-accent-soft text-accent"
+                >
                   <Icon name={f.icon} className="h-[18px] w-[18px]" />
                 </span>
                 <h3 className="mt-4 font-display text-[18px] font-semibold tracking-tight">
@@ -481,9 +575,51 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ------------------------- roadmap: where Vesta goes ------------------------ */}
+      <section className="relative border-t border-line bg-panel px-5 py-20 sm:py-24">
+        <div className="mx-auto max-w-[1320px]">
+          <div data-parallax className="flex max-w-[640px] flex-col gap-3">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-[#8b7cf6]">
+              On the roadmap
+            </p>
+            <h2 className="m-0 font-display text-[30px] font-semibold leading-tight tracking-tight sm:text-[40px]">
+              Where Vesta goes next.
+            </h2>
+          </div>
+          {/* The journey's violet streams, continued: a line draws to what's coming. */}
+          <div aria-hidden="true" className="mt-12 hidden sm:block">
+            <div
+              data-drawline
+              className="h-[2px] w-full rounded-full bg-gradient-to-r from-accent via-[#8b7cf6] to-[#8b7cf6] opacity-60"
+              style={{ clipPath: reduced ? undefined : 'inset(0 100% 0 0)' }}
+            />
+          </div>
+          <div data-stagger className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-4">
+            {ROADMAP.map((r) => (
+              <article
+                key={r.title}
+                className="rounded-[var(--radius)] border border-dashed border-line-strong bg-bg p-6"
+              >
+                <span className="inline-flex rounded-full border border-[#8b7cf6]/40 px-[10px] py-[3px] font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-[#8b7cf6]">
+                  Soon
+                </span>
+                <h3 className="mt-4 font-display text-[17px] font-semibold tracking-tight">
+                  {r.title}
+                </h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted">{r.body}</p>
+              </article>
+            ))}
+          </div>
+          <p className="mb-0 mt-6 text-[12px] text-muted">
+            On the roadmap — designed, not yet in the product. The wireframe horizon at the end of
+            the journey above is the same promise.
+          </p>
+        </div>
+      </section>
+
       {/* ------------------------------ safety ----------------------------- */}
       <section className="border-t border-line bg-panel px-5 py-16">
-        <div className="mx-auto max-w-[1100px]">
+        <div className="mx-auto max-w-[1320px]">
           <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <h2
               data-parallax
@@ -509,7 +645,7 @@ export function LandingPage() {
 
       {/* ---------------------------- how to start ------------------------- */}
       <section className="border-t border-line bg-bg px-5 py-20 sm:py-28">
-        <div className="mx-auto max-w-[1100px]">
+        <div className="mx-auto max-w-[1320px]">
           <div data-parallax className="max-w-[640px]">
             <p className="font-mono text-[11px] font-bold uppercase tracking-[0.22em] text-accent">
               Two minutes to calm
@@ -521,7 +657,7 @@ export function LandingPage() {
           {/* The journey's path language, continued: a line draws across the steps. */}
           <div aria-hidden="true" className="mt-12 hidden sm:block">
             <div
-              ref={stepLineRef}
+              data-drawline
               className="h-[2px] w-full rounded-full bg-gradient-to-r from-accent via-accent-2 to-accent opacity-70"
               style={{ clipPath: reduced ? undefined : 'inset(0 100% 0 0)' }}
             />
@@ -549,7 +685,7 @@ export function LandingPage() {
       <section className="border-t border-line bg-bg px-5 pb-24 pt-8">
         <div
           data-reveal
-          className="relative mx-auto max-w-[1100px] overflow-hidden rounded-[var(--radius-lg)] border border-line-strong bg-panel p-10 text-center shadow-glow sm:p-16"
+          className="relative mx-auto max-w-[1320px] overflow-hidden rounded-[var(--radius-lg)] border border-line-strong bg-panel p-10 text-center shadow-glow sm:p-16"
         >
           <span
             className="animate-vesta-breathe pointer-events-none absolute inset-0 bg-[radial-gradient(600px_240px_at_50%_-10%,var(--accent-soft),transparent_70%)]"

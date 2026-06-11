@@ -4,15 +4,61 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (landing **v3 journey + round-3 polish MERGED to
-main** — owner approved after live preview).
-**Repo state:** `main` clean — 315 tests green, typecheck/lint clean,
-Playwright-verified screenshots both themes + mobile (`node
-scripts/landing-shots.mjs` regenerates them against a running dev server).
-**Next: 1) after Vercel deploys main, owner spot-checks production /welcome
-(incognito; scroll to the VESTA finale) — the 4 re-queued work items also
-re-analyze with v2 prompts after deploy + next sync → 2) Phase 10 — Memory &
-Rules. Smaller queued: due_at in manager timezone.**
+**Last updated:** 2026-06-11 (landing **v4 — labeled 6-beat journey + fan-out
+finale + spotlight bands — built on branch `feat/landing-v4-journey`, awaiting
+owner review in VS Code; NOT pushed yet**).
+**Repo state:** branch `feat/landing-v4-journey` (off `main` `90ff564`) —
+317 tests green, typecheck/lint clean, Playwright-verified screenshots both
+themes + mobile (`node scripts/landing-shots.mjs` against a running dev server).
+**Next: 1) owner reviews the landing v4 branch (then push → PR → merge) →
+2) after Vercel deploys, owner spot-checks production /welcome — the 4 re-queued
+work items also re-analyze with v2 prompts after deploy + next sync →
+3) Phase 10 — Memory & Rules. Smaller queued: due_at in manager timezone.**
+
+## 🔭 Landing v4 — labeled journey + fan-out finale (2026-06-11, on branch)
+
+Owner asked (after reviewing v3 live): words ON the 3D objects, an AI-analysis
+beat, a NEW post-radar scene showing what comes after the send ("advanced and
+special, multi flowing glow"), all features represented below the scene with
+special per-feature animations + a special card-open style, and advice on
+full-screen (decision: hybrid — full-bleed bands + wide 1320px grid, not
+full-screen text). Owner confirmed via Q&A: finale = built features + SOON
+horizon; labels = mono tags + micro-labels; 6 beats incl. AI station.
+
+Built on `feat/landing-v4-journey` (all in `components/landing/`):
+- **Scene v4 (`VestaScene.tsx`):** six labeled beats — 01 INBOX (envelope) →
+  02 FILTERING (gate + HIDDEN TRAY/NOISE micro-labels) → **03 AI ANALYSIS (new
+  station:** breathing icosahedron core + orbiting thought-sheets, red/amber/
+  green priority tokens flying back onto the path, SCORE 0–100 pylon, "REASONS
+  YOU CAN READ" slab) → 04 TODAY'S RADAR (OVERDUE/RANKED micros) → 05 APPROVE &
+  SEND → **06 fan-out finale:** the single path SPLITS into colored streams
+  (amber→WAITING ON THEM clock island, green→TASKS checklist, cyan→MORNING
+  BRIEF sunrise) + violet streams to **wireframe SOON monuments** (MEMORY &
+  RULES, DECISION DESK, TEAMS) while the camera pulls up/back for the wide
+  delta reveal. Labels are canvas-sprite JetBrains Mono, theme-redrawn, fade
+  with arrival, shrink 0.62× on narrow screens; path labels fade out as the
+  finale takes over.
+- **Page (`LandingPage.tsx`):** 6-step rail (new steps 03 "AI that shows its
+  work", 06 "It keeps working"), STORY_VH 450→600, new stepAt boundaries;
+  sections widened to 1320px; feature-card grid gets a **clip-path "card-open"
+  reveal + icon pop**; new **roadmap strip** (4 dashed SOON cards, violet,
+  honesty note); connector-line draw generalized (`data-drawline`).
+- **`FeatureSpotlights.tsx` (new):** 3 full-bleed bands with looping GSAP UI
+  mocks — radar rows stagger in + the red OVERDUE row climbs to the top;
+  the AI reason card assembles (score dial fills to 87); the draft types
+  itself → Approve & Send glows → paper plane flies → "Sent ✓".
+- **Real bug found & fixed:** scene pointer-parallax NDC wasn't clamped — with
+  the scene host scrolled far off-screen the camera target could be shoved ~10
+  world units (this was silently mis-framing things whenever the pointer moved
+  while below the story). Clamped to [-1,1].
+- `scripts/landing-shots.mjs`: v4 beats + per-section heading shots; re-centers
+  the mouse after every scroll so parallax never biases screenshots.
+- Guide updated: `getting-started.md` "The front door". Tests: LandingPage suite
+  covers 6 steps, bands, grid, roadmap + Soon badges (317 total).
+- ⚠️ **Owner verify (live, both themes):** scroll the full journey — labels
+  appear per station, AI station reads, fan-out finale + SOON wireframes,
+  6-step captions stay synced; bands' mocks loop; card-open reveal; roadmap;
+  mobile (390px) labels fit.
 
 ## 🔁 Landing v3 — journey FIXED + workflow stations (2026-06-10, round 2)
 
