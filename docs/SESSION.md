@@ -4,9 +4,10 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**PERSONAL INTELLIGENCE BRIEF v1 MERGED (#54)
-and the migration WAS RUN by the owner** (`20260611190001_personal_briefing`
-applied in Supabase). `main` = #49–#54. 394 tests green.)
+**Last updated:** 2026-06-11 (**Briefing v1 MERGED (#54), migration applied,
+and the generation bug FIXED + MERGED (#55)** — upsert ON CONFLICT couldn't
+use the partial dedupe index → plain insert; Refresh delete now precedes the
+seen-check. `main` = #49–#55. 394 tests green.)
 **Owner verify when convenient (both themes, after Vercel deploys):**
 sidebar → Briefing → set topics + a company → Save & build → items with real
 source links in seconds; Refresh rebuilds; Save survives to tomorrow's
