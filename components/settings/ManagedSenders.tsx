@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { removeTriageRule, setSenderVip } from '@/app/settings/actions';
+import { removeTriageRule, setSenderVip } from '@/app/(shell)/settings/actions';
 import { Icon } from '@/components/ui/Icon';
 
 export type ManagedRule = { id: string; kind: 'mute' | 'allow'; value: string };

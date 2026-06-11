@@ -9,35 +9,19 @@ import type { AccountView } from '@/lib/supabase/account';
 export type NavView = 'today' | 'memory';
 
 /** Real counts shown as nav badges (omitted/zero → no badge, never a fake number). */
-export type NavCounts = { today?: number; waiting?: number; followup?: number; drafts?: number };
+export type NavCounts = { today?: number; waiting?: number; drafts?: number };
 
-function buildNav(counts: NavCounts, activeView: NavView, activeFilter?: string): NavGroup[] {
+function buildNav(counts: NavCounts): NavGroup[] {
   // Only badge what we have real data for; 0 shows no badge (honest, not "empty").
+  // (No Follow-ups item — that slice lives in the radar's filter chips.)
   const badge = (n?: number) => (n && n > 0 ? n : undefined);
-  // Today and Follow-ups both live on the 'today' view; the radar filter decides
-  // which of the two is highlighted (Follow-ups = the followup-filtered radar).
-  const onFollowups = activeView === 'today' && activeFilter === 'followup';
   return [
     {
       heading: 'Workspace',
       items: [
-        {
-          label: 'Today',
-          icon: 'home',
-          view: 'today',
-          badge: badge(counts.today),
-          active: activeView === 'today' && !onFollowups,
-        },
+        { label: 'Today', icon: 'home', view: 'today', badge: badge(counts.today) },
         { label: 'Inbox', icon: 'mail', href: '/inbox' },
         { label: 'Waiting on Me', icon: 'clock', href: '/priorities', badge: badge(counts.waiting) },
-        {
-          label: 'Follow-ups',
-          icon: 'reply',
-          view: 'today',
-          filter: 'followup',
-          badge: badge(counts.followup),
-          active: onFollowups,
-        },
         { label: 'Draft Replies', icon: 'drafts', href: '/drafts', badge: badge(counts.drafts) },
         { label: 'Hidden', icon: 'eyeOff', href: '/hidden' },
       ],
@@ -57,10 +41,11 @@ function buildNav(counts: NavCounts, activeView: NavView, activeFilter?: string)
 type SidebarProps = {
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  activeView: NavView;
-  /** The radar filter currently applied (drives the Today/Follow-ups highlight). */
-  activeFilter?: string;
-  onSelectView: (view: NavView, filter?: string) => void;
+  /** The in-page dashboard view (only set on the dashboard itself). */
+  activeView?: NavView;
+  /** Current route, so href items (Inbox, Drafts…) highlight on their page. */
+  activePath?: string;
+  onSelectView: (view: NavView) => void;
   /** Mobile drawer state (the sidebar is hidden on < lg and shown as an overlay). */
   mobileOpen: boolean;
   onCloseMobile: () => void;
@@ -74,14 +59,14 @@ export function Sidebar({
   collapsed,
   onToggleCollapsed,
   activeView,
-  activeFilter,
+  activePath,
   onSelectView,
   mobileOpen,
   onCloseMobile,
   account,
   counts = {},
 }: SidebarProps) {
-  const nav = buildNav(counts, activeView, activeFilter);
+  const nav = buildNav(counts);
   // Close the mobile drawer on Escape.
   useEffect(() => {
     if (!mobileOpen) return;
@@ -114,8 +99,9 @@ export function Sidebar({
         groups={nav}
         collapsed={mobile ? false : collapsed}
         activeView={activeView}
-        onSelectView={(v, filter) => {
-          onSelectView(v, filter);
+        activePath={activePath}
+        onSelectView={(v) => {
+          onSelectView(v);
           if (mobile) onCloseMobile();
         }}
       />

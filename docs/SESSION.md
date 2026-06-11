@@ -4,20 +4,69 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**LEFT-SIDEBAR button pass built on
-`feat/sidebar-button-pass` — PR open, awaiting owner review/merge.** Every
-left-panel button is now real or honestly "Soon"; 349 tests green,
-typecheck/lint/build clean, landing-shots re-verified both themes + mobile.)
-**Repo state:** branch pushed; `main` = Phase 10 merged (#46–#48), re-analysis
-done (all open items on prompt v3).
-**Next: 1) owner merges the sidebar PR after testing (see "Verify live"
-below) → 2) the RIGHT-RAIL pass (known placeholders: "Delegate" → SOON toast;
-"Ask Vesta" chat drawer → demo shell; Morning Brief quick-action drawers →
-demo previews) → 3) Phase 11 — Daily Brief & Focus Mode (owner wants a SCOPE
-DISCUSSION first, per Q&A 2026-06-11 — don't start coding without it; note
-Phase 11 will make the Morning Brief drawers real, so order 2+3 together).
-Smaller queued: due_at + Weekly Review day-buckets in manager timezone
-(profiles.timezone); future chat assistant reads 'personal' memories.**
+**Last updated:** 2026-06-11 (**sidebar pass #49 MERGED; follow-up: APP-SHELL
+rework built on `feat/app-shell-pages` — PR open, awaiting owner review.**
+354 tests green, typecheck/lint/build clean.)
+**Repo state:** `main` = #49 (left-sidebar buttons) + Phase 10; branch
+`feat/app-shell-pages` pushed.
+**Owner decisions (2026-06-11 Q&A):** 1) Follow-ups sidebar button REMOVED
+(redundant with the radar chip) — owner asked after merging #49; 2) routed
+pages must be full-screen → chose **"App shell everywhere"** (persistent
+sidebar + topbar on Inbox / Waiting on Me / Drafts / Hidden / Weekly Review /
+Settings); 3) Phase 11 confusion cleared: it's the brief about the manager's
+OWN inbox (Daily Brief & Focus Mode) — NOT the internet-news idea (that's the
+separate Personal Intelligence Brief track, deliberately later). Owner picked
+**Phase 11 as planned** for after this layout work.
+**Next: 1) owner merges the app-shell PR after testing (see Verify below) →
+2) Phase 11 — Daily Brief & Focus Mode, which should FOLD IN the right-rail
+placeholder pass ("Delegate" SOON toast, "Ask Vesta" demo shell, Morning
+Brief demo drawers — the brief/focus work makes most of them real). Open
+Phase 11 scope decisions to settle with the owner before coding: AI-written
+brief once/day (recommended) vs deterministic; cached brief storage (a tiny
+`daily_briefs` table needs migration approval) vs metadata; Focus Mode as
+drawer vs full-screen. Smaller queued: due_at + Weekly Review day-buckets in
+manager timezone (profiles.timezone); chat assistant reads 'personal'
+memories.**
+
+## 🖼️ App shell everywhere (built 2026-06-11, `feat/app-shell-pages`)
+
+Owner (after merging #49): remove the Follow-ups button; make routed pages
+full-screen. Chose "App shell everywhere" via Q&A. Built:
+
+- **New `app/(shell)/` route group** (URLs unchanged) holding Inbox,
+  Priorities, Drafts, Hidden, Weekly Review, **Settings** (added for
+  consistency; the full-screen thread reader stays standalone on purpose).
+  Its `layout.tsx` renders the persistent frame ONCE — navigation only swaps
+  the content column (each route's `loading.tsx` is now an in-shell skeleton
+  via `PageSkeleton inShell`), so the sidebar never blinks.
+- **`components/app/AppShell.tsx`** (client): Sidebar + Topbar + scrollable
+  content column; `usePathname` highlights the current route in the nav;
+  Today/Memory buttons `router.push('/')` / `'/?view=memory'` (dashboard
+  prefetched on mount). Topbar gained `title`/`subtitle` props — shell pages
+  show the page name instead of the greeting (route→title map in AppShell).
+- **`lib/dashboard/nav-counts.ts`**: real badge counts (today / waiting /
+  drafts) for shell pages, mirroring getDashboardData's snooze-visibility
+  rules. Layout fetches account + counts in parallel after one requireUser.
+- **Pages stripped of their own chrome** (back-chevron headers, max-width
+  centered mains) — content is full width; Weekly Review got a 2-column lg
+  layout (rhythm + senders side by side). AutoSync moved into the shell
+  layout (was per-page). Settings actions moved with the route — imports are
+  now `@/app/(shell)/settings/actions`.
+- **Follow-ups nav button removed** (sidebar = Today · Inbox · Waiting on Me ·
+  Draft Replies · Hidden · Delegation(Soon) · Memory & Rules · Weekly Review);
+  the followup slice lives in the radar chips. Sidebar's filter plumbing
+  reverted; href items highlight by route (`activePath`). Clicking Today still
+  resets the radar filter to All. `/?view=memory` deep link added so Memory &
+  Rules works from any shell page.
+- Tests 354 (new AppShell suite; DashboardClient nav tests updated: no
+  Follow-ups button, Today resets filter, memory deep link). Guides:
+  priorities-and-dashboard sidebar section rewritten (persistent shell).
+- ⚠️ **Verify live (both themes, desktop + mobile):** every sidebar page keeps
+  the sidebar/topbar (current page highlighted, badges real); Memory & Rules
+  works from /inbox; navigation between shell pages swaps only the content
+  (no frame blink); Settings still connects/disconnects Outlook fine
+  (actions path moved!); /drafts deep-link → composer still opens; sidebar
+  collapse + mobile drawer work on shell pages.
 
 ## 🧭 Left-sidebar button pass (built 2026-06-11, `feat/sidebar-button-pass`)
 

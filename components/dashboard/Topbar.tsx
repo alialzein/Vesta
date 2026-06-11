@@ -13,6 +13,10 @@ type TopbarProps = {
   onOpenSidebar: () => void;
   /** Signed-in account; falls back to demo identity when absent. */
   account?: AccountView;
+  /** Page title — shown instead of the greeting on app-shell pages. */
+  title?: string;
+  /** Page subtitle (only used with `title`). */
+  subtitle?: string;
 };
 
 /**
@@ -24,7 +28,7 @@ type TopbarProps = {
  * Settings + theme work today; search and notifications show an honest
  * "coming soon" message until their phases land.
  */
-export function Topbar({ onOpenSidebar, account }: TopbarProps) {
+export function Topbar({ onOpenSidebar, account, title, subtitle }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
   const { showToast } = useToast();
   const firstName = account?.firstName ?? DEMO_USER.firstName;
@@ -52,13 +56,26 @@ export function Topbar({ onOpenSidebar, account }: TopbarProps) {
           <Icon name="list" className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <h1 className="m-0 truncate pb-[2px] font-display text-[24px] font-semibold leading-[1.2] tracking-tight sm:text-[30px]">
-            Good morning,{' '}
-            <span className="grad-text inline-block pr-[4px] italic">{firstName}</span>
-          </h1>
-          <p className="mt-[3px] truncate text-[13px] text-muted sm:text-sm">
-            {today && `${today} — `}here&apos;s what genuinely needs you today.
-          </p>
+          {title ? (
+            <>
+              <h1 className="m-0 truncate pb-[2px] font-display text-[24px] font-semibold leading-[1.2] tracking-tight sm:text-[30px]">
+                {title}
+              </h1>
+              {subtitle && (
+                <p className="mt-[3px] truncate text-[13px] text-muted sm:text-sm">{subtitle}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <h1 className="m-0 truncate pb-[2px] font-display text-[24px] font-semibold leading-[1.2] tracking-tight sm:text-[30px]">
+                Good morning,{' '}
+                <span className="grad-text inline-block pr-[4px] italic">{firstName}</span>
+              </h1>
+              <p className="mt-[3px] truncate text-[13px] text-muted sm:text-sm">
+                {today && `${today} — `}here&apos;s what genuinely needs you today.
+              </p>
+            </>
+          )}
         </div>
       </div>
 

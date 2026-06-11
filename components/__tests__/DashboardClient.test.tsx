@@ -182,24 +182,34 @@ describe('DashboardClient shell', () => {
     expect(screen.getByText(/delegation arrives in Phase 8/i)).toBeInTheDocument();
   });
 
-  it('sidebar Follow-ups switches to Today filtered to follow-ups; Today clears it', async () => {
+  it('has no sidebar Follow-ups button (that slice lives in the radar filter chips)', () => {
+    renderDashboard();
+    expect(screen.queryByRole('button', { name: /Follow-ups/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Follow-ups' })).toBeInTheDocument();
+  });
+
+  it('clicking Today in the sidebar resets the radar filter to All', async () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    // The sidebar item is a button; the radar chip with the same name is a tab.
-    await user.click(screen.getByRole('button', { name: /Follow-ups/ }));
-    expect(screen.getByRole('tab', { name: 'Follow-ups' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    // Non-followup demo items leave the radar.
+    await user.click(screen.getByRole('tab', { name: 'Follow-ups' }));
     expect(screen.queryByText('IT laptop purchase request')).not.toBeInTheDocument();
-    expect(screen.getByText('Hiring decision follow-up')).toBeInTheDocument();
 
-    // Clicking Today resets to the full queue.
     await user.click(screen.getByRole('button', { name: /^Today/ }));
     expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('IT laptop purchase request')).toBeInTheDocument();
+  });
+
+  it('opens directly on Memory & Rules when deep-linked (/?view=memory)', () => {
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <DashboardClient initialView="memory" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole('heading', { name: /^Memory & Rules$/i })).toBeInTheDocument();
+    expect(screen.queryByText("Today's Radar")).not.toBeInTheDocument();
   });
 
   it('sidebar Draft Replies and Weekly Review are real links', () => {

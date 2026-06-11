@@ -18,11 +18,15 @@ Waiting on them, Decisions, Blockers, Follow-ups, Promises, Can delegate, Drafts
 
 ### The left sidebar — every button does something
 
-- **Today** — the full Radar (clicking it also clears any filter).
+The sidebar (and the top bar) now stay with you on **every** page — Inbox,
+Waiting on Me, Draft Replies, Hidden, Weekly Review, and Settings all open
+inside the same frame, full width, with the current page highlighted in the nav.
+You never "leave" the app to a bare page.
+
+- **Today** — the full Radar (clicking it also clears any filter). Need just the
+  follow-ups? Use the **Follow-ups chip** on the Radar itself.
 - **Inbox** / **Hidden** — your synced mail and the noise Vesta filtered out.
 - **Waiting on Me** — the full ranked Priorities list (below).
-- **Follow-ups** — one click shows the Radar filtered to follow-up items only
-  (the badge is the live count). Click **Today** to go back to everything.
 - **Draft Replies** — every saved reply waiting for your review, with a badge for
   how many (see [Draft replies](draft-replies.md)).
 - **Memory & Rules** and **Weekly Review** — the Intelligence tools

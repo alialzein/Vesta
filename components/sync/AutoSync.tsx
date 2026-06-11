@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSyncStatus, syncOutlook } from '@/app/settings/actions';
+import { getSyncStatus, syncOutlook } from '@/app/(shell)/settings/actions';
 import { shouldAutoSync, AUTO_SYNC_INTERVAL_MS } from '@/lib/sync/auto';
 
 /** How often the open page re-fetches server data to reflect cron/webhook updates. */
