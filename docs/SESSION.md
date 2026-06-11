@@ -4,16 +4,19 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**MANAGER-TIMEZONE pass built on
-`fix/manager-timezone` — PR open.** Owner chose auto-detect + Settings
-override. 378 tests green, typecheck/lint/build clean.)
-**Repo state:** `main` = #49–#52 (sidebar pass, app shell, Phase 11,
-draft-v4); tz branch pushed. **No migration** (profiles.timezone existed; the
-manual-pin flag is `tz_manual` in auth user metadata).
-**Next: 1) owner merges the timezone PR after testing (see Verify below) →
-2) pick next: Phase 12 feature (AI Decision Desk / Teams / Promise tracker —
-discuss scope first), or make "Ask Vesta" chat real (reads 'personal'
-memories), or Phase 8 leftover (reminder processor / notifications bell).**
+**Last updated:** 2026-06-11 (**timezone pass MERGED (#53)** — `main` now =
+#49–#53: sidebar pass, app shell everywhere, Phase 11 Daily Brief & Focus
+Mode, draft-v4 time awareness, manager-timezone. 378 tests green.)
+**Owner verify when convenient:** Settings → Timezone card shows the real
+zone "(automatic)" after one dashboard load; a "tomorrow 9am" task dues at
+the manager's 9 AM; an evening completion lands on today's Weekly Review bar.
+**Next: pick the next track (owner deciding):** Phase 12 feature (AI
+Decision Desk / Promise tracker — discuss scope first), Microsoft Teams
+(Phase 13), Personal Intelligence Brief (news track, phases A–F), "Ask
+Vesta" chat made real (reads 'personal' memories), or the Phase 8 leftover
+(reminder processor / notifications bell). Pre-launch checklist still
+standing (rotate keys/passwords, re-enable email confirmation, remove dev
+user, Mail.Send on prod Azure app).**
 
 ## 🕐 Manager-timezone pass (built 2026-06-11, `fix/manager-timezone`)
 
