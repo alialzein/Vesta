@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { alwaysAllowSender, muteSender, setSenderVip } from '@/app/settings/actions';
+import { alwaysAllowSender, muteSender, setSenderVip } from '@/app/(shell)/settings/actions';
 
 /**
  * Per-sender triage controls (Phase 6.5). On the Hidden review: "Always allow"

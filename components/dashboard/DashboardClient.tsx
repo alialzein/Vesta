@@ -79,6 +79,7 @@ export function DashboardClient({
   capabilities = DEFAULT_CAPABILITIES,
   initialItemId,
   initialComposer = false,
+  initialView = 'today',
 }: {
   account?: AccountView;
   /** Server decides (cookie-gated) so the splash plays once per session, not on
@@ -98,6 +99,9 @@ export function DashboardClient({
   initialItemId?: string;
   /** Deep link (`&compose=1`) — also open the draft composer on the item. */
   initialComposer?: boolean;
+  /** Deep link (`/?view=memory`) — open on a specific view (the sidebar's
+   *  Memory & Rules works from any app-shell page through this). */
+  initialView?: NavView;
 } = {}) {
   const { showToast } = useToast();
 
@@ -106,17 +110,17 @@ export function DashboardClient({
   // on mount so it never replays on internal navigation. Default off (tests).
   const [showSplash, setShowSplash] = useState(showSplashInitially);
 
-  // Strip the one-shot URL params (?splash=1, ?item=…&compose=1) as soon as we
-  // mount, so a refresh or back-navigation never replays the splash or re-opens
-  // the composer.
+  // Strip the one-shot URL params (?splash=1, ?item=…&compose=1, ?view=memory)
+  // as soon as we mount, so a refresh or back-navigation never replays the
+  // splash, re-opens the composer, or pins the view.
   useEffect(() => {
-    if (!showSplashInitially && !initialItemId) return;
+    if (!showSplashInitially && !initialItemId && initialView === 'today') return;
     try {
       window.history.replaceState(null, '', window.location.pathname);
     } catch {
       /* non-blocking */
     }
-  }, [showSplashInitially, initialItemId]);
+  }, [showSplashInitially, initialItemId, initialView]);
 
   // Local copy of the server's work items so radar actions (done/dismiss/snooze)
   // can optimistically drop a card; re-synced whenever the server sends fresh data.
@@ -142,7 +146,7 @@ export function DashboardClient({
   // open its composer) instead of defaulting to the top of the radar.
   const linkedItem = initialItemId ? workItems.find((i) => i.id === initialItemId) : undefined;
   const [selected, setSelected] = useState<WorkItem | undefined>(linkedItem ?? workItems[0]);
-  const [view, setView] = useState<NavView>('today');
+  const [view, setView] = useState<NavView>(initialView);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
   const [railCollapsed, setRailCollapsed] = useState(false);
@@ -168,7 +172,6 @@ export function DashboardClient({
   const navCounts = {
     today: items.length,
     waiting: items.filter((i) => i.categories.includes('waiting')).length,
-    followup: items.filter((i) => i.categories.includes('followup')).length,
     drafts: items.filter((i) => i.draft).length,
   };
   const highPriority = selected ? priorityBand(selected.priorityScore) === 'red' : false;
@@ -335,11 +338,11 @@ export function DashboardClient({
           collapsed={sidebarCollapsed}
           onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
           activeView={view}
-          activeFilter={radarFilter}
-          onSelectView={(v, filter) => {
+          activePath="/"
+          onSelectView={(v) => {
             setView(v);
-            // Today = the full queue; Follow-ups = the followup-filtered queue.
-            if (v === 'today') setRadarFilter((filter as RadarFilter) ?? 'all');
+            // Clicking Today always lands on the full queue, not a stale filter.
+            if (v === 'today') setRadarFilter('all');
           }}
           mobileOpen={sidebarMobileOpen}
           onCloseMobile={() => setSidebarMobileOpen(false)}

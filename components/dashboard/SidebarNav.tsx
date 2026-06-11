@@ -12,15 +12,10 @@ export type NavItem = {
   badge?: number;
   /** Switches the in-page dashboard view. */
   view?: NavView;
-  /** Pre-applies a radar filter alongside the view switch (e.g. Follow-ups). */
-  filter?: string;
   /** Navigates to a route (e.g. /inbox). Mutually exclusive with `view`. */
   href?: string;
   /** Roadmap item — rendered honestly as a non-clickable "Soon" row. */
   soon?: boolean;
-  /** Overrides the default `view === activeView` highlight (used to keep
-   *  Today and Follow-ups — both view:'today' — from lighting up together). */
-  active?: boolean;
 };
 
 export type NavGroup = {
@@ -31,11 +26,20 @@ export type NavGroup = {
 type SidebarNavProps = {
   groups: NavGroup[];
   collapsed: boolean;
-  activeView: NavView;
-  onSelectView: (view: NavView, filter?: string) => void;
+  /** The in-page dashboard view (only meaningful on the dashboard itself). */
+  activeView?: NavView;
+  /** Current route (e.g. /inbox) so href items highlight on their own page. */
+  activePath?: string;
+  onSelectView: (view: NavView) => void;
 };
 
-export function SidebarNav({ groups, collapsed, activeView, onSelectView }: SidebarNavProps) {
+export function SidebarNav({
+  groups,
+  collapsed,
+  activeView,
+  activePath,
+  onSelectView,
+}: SidebarNavProps) {
   // Collapsed-rail tooltip. Rendered as a fixed element (positioned from the hovered
   // icon's rect) so it escapes the sidebar's overflow clipping and the content's
   // stacking context — otherwise it hides behind the dashboard.
@@ -66,7 +70,10 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
           )}
 
           {group.items.map((item) => {
-            const isActive = item.active ?? (item.view !== undefined && item.view === activeView);
+            // View items highlight on the dashboard; route items on their page.
+            const isActive = item.href
+              ? item.href === activePath
+              : item.view !== undefined && item.view === activeView;
             const hasBadge = item.badge !== undefined;
 
             const className = [
@@ -168,7 +175,7 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
               <button
                 key={item.label}
                 type="button"
-                onClick={() => item.view && onSelectView(item.view, item.filter)}
+                onClick={() => item.view && onSelectView(item.view)}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
                 className={className}

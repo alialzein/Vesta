@@ -9,7 +9,7 @@ import {
   syncOutlook,
   setTriageMode,
   type TestResult,
-} from '@/app/settings/actions';
+} from '@/app/(shell)/settings/actions';
 import type { SyncResult } from '@/lib/sync/outlook';
 import type { TriageMode } from '@/lib/engine/triage';
 import { Icon, MicrosoftLogo } from '@/components/ui/Icon';

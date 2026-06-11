@@ -19,7 +19,7 @@ import { getDraftCapabilities } from '@/lib/drafts/capabilities';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { splash?: string; item?: string; compose?: string };
+  searchParams: { splash?: string; item?: string; compose?: string; view?: string };
 }) {
   const user = await requireUser();
 
@@ -62,6 +62,8 @@ export default async function DashboardPage({
       // the dashboard with that item selected and its composer open.
       initialItemId={searchParams?.item}
       initialComposer={searchParams?.compose === '1'}
+      // /?view=memory lets the sidebar's Memory & Rules work from shell pages.
+      initialView={searchParams?.view === 'memory' ? 'memory' : 'today'}
     />
   );
 }

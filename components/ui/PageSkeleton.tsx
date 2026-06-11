@@ -1,7 +1,13 @@
 /**
- * Theme-aware loading skeleton for the centered list pages (Inbox, Priorities,
- * Settings). Rendered by each route's `loading.tsx`, so navigation shows an
- * instant placeholder while the server work runs instead of a frozen screen.
+ * Theme-aware loading skeleton, rendered by each route's `loading.tsx` so
+ * navigation shows an instant placeholder while the server work runs instead
+ * of a frozen screen.
+ *
+ * Two modes:
+ * - default — a standalone centered page (e.g. the full-screen thread view);
+ * - `inShell` — content-column-only (no outer main/header chrome), for routes
+ *   inside the persistent AppShell where the sidebar + topbar stay mounted and
+ *   only the content area swaps.
  *
  * Uses the panel/line theme tokens so it matches the real cards and works in
  * both light and dark mode (per the UI rules). No real data; aria-hidden.
@@ -10,11 +16,36 @@ export function PageSkeleton({
   maxWidth = '820px',
   rows = 5,
   rowHeight = 92,
+  inShell = false,
 }: {
   maxWidth?: string;
   rows?: number;
   rowHeight?: number;
+  inShell?: boolean;
 }) {
+  const cards = (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div
+          key={i}
+          className="animate-pulse rounded-[14px] border border-line bg-panel p-4 shadow-soft"
+          style={{ height: rowHeight }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="h-[14px] w-40 max-w-[55%] rounded bg-panel-2" />
+            <div className="h-3 w-16 flex-none rounded bg-panel-2" />
+          </div>
+          <div className="mt-3 h-[14px] w-3/4 rounded bg-panel-2" />
+          <div className="mt-2 h-3 w-1/2 rounded bg-panel-2" />
+        </div>
+      ))}
+    </div>
+  );
+
+  if (inShell) {
+    return <div aria-hidden="true">{cards}</div>;
+  }
+
   return (
     <main
       className="v-scroll mx-auto h-screen w-full overflow-y-auto px-5 py-8"
@@ -31,23 +62,7 @@ export function PageSkeleton({
         <div className="hidden h-9 w-28 flex-none animate-pulse rounded-[11px] border border-line bg-panel-2 sm:block" />
       </div>
 
-      {/* Card rows */}
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: rows }).map((_, i) => (
-          <div
-            key={i}
-            className="animate-pulse rounded-[14px] border border-line bg-panel p-4 shadow-soft"
-            style={{ height: rowHeight }}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="h-[14px] w-40 max-w-[55%] rounded bg-panel-2" />
-              <div className="h-3 w-16 flex-none rounded bg-panel-2" />
-            </div>
-            <div className="mt-3 h-[14px] w-3/4 rounded bg-panel-2" />
-            <div className="mt-2 h-3 w-1/2 rounded bg-panel-2" />
-          </div>
-        ))}
-      </div>
+      {cards}
     </main>
   );
 }
