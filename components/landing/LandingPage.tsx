@@ -61,7 +61,7 @@ const STEPS: Step[] = [
   {
     n: '06',
     title: 'It keeps working',
-    body: 'After you hit send, Vesta tracks who owes you an answer, watches your tasks and morning brief — and memory, decisions, and Teams are on the way.',
+    body: 'After you hit send, Vesta tracks who owes you an answer, applies the memory and rules you teach it, and watches your tasks and brief — decisions and Teams are next.',
   },
 ];
 
@@ -80,6 +80,11 @@ function stepAt(p: number): number {
 }
 
 const FEATURES: { icon: IconName; title: string; body: string }[] = [
+  {
+    icon: 'brain',
+    title: 'Memory & Rules',
+    body: 'Teach Vesta once — VIPs, tone, delegation, hard limits. Every ranking and every draft applies it, and nothing Vesta suggests is saved without your approval.',
+  },
   {
     icon: 'refresh',
     title: '“Waiting on them” tracking',
@@ -113,10 +118,6 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
 ];
 
 const ROADMAP: { title: string; body: string }[] = [
-  {
-    title: 'Memory & Rules',
-    body: 'Teach Vesta once — VIPs, tone, delegation, topics to never touch. It remembers and applies it everywhere.',
-  },
   {
     title: 'Daily Brief & Focus Mode',
     body: 'A morning briefing worth reading, then a Clear-My-Day queue that walks you through what’s left.',
@@ -594,7 +595,7 @@ export function LandingPage() {
               style={{ clipPath: reduced ? undefined : 'inset(0 100% 0 0)' }}
             />
           </div>
-          <div data-stagger className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div data-stagger className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-3">
             {ROADMAP.map((r) => (
               <article
                 key={r.title}

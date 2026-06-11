@@ -17,9 +17,9 @@ import type { Theme } from '@/lib/theme';
  *   05 · APPROVE & SEND the antenna — a paper plane launches (your approval)
  *   06 · IT KEEPS WORKING the fan-out finale: the single path SPLITS into
  *        colored streams flowing to shipped islands (waiting-on-them, tasks,
- *        morning brief) while a violet wireframe horizon teases what's coming
- *        (memory & rules, decision desk, Teams). The camera pulls up and back
- *        for the wide delta reveal.
+ *        morning brief, memory & rules) while a violet wireframe horizon
+ *        teases what's coming (decision desk, Teams). The camera pulls up and
+ *        back for the wide delta reveal.
  *
  * The glowing path draws itself slightly AHEAD of the camera and the camera
  * rides the path (scroll = travel). Labels are canvas-texture sprites in the
@@ -978,7 +978,9 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
     addStream(ISLAND_TASKS, 0, STATUS.green, true, 1, matGreenP);
     addStream(ISLAND_BRIEF, 9.5, PALETTES.dark.accent2, true, 2, matCyanP);
     const cyanStream = streams[2]; // re-tinted on theme change
-    addStream(SOON_MEMORY, -12, VIOLET, false, 3, matViolet);
+    // Memory & Rules SHIPPED (Phase 10): its stream is vivid and its vault is
+    // built — only Decision Desk and Teams remain wireframe promises.
+    addStream(SOON_MEMORY, -12, VIOLET, true, 3, matViolet);
     addStream(SOON_DESK, 0, VIOLET, false, 4, matViolet);
     addStream(SOON_TEAMS, 12, VIOLET, false, 5, matViolet);
 
@@ -1060,6 +1062,26 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       height: 1.0,
     });
 
+    // Island: MEMORY & RULES — shipped in Phase 10, so the vault is BUILT now
+    // (solid stacked slabs with a violet seam), no longer a wireframe promise.
+    const memoryGroup = new THREE.Group();
+    memoryGroup.add(box(3.0, 0.4, 2.6, matBuildingSoft, 0, 0.2, 0));
+    memoryGroup.add(box(2.6, 0.7, 1.9, matBuilding, 0, 0.75, 0));
+    memoryGroup.add(box(2.7, 0.14, 2.0, matViolet, 0, 1.17, 0)); // the glowing seam
+    memoryGroup.add(box(2.2, 0.7, 1.6, matBuildingSoft, 0, 1.6, 0));
+    const memoryCap = box(1.7, 0.7, 1.3, matBuilding, 0, 2.35, 0);
+    memoryGroup.add(memoryCap);
+    memoryGroup.rotation.y = Math.PI / 4;
+    memoryGroup.scale.setScalar(1.25);
+    memoryGroup.position.copy(SOON_MEMORY);
+    scene.add(memoryGroup);
+    dropShadow(SOON_MEMORY.x, SOON_MEMORY.z, 7);
+    dotField(SOON_MEMORY, 5, 0, 0.8, 'fan');
+    makeLabel('MEMORY & RULES', new THREE.Vector3(SOON_MEMORY.x, 5.6, SOON_MEMORY.z), {
+      driver: 'fan',
+      height: 1.0,
+    });
+
     // The SOON horizon: violet wireframe monuments — designed but not built,
     // which is exactly what they are.
     const soonMonuments: THREE.Group[] = [];
@@ -1076,16 +1098,6 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
         maxOpacity: 0.8,
       });
     }
-    soonMonument(
-      SOON_MEMORY,
-      (g) => {
-        // Memory & rules: a vault of stacked slabs.
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 1.9), matSoonWire).translateY(0.35));
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.7, 1.6), matSoonWire).translateY(1.1));
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.7, 1.3), matSoonWire).translateY(1.85));
-      },
-      'MEMORY & RULES',
-    );
     soonMonument(
       SOON_DESK,
       (g) => {
@@ -1607,6 +1619,8 @@ export function VestaScene({ theme, reducedMotion = false, className, onReady }:
       rays.forEach((ray, i) => {
         ray.scale.y = Math.max(0.001, fin * (1 + Math.sin(elapsed * 2 + i) * 0.15));
       });
+      // Memory vault (shipped): the cap hovers gently — alive, not a promise.
+      memoryCap.position.y = 2.35 + Math.sin(elapsed * 1.3) * 0.09 * fin;
       // SOON monuments: wireframes fade in and rise as the horizon wakes.
       matSoonWire.opacity = 0.55 * soonAct;
       for (const g of soonMonuments) {

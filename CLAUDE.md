@@ -33,6 +33,18 @@ laptop), switching back and forth. Git is the single source of truth.
    (manager voice, no jargon) and add it to `docs/guides/README.md`. A feature is not
    "done" until its guide exists. Keep guides in sync with the app — if they disagree,
    the app is right and the guide must be fixed.
+   **A guide must be actionable, not just descriptive.** It answers: (1) exactly WHAT
+   the user should enter or do — concrete examples they can copy (e.g. which memory
+   types to save and sample wording); (2) WHERE in the app — the exact screen/button
+   path; (3) WHAT IT CHANGES — the visible effect, so the user can tell it worked.
+   Prefer a "start with these" quick-start list over abstract explanation.
+5b. **Keep the public landing page (`/welcome`) in sync with reality in the same
+   task.** When a feature goes live (or is cut/changed), update the landing page
+   everywhere it appears: feature grid/spotlight copy, the roadmap "Soon" cards, the
+   3D journey (a shipped feature must not stay a wireframe "SOON" monument), and the
+   step-rail copy. The landing page must never advertise a live feature as "coming
+   soon" or promise something that was dropped. Verify both themes
+   (`node scripts/landing-shots.mjs`).
 6. Do not silently change architecture decisions.
 7. Ask before destructive changes.
 8. **Always get explicit confirmation before any database/schema change (a

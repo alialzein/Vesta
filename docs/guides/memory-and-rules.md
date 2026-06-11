@@ -21,6 +21,26 @@ Open it from the sidebar: **Intelligence → Memory & Rules**.
 Type the memory, pick its type, and press **Remember this**. Your own memories
 are active immediately.
 
+## Start with these five (copy and adapt)
+
+If you save nothing else, save these — they give the biggest visible improvement
+on day one:
+
+1. **VIP person** — `Treat <boss-or-key-client email> as VIP`
+   *(use the real email address — that's what unlocks the filter + priority boost)*
+2. **Tone** — `Friendly but brief. Two short paragraphs max. No exclamation marks.`
+   *(your next draft will already sound like you)*
+3. **Do NOT do** — `Never commit to prices, dates, or approvals that aren't already in the thread.`
+   *(a safety net under every draft)*
+4. **Delegation rule** — `Invoices, receipts, and payment questions go to <name>.`
+   *(matching items start suggesting "hand this to <name>")*
+5. **Project context** — `<Your top project> is the company's #1 priority this quarter.`
+   *(threads about it rank higher, and the AI's "why" mentions it)*
+
+How to tell each one worked: after the next sync, open an affected item on the
+radar — the rail's **Memory** tab lists the memories Vesta applied, the score and
+"Why this matters" reflect them, and a fresh draft follows the tone and limits.
+
 ### The VIP shortcut
 
 If a VIP memory contains an **email address**, Vesta also marks that sender as
