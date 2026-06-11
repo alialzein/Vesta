@@ -4,20 +4,22 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**Phase 10 MERGED #46 + landing sync MERGED #47
-+ memory UX round on branch `feat/memory-ux-personal` (PR open)**: per-type
-placeholder samples, new "About me (personal)" type, dead ManagerMemoryPanel
-removed).
-**Repo state:** branch `feat/memory-ux-personal` — 339 tests green,
-typecheck/lint clean. New CLAUDE.md rules: **5a guides must be actionable
-(what/where/effect + quick-start)** and **5b landing page stays in sync with
-shipped reality, both themes**.
-**Next: 1) owner merges the memory-UX PR → 2) after deploy: run
-`node scripts/reanalyze-work-items.mjs` once (prompt v3 applies memory to
-existing items); owner tests Memory & Rules per the guide's quick-start →
-3) Phase 11 — Daily Brief & Focus Mode. Smaller queued: due_at in manager
-timezone; future chat assistant reads 'personal' memories (type already
-stored + retrieved).**
+**Last updated:** 2026-06-11 (**Phase 10 fully MERGED — #46 core, #47 landing
+sync, #48 memory UX (per-type samples + About-me type). Re-analysis DONE:**
+reanalyze script + cron sync run; all open items confirmed on **prompt v3**,
+zero errors).
+**Repo state:** `main` clean — 339 tests green, typecheck/lint clean. New
+CLAUDE.md rules: **5a guides must be actionable (what/where/effect +
+quick-start)** and **5b landing page stays in sync with shipped reality, both
+themes**.
+**Next (owner-announced): 1) review every button on the RIGHT RAIL and make
+each one real (known placeholders: "Delegate" → SOON toast; "Ask Vesta" chat
+drawer → demo shell; Morning Brief quick-action drawers → demo previews) →
+2) discuss/pick the next feature (Phase 11 — Daily Brief & Focus Mode is the
+queued default). Smaller queued: due_at in manager timezone; future chat
+assistant reads 'personal' memories (type already stored + retrieved).
+Owner test pass for Memory & Rules: follow the guide's "Start with these
+five" quick-start.**
 
 ## 🧠 Phase 10 — Memory & Rules (built 2026-06-11, on branch)
 
