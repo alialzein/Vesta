@@ -34,6 +34,7 @@ const MEMORY_TYPES = [
   'project_context',
   'company_context',
   'preference',
+  'personal',
 ] as const;
 type MemoryTypeValue = (typeof MEMORY_TYPES)[number];
 

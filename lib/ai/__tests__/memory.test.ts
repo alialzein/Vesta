@@ -95,6 +95,16 @@ describe('memoryNotesForDraft', () => {
     expect(notes.hardRules).toEqual(['Never promise same-day delivery.']);
     expect(notes.contextNotes).toEqual(['We are Vesta GmbH.']);
   });
+
+  it("includes 'about me' personal memories as context in drafts AND analysis", () => {
+    const memories: MemoryRow[] = [
+      mem({ id: '1', memory_type: 'personal', memory_text: 'I reply after 2pm; bullet points.' }),
+    ];
+    expect(memoryNotesForDraft(memories, {}).contextNotes).toEqual([
+      'I reply after 2pm; bullet points.',
+    ]);
+    expect(memoryNotesForAnalysis(memories, {})).toEqual(['I reply after 2pm; bullet points.']);
+  });
 });
 
 describe('isVipByMemory', () => {

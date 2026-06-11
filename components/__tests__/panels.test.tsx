@@ -6,7 +6,6 @@ import { MetricsStrip } from '@/components/dashboard/MetricsStrip';
 import { MorningBrief } from '@/components/dashboard/MorningBrief';
 import { AiCommandCenter } from '@/components/dashboard/AiCommandCenter';
 import { AiAssistantRail } from '@/components/dashboard/AiAssistantRail';
-import { ManagerMemoryPanel } from '@/components/dashboard/ManagerMemoryPanel';
 import { ToastProvider } from '@/components/ui/Toast';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 
@@ -130,18 +129,3 @@ describe('AiAssistantRail', () => {
   });
 });
 
-describe('ManagerMemoryPanel', () => {
-  it('adds a new memory and can forget it', async () => {
-    const user = userEvent.setup();
-    render(<ManagerMemoryPanel />);
-
-    const input = screen.getByLabelText('New memory text');
-    await user.type(input, 'Treat Acme as VIP');
-    await user.click(screen.getByRole('button', { name: /Remember this/i }));
-
-    expect(screen.getByText('Treat Acme as VIP')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Forget memory: Treat Acme as VIP' }));
-    expect(screen.queryByText('Treat Acme as VIP')).not.toBeInTheDocument();
-  });
-});

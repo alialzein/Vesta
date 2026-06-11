@@ -4,17 +4,20 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**Phase 10 — Memory & Rules BUILT on branch
-`feat/phase-10-memory-rules`, PR open — owner reviews/merges**; landing v4
-merged earlier today, #45).
-**Repo state:** branch `feat/phase-10-memory-rules` (off `main` `a893bc0`) —
-337 tests green, typecheck/lint/build clean; Memory & Rules verified live in
-BOTH themes with the dev user (add → list → VIP flag → delete).
-**Next: 1) owner reviews/merges the Phase 10 PR → 2) after deploy: run
+**Last updated:** 2026-06-11 (**Phase 10 MERGED #46 + landing sync MERGED #47
++ memory UX round on branch `feat/memory-ux-personal` (PR open)**: per-type
+placeholder samples, new "About me (personal)" type, dead ManagerMemoryPanel
+removed).
+**Repo state:** branch `feat/memory-ux-personal` — 339 tests green,
+typecheck/lint clean. New CLAUDE.md rules: **5a guides must be actionable
+(what/where/effect + quick-start)** and **5b landing page stays in sync with
+shipped reality, both themes**.
+**Next: 1) owner merges the memory-UX PR → 2) after deploy: run
 `node scripts/reanalyze-work-items.mjs` once (prompt v3 applies memory to
-existing items) + owner spot-checks production /welcome (landing v4) →
+existing items); owner tests Memory & Rules per the guide's quick-start →
 3) Phase 11 — Daily Brief & Focus Mode. Smaller queued: due_at in manager
-timezone.**
+timezone; future chat assistant reads 'personal' memories (type already
+stored + retrieved).**
 
 ## 🧠 Phase 10 — Memory & Rules (built 2026-06-11, on branch)
 

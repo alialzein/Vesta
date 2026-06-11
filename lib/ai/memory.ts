@@ -20,7 +20,8 @@ export type MemoryKind =
   | 'do_not_do'
   | 'project_context'
   | 'company_context'
-  | 'preference';
+  | 'preference'
+  | 'personal';
 
 /** The slice of a manager_memories row retrieval needs. */
 export type MemoryRow = {
@@ -81,7 +82,15 @@ function pick(
 export function memoryNotesForAnalysis(memories: MemoryRow[], sender: MemoryAudience): string[] {
   return pick(
     memories,
-    ['vip', 'delegation_rule', 'do_not_do', 'project_context', 'company_context', 'preference'],
+    [
+      'vip',
+      'delegation_rule',
+      'do_not_do',
+      'project_context',
+      'company_context',
+      'preference',
+      'personal',
+    ],
     sender,
     MAX_LINES,
   );
@@ -106,9 +115,9 @@ export function memoryNotesForDraft(
     hardRules: pick(memories, ['do_not_do'], recipient, 4),
     contextNotes: pick(
       memories,
-      ['project_context', 'company_context', 'vip'],
+      ['project_context', 'company_context', 'personal', 'vip'],
       recipient,
-      5,
+      6,
     ),
   };
 }

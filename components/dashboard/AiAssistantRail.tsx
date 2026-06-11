@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { MemoryType, RailTab, WorkItem, WorkItemSource } from '@/lib/types';
 import { addMemory } from '@/app/actions/memories';
+import { MEMORY_PLACEHOLDER, MEMORY_TYPE_OPTIONS } from '@/lib/memory/presets';
 import { priorityBand } from '@/lib/priority';
 import { Chip } from '@/components/ui/Chip';
 import { Icon, type IconName } from '@/components/ui/Icon';
@@ -78,6 +79,7 @@ const MEMORY_LABEL: Record<MemoryType, string> = {
   project_context: 'Project',
   company_context: 'Company',
   preference: 'Pref',
+  personal: 'Me',
 };
 
 const MEMORY_TONE: Record<MemoryType, string> = {
@@ -88,6 +90,7 @@ const MEMORY_TONE: Record<MemoryType, string> = {
   project_context: 'bg-green-soft text-green',
   company_context: 'bg-green-soft text-green',
   preference: 'bg-green-soft text-green',
+  personal: 'bg-accent-soft text-accent',
 };
 
 const bandLabel: Record<ReturnType<typeof priorityBand>, string> = {
@@ -528,6 +531,10 @@ function MemoryTab({ item }: { item: WorkItem }) {
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Globally-applicable types are never pinned to the sender — tone, company
+  // facts, and "about me" describe the manager, not this thread's person.
+  const globalType = type === 'tone' || type === 'company_context' || type === 'personal';
+
   // Real since Phase 10: saves a memory scoped to this item's sender (when
   // known), so "always escalate Maya" lands exactly on Maya's threads. The
   // action revalidates the dashboard, so "memory used" refreshes on its own.
@@ -538,7 +545,7 @@ function MemoryTab({ item }: { item: WorkItem }) {
     const res = await addMemory({
       type,
       text: trimmed,
-      scopeEmail: type === 'tone' || type === 'company_context' ? null : item.personEmail ?? null,
+      scopeEmail: globalType ? null : item.personEmail ?? null,
     });
     setSaving(false);
     if (res.ok) {
@@ -586,13 +593,11 @@ function MemoryTab({ item }: { item: WorkItem }) {
             aria-label="Memory type"
             className="w-full cursor-pointer rounded-[10px] border border-line bg-field px-[10px] py-[8px] text-[12px] font-semibold text-ink focus:border-accent"
           >
-            <option value="preference">Preference</option>
-            <option value="vip">VIP person</option>
-            <option value="tone">Tone</option>
-            <option value="delegation_rule">Delegation rule</option>
-            <option value="do_not_do">Do NOT do</option>
-            <option value="project_context">Project context</option>
-            <option value="company_context">Company context</option>
+            {MEMORY_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
           <input
             value={text}
@@ -600,15 +605,18 @@ function MemoryTab({ item }: { item: WorkItem }) {
             onKeyDown={(e) => {
               if (e.key === 'Enter') void save();
             }}
+            // Sample for the selected type; preference gets a sender-aware one.
             placeholder={
-              item.person ? `e.g. Always answer ${item.person} same-day` : 'e.g. Treat this as VIP'
+              type === 'preference' && item.person
+                ? `e.g. Always answer ${item.person} same-day`
+                : MEMORY_PLACEHOLDER[type]
             }
             aria-label="New memory text"
             // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             className="w-full rounded-[10px] border border-line bg-field px-3 py-[8px] text-[12.5px] text-ink outline-none placeholder:text-muted focus:border-accent"
           />
-          {item.personEmail && type !== 'tone' && type !== 'company_context' && (
+          {item.personEmail && !globalType && (
             <span className="font-mono text-[10px] text-muted">
               Applies to {item.personEmail}
             </span>

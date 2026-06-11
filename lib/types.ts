@@ -163,7 +163,8 @@ export type MemoryType =
   | 'do_not_do'
   | 'project_context'
   | 'company_context'
-  | 'preference';
+  | 'preference'
+  | 'personal';
 
 /** Mirrors a row of manager_memories. */
 export type ManagerMemory = {
