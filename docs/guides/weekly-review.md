@@ -44,5 +44,5 @@ items, then come back.
 
 - All numbers come only from **your own data** — your items, your drafts, your
   mailbox. Nothing is estimated or made up; an empty week shows as empty.
-- The window is **rolling 7 days**, so checking on Friday vs Monday compares the
-  same length of week.
+- The window is the **last 7 calendar days in your timezone** (see Settings →
+  Timezone) — finishing something at 11 PM counts on that day, your day.

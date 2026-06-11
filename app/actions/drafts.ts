@@ -8,6 +8,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import type { Database, Json } from '@/lib/database.types';
 import type { DraftView } from '@/lib/types';
 import { toDraftView, ACTIVE_DRAFT_STATUSES, type DraftRow } from '@/lib/drafts/serialize';
+import { dayLabelInTz, longTodayInTz, receivedLabelInTz } from '@/lib/time/zone';
 import {
   buildDraftPrompt,
   parseDraft,
@@ -172,49 +173,9 @@ async function loadReplyContext(
   return { item: item as ReplyItem, inbound, recent };
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Short date label for thread-context lines, e.g. "Jun 9". */
-function dayLabel(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-}
-
-/** Full received label with age, e.g. "Tue, Jun 9, 8:39 PM UTC (2 days ago)" —
- *  the age is what stops the model treating "today/tomorrow" in old mail as
- *  still current (draft-v4 time awareness). */
-function receivedLabel(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const days = Math.floor((Date.now() - d.getTime()) / DAY_MS);
-  const ago = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
-  const stamp = d.toLocaleString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'UTC',
-  });
-  return `${stamp} UTC (${ago})`;
-}
-
-/** Today's date for the prompt, e.g. "Thursday, June 11, 2026". */
-function todayLabel(): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-/** Compact "who said what (and when)" lines (oldest first) for the draft prompt. */
-function threadContextFor(recent: InboundMsg[]): ThreadContextMsg[] {
+/** Compact "who said what (and when)" lines (oldest first) for the draft
+ *  prompt. Dates are labeled in the MANAGER's timezone (draft-v4). */
+function threadContextFor(recent: InboundMsg[], tz: string): ThreadContextMsg[] {
   return recent
     .slice()
     .reverse()
@@ -223,7 +184,7 @@ function threadContextFor(recent: InboundMsg[]): ThreadContextMsg[] {
         m.direction === 'outbound'
           ? 'the manager'
           : m.sender_name || m.sender_email || 'them',
-      at: dayLabel(m.received_at),
+      at: dayLabelInTz(m.received_at, tz),
       body:
         bodyForAi({
           body_text: m.body_text,
@@ -396,7 +357,7 @@ export async function generateDraft(
   // Manager identity + memory (Phase 10): tone/preferences to follow, hard
   // "never do" limits to obey, and saved context — scoped to the recipient.
   const [{ data: profile }, { data: memRows }, mailbox] = await Promise.all([
-    db.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+    db.from('profiles').select('full_name, timezone').eq('id', user.id).maybeSingle(),
     db
       .from('manager_memories')
       .select('id, memory_type, memory_text, scope, scope_ref, is_active')
@@ -413,6 +374,7 @@ export async function generateDraft(
 
   const tone = asTone(opts?.tone);
   const replyAll = opts?.replyAll === true;
+  const managerTz = profile?.timezone ?? 'UTC';
   // 'waiting_on_them' = the manager already answered and is owed something →
   // the draft is a follow-up nudge, not a reply (the old prompt wrote backwards
   // "we'll get back to you" drafts for these).
@@ -432,11 +394,12 @@ export async function generateDraft(
     contextNotes: memoryNotes.contextNotes,
     instruction: opts?.instruction ?? null,
     purpose,
-    threadContext: threadContextFor(ctx.recent ?? []),
+    threadContext: threadContextFor(ctx.recent ?? [], managerTz),
     // draft-v4 — time awareness: without these the model replied to days-old
-    // "today or tomorrow?" mail as if no time had passed.
-    today: todayLabel(),
-    receivedAt: receivedLabel(inbound.received_at),
+    // "today or tomorrow?" mail as if no time had passed. Labels are in the
+    // manager's timezone (profiles.timezone).
+    today: longTodayInTz(managerTz),
+    receivedAt: receivedLabelInTz(inbound.received_at, managerTz),
   });
 
   let draft;

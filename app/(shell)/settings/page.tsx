@@ -4,6 +4,7 @@ import { isGraphConfigured } from '@/lib/graph/oauth';
 import { hasSendScope } from '@/lib/graph/tokens';
 import { OutlookCard, type OutlookStatus } from '@/components/settings/OutlookCard';
 import { ManagedSenders, type ManagedRule } from '@/components/settings/ManagedSenders';
+import { TimezoneCard } from '@/components/settings/TimezoneCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,11 +22,16 @@ export default async function SettingsPage({
 }: {
   searchParams: { outlook?: string };
 }) {
-  await requireUser();
+  const user = await requireUser();
 
   const supabase = createClient();
-  const [{ data: integration }, { data: mailbox }, { data: ruleRows }, { data: vipRows }] =
-    await Promise.all([
+  const [
+    { data: integration },
+    { data: mailbox },
+    { data: ruleRows },
+    { data: vipRows },
+    { data: tzProfile },
+  ] = await Promise.all([
       supabase
         .from('user_integrations')
         .select('status, provider_email, connected_at')
@@ -42,6 +48,7 @@ export default async function SettingsPage({
         .select('id, rule_type, conditions')
         .in('rule_type', ['allow', 'suppression']),
       supabase.from('people').select('email, display_name').eq('is_vip', true),
+      supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle(),
     ]);
 
   const connected = integration?.status === 'connected';
@@ -84,6 +91,14 @@ export default async function SettingsPage({
         connected automatically — Vesta refreshes access in the background and never sends email
         without your explicit approval.
       </p>
+
+      <h2 className="m-0 mt-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+        Preferences
+      </h2>
+      <TimezoneCard
+        timezone={tzProfile?.timezone ?? 'UTC'}
+        manual={user.user_metadata?.tz_manual === true}
+      />
     </section>
   );
 }

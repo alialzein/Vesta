@@ -8,6 +8,8 @@ import { ToastProvider } from '@/components/ui/Toast';
 // AutoSync runs background server actions on mount; stub it out so this shell
 // test stays isolated (its logic is covered by lib/sync/__tests__/auto.test.ts).
 vi.mock('@/components/sync/AutoSync', () => ({ AutoSync: () => null }));
+// TimezoneSync reports the device timezone via a server action — same deal.
+vi.mock('@/components/sync/TimezoneSync', () => ({ TimezoneSync: () => null }));
 
 // The radar action server functions pull in server-only modules (React cache,
 // the Supabase server client). Stub them so the client shell renders in jsdom.

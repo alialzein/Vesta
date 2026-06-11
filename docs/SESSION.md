@@ -4,20 +4,47 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**Phase 11 MERGED (#51) and draft time-awareness
-fix MERGED (#52) — owner VERIFIED LIVE: regenerated draft on the overdue
-"today or tomorrow?" email now acknowledges the delay and asks for new
-timing.** draft-v4 = today's date + "received … (N days ago)" + per-message
-dates + TIME AWARENESS rule. 368 tests green.)
-**Repo state:** `main` clean = #49–#52 (sidebar pass, app shell everywhere,
-Phase 11 Daily Brief & Focus Mode, draft-v4). Old saved drafts keep their
-text — **Regenerate** picks up v4.
-**Next session — pick one:** 1) **manager-timezone pass** (one branch:
-due_at 9:00 in profiles.timezone, Weekly Review day buckets, brief_date,
-draft-v4 date labels — all currently UTC); 2) **Phase 12 feature** (AI
-Decision Desk / Microsoft Teams / Promise tracker — discuss first);
-3) remaining honest placeholders ("Ask Vesta" chat → could become real,
-reading 'personal' memories; Meeting Prep stays Phase 12/calendar).
+**Last updated:** 2026-06-11 (**MANAGER-TIMEZONE pass built on
+`fix/manager-timezone` — PR open.** Owner chose auto-detect + Settings
+override. 378 tests green, typecheck/lint/build clean.)
+**Repo state:** `main` = #49–#52 (sidebar pass, app shell, Phase 11,
+draft-v4); tz branch pushed. **No migration** (profiles.timezone existed; the
+manual-pin flag is `tz_manual` in auth user metadata).
+**Next: 1) owner merges the timezone PR after testing (see Verify below) →
+2) pick next: Phase 12 feature (AI Decision Desk / Teams / Promise tracker —
+discuss scope first), or make "Ask Vesta" chat real (reads 'personal'
+memories), or Phase 8 leftover (reminder processor / notifications bell).**
+
+## 🕐 Manager-timezone pass (built 2026-06-11, `fix/manager-timezone`)
+
+Everything time-based now follows `profiles.timezone` instead of UTC:
+
+- **Detection:** `TimezoneSync` (mounted on the dashboard + shell layout)
+  reports the device's IANA zone → `reportDetectedTimezone` updates the
+  profile unless pinned. **Settings → Preferences → Timezone** card:
+  Automatic (default) or pin manually (`setTimezonePreference`; pin recorded
+  as `tz_manual` in auth user metadata — no schema change).
+- **Pure helpers** `lib/time/zone.ts` (tested): todayInTz, zonedTimeToUtc
+  (two-pass DST-safe), calendarDaysAgo, day/received/long-today labels,
+  lastCalendarDays, weekdayShortOf.
+- **due_at:** AI analysis deadlines → 9:00 AM manager time (store.ts; was
+  9:00 UTC); quick-add tasks now parse in the BROWSER (same pure parser) so
+  "tomorrow 3pm" is the manager's 3pm — server re-parse is the fallback,
+  client values validated.
+- **Weekly Review:** window = last 7 calendar days from tz midnight; bars
+  bucket by the manager's dates (new tz test: 22:00 UTC = next-day Beirut).
+- **Daily brief:** brief_date + the prompt's "Today" follow the manager's
+  calendar — the cache rolls over at THEIR midnight (data.ts now also returns
+  `timezone`).
+- **Draft labels (draft-v4):** today/received/[Jun 9] labels in manager tz
+  (helpers moved to lib/time/zone).
+- Guides: settings-and-themes (new Timezone section), weekly-review,
+  daily-brief-and-focus.
+- ⚠️ **Verify live:** Settings shows the Timezone card with your real zone
+  (auto-detected after first dashboard load — was 'UTC' default); add a task
+  "tomorrow 9am" → due shows YOUR 9 AM; mark something done late evening →
+  Weekly Review counts it on the right day; pin a different zone → labels
+  follow; switch back to Automatic.
 **Owner decisions (2026-06-11 Q&A):** AI-written brief once/morning (cached);
 storage = `daily_briefs` — **already existed from Phase 1, NO migration
 needed**; Focus Mode = full-screen. Also clarified: Phase 11 is about the

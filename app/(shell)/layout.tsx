@@ -3,6 +3,7 @@ import { getAccountView } from '@/lib/supabase/account';
 import { getNavCounts } from '@/lib/dashboard/nav-counts';
 import { AppShell } from '@/components/app/AppShell';
 import { AutoSync } from '@/components/sync/AutoSync';
+import { TimezoneSync } from '@/components/sync/TimezoneSync';
 
 /**
  * Shared frame for all routed app pages — the persistent sidebar + topbar
@@ -19,6 +20,8 @@ export default async function ShellLayout({ children }: { children: React.ReactN
     <AppShell account={account ?? undefined} counts={counts}>
       {/* Background auto-sync — keeps mail fresh on every shell page. */}
       <AutoSync />
+      {/* Keeps profiles.timezone following the device (unless pinned). */}
+      <TimezoneSync />
       {children}
     </AppShell>
   );

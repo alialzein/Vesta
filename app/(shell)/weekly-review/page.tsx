@@ -23,9 +23,16 @@ export const dynamic = 'force-dynamic';
  * Renders inside the AppShell (sidebar + topbar provide nav and the page title).
  */
 export default async function WeeklyReviewPage() {
-  await requireUser();
+  const user = await requireUser();
   const supabase = createClient();
-  const since = windowStart(new Date());
+  // Day buckets follow the manager's clock (profiles.timezone, auto-detected).
+  const { data: tzProfile } = await supabase
+    .from('profiles')
+    .select('timezone')
+    .eq('id', user.id)
+    .maybeSingle();
+  const tz = tzProfile?.timezone ?? 'UTC';
+  const since = windowStart(new Date(), tz);
 
   const [resolvedRes, sentRes, inboundRes, openRes] = await Promise.all([
     supabase
@@ -54,6 +61,7 @@ export default async function WeeklyReviewPage() {
     resolved: (resolvedRes.data ?? []) as ResolvedItemRow[],
     sent: (sentRes.data ?? []) as SentDraftRow[],
     inbound: (inboundRes.data ?? []) as InboundMessageRow[],
+    tz,
   });
   const openCount = openRes.count ?? 0;
   const maxDay = Math.max(1, ...review.perDay.map((d) => d.count));

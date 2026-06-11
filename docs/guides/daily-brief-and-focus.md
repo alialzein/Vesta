@@ -21,7 +21,8 @@ Both live on the **Today** dashboard:
   what's overdue, what can wait).
 - **One AI call per day.** The brief is written once each morning and cached —
   reloading the page, or opening Vesta on your other laptop, shows the same
-  brief without paying again. Tomorrow it's written fresh.
+  brief without paying again. It refreshes after **your** midnight (Settings →
+  Timezone), so a new day means a new brief wherever you are.
 - **"Start here"** names the one item Vesta would tackle first (overdue beats
   waiting-people beats score) and gives the reason in plain words. Click it and
   that item is selected with the AI rail open — ready to act.
