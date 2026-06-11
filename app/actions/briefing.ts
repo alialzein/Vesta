@@ -179,7 +179,18 @@ export async function generateBriefing(force = false): Promise<GenerateBriefingR
     return { ok: false, reason: 'No fresh news found for your topics — try broader topics or another region.' };
   }
 
-  // Skip stories the manager has already seen on previous days.
+  if (force) {
+    // A refresh replaces today's unhandled items (saved ones are kept) —
+    // BEFORE the seen-check below, so today's deleted stories can be
+    // re-selected by the rebuild instead of being treated as already seen.
+    await supabase
+      .from('briefing_items')
+      .delete()
+      .eq('brief_date', briefDate)
+      .neq('status', 'saved');
+  }
+
+  // Skip stories the manager has already seen (saved items + previous days).
   const keys = candidates.map((c) => dedupeKeyOf(c.title));
   const { data: seenRows } = await supabase
     .from('briefing_items')
@@ -228,18 +239,10 @@ export async function generateBriefing(force = false): Promise<GenerateBriefingR
       };
     });
 
-    if (force) {
-      // A refresh replaces today's unhandled items; saved ones are kept.
-      await supabase
-        .from('briefing_items')
-        .delete()
-        .eq('brief_date', briefDate)
-        .neq('status', 'saved');
-    }
-    // Ignore per-row dedupe conflicts (story already stored on an earlier day).
-    const { error } = await supabase
-      .from('briefing_items')
-      .upsert(rows, { onConflict: 'user_id,dedupe_key', ignoreDuplicates: true });
+    // Plain insert: `fresh` was already filtered against every stored
+    // dedupe_key, so rows can't collide. (Upsert ON CONFLICT can't be used —
+    // the dedupe index is partial, which Postgres won't infer for it.)
+    const { error } = await supabase.from('briefing_items').insert(rows);
     if (error) return { ok: false, reason: error.message };
 
     await recordAiUsage({
