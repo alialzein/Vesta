@@ -14,6 +14,7 @@ import {
   type BriefingCandidate,
 } from '@/lib/briefing/rss';
 import { aiSearchCandidates } from '@/lib/briefing/ai-search';
+import { domainOf, resolveArticleVisual, type ArticleVisual } from '@/lib/briefing/images';
 import { buildBriefingPrompt, parseBriefing, BRIEFING_PROMPT_VERSION } from '@/lib/ai/briefing';
 import { getEffectiveAi } from '@/lib/ai/runtime';
 import { estimateCostUsd } from '@/lib/ai/cost';
@@ -214,9 +215,18 @@ export async function generateBriefing(force = false): Promise<GenerateBriefingR
   try {
     const res = await client.complete(prompt);
     const ranked = parseBriefing(res.content, Math.min(fresh.length, 40));
+    const picked = ranked.slice(0, prefs.itemsPerDay);
 
-    const rows = ranked.slice(0, prefs.itemsPerDay).map((it, i) => {
+    // Card visuals for ONLY the selected items (og:image via the decoded
+    // publisher URL, short timeout each, all in parallel) — best-effort, a
+    // failed fetch just means the card renders its gradient fallback.
+    const visuals: ArticleVisual[] = await Promise.all(
+      picked.map((it) => resolveArticleVisual(fresh[it.candidateIndex].url, { timeoutMs: 4000 })),
+    );
+
+    const rows = picked.map((it, i) => {
       const c = fresh[it.candidateIndex];
+      const v = visuals[i];
       return {
         user_id: user.id,
         brief_date: briefDate,
@@ -235,6 +245,9 @@ export async function generateBriefing(force = false): Promise<GenerateBriefingR
           engine: engineUsed,
           matched_query: c.query,
           prompt_version: BRIEFING_PROMPT_VERSION,
+          image_url: v.imageUrl,
+          article_url: v.articleUrl,
+          source_domain: v.sourceDomain ?? domainOf(c.sourceHomepage),
         } as Json,
       };
     });

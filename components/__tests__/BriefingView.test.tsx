@@ -33,6 +33,8 @@ const ITEM: BriefingItemView = {
   sourceUrl: 'https://news.example/1',
   publishedAt: '2026-06-11T06:00:00.000Z',
   status: 'unread',
+  imageUrl: 'https://img.example/story.jpg',
+  sourceDomain: 'gulftimes.example',
 };
 
 function makeData(over: Partial<BriefingData> = {}): BriefingData {
@@ -116,5 +118,36 @@ describe('BriefingView', () => {
     renderView(makeData());
     await user.click(screen.getByRole('button', { name: /Refresh/ }));
     expect(generateBriefing).toHaveBeenCalledWith(true);
+  });
+
+  it('labels the relevance score as a match percentage with an explainer tooltip', () => {
+    renderView(makeData());
+    const chip = screen.getByText('88% match');
+    expect(chip).toHaveAttribute('title', expect.stringMatching(/relevant.*to you/i));
+  });
+
+  it('renders the article image when present and category art when absent', () => {
+    const second: BriefingItemView = { ...ITEM, id: 'b2', rank: 1, imageUrl: null };
+    const { container } = renderView(makeData({ items: [ITEM, second] }));
+    const imgs = Array.from(container.querySelectorAll('img')).map((i) => i.getAttribute('src'));
+    expect(imgs).toContain('https://img.example/story.jpg');
+    // The no-image card falls back to a gradient panel (inline backgroundImage).
+    const art = container.querySelector('[style*="linear-gradient"]');
+    expect(art).not.toBeNull();
+  });
+
+  it('shows the publisher favicon chip from the source domain', () => {
+    const { container } = renderView(makeData());
+    const fav = Array.from(container.querySelectorAll('img')).find((i) =>
+      (i.getAttribute('src') ?? '').includes('s2/favicons'),
+    );
+    expect(fav?.getAttribute('src')).toContain('gulftimes.example');
+  });
+
+  it('explains the Saved-for-later shelf', () => {
+    const savedItem: BriefingItemView = { ...ITEM, id: 'b9', status: 'saved' };
+    renderView(makeData({ saved: [savedItem] }));
+    expect(screen.getByText('Saved for later')).toBeInTheDocument();
+    expect(screen.getByText(/stay on this shelf across days/i)).toBeInTheDocument();
   });
 });

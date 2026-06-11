@@ -11,6 +11,8 @@ export type BriefingCandidate = {
   title: string;
   url: string;
   sourceName: string | null;
+  /** Publisher homepage from the feed's <source url="…"> (favicon/logo). */
+  sourceHomepage?: string | null;
   publishedAt: string | null; // ISO
   snippet: string | null;
   /** Which preference (topic/company) surfaced this candidate. */
@@ -81,6 +83,7 @@ export function parseRssItems(xml: string, query: string): BriefingCandidate[] {
     const url = tagContent(block, 'link');
     if (!rawTitle || !url) continue;
     const sourceName = tagContent(block, 'source');
+    const sourceHomepage = block.match(/<source[^>]+url=["']([^"']+)["']/i)?.[1] ?? null;
     // Google appends " - Source" to titles; drop it when it matches the source tag.
     let title = decodeEntities(rawTitle);
     if (sourceName && title.endsWith(` - ${decodeEntities(sourceName)}`)) {
@@ -97,6 +100,7 @@ export function parseRssItems(xml: string, query: string): BriefingCandidate[] {
       title,
       url: decodeEntities(url),
       sourceName: sourceName ? decodeEntities(sourceName) : null,
+      sourceHomepage: sourceHomepage ? decodeEntities(sourceHomepage) : null,
       publishedAt,
       snippet: description ? stripTags(description).slice(0, 300) : null,
       query,
