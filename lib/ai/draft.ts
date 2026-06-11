@@ -12,7 +12,11 @@
 
 // draft-v3: the prompt reads the manager's memory — hard "never do" limits
 // (system rules) + project/company/person context notes (Phase 10).
-export const DRAFT_PROMPT_VERSION = 'draft-v3';
+// draft-v4: the prompt is TIME-AWARE — today's date, when the message being
+// answered arrived, and per-message dates in the thread context. Fixes
+// confident-but-stale drafts (e.g. accepting a "today or tomorrow?" meeting
+// two days after it was asked, as if no time had passed).
+export const DRAFT_PROMPT_VERSION = 'draft-v4';
 
 /**
  * What the draft is FOR — drives the writing instruction:
@@ -28,6 +32,9 @@ export type ThreadContextMsg = {
   /** "the manager" for outbound, else the sender's display name/email. */
   from: string;
   body: string;
+  /** Short date label for when this message was sent (e.g. "Jun 9"), so the
+   *  model can tell how the conversation sits in time. */
+  at?: string | null;
 };
 
 /** Tones the manager can steer with (also accepted back from the model). */
@@ -71,6 +78,12 @@ export type DraftInput = {
    *  capped) so the model knows what was already said — including the
    *  manager's own replies, which the latest inbound message alone misses. */
   threadContext?: ThreadContextMsg[];
+  /** Today's date, human-readable (e.g. "Thursday, June 11, 2026") — without it
+   *  the model has no idea relative words in old mail have already expired. */
+  today?: string;
+  /** When the message being answered arrived, human-readable with its age
+   *  (e.g. "Tue, Jun 9, 8:39 PM UTC (2 days ago)"). */
+  receivedAt?: string | null;
 };
 
 export const DRAFT_JSON_HINT = `{
@@ -94,6 +107,7 @@ export function buildDraftPrompt(input: DraftInput): { system: string; user: str
     '- Keep it brief and purposeful: greeting, the substance, a clear close. Match the requested tone.',
     '- If the topic is sensitive (legal, contract, finance/payment, HR/termination, medical, security, confidential, or an upset client), keep the reply careful, add a warning, and set requires_human_review to true.',
     '- Sign off as the manager by name when known. Do not fabricate a signature block, title, or contact details.',
+    '- TIME AWARENESS: use the dates provided. Relative words inside a message ("today", "tomorrow", "this afternoon", weekday names) refer to the date THAT message was received — if days have passed since, those times are already gone. Never accept, confirm, or propose a time that has already passed. When the reply comes after an asked-about time has slipped (a day or more), open with ONE short acknowledgement of the late reply, then move it forward: confirm whether it is still needed and ask for or propose NEW timing. Never write as if the reply is being sent the day the message arrived.',
     ...(input.hardRules && input.hardRules.length > 0
       ? [
           "The manager's hard rules — these are absolute and override everything else:",
@@ -114,7 +128,12 @@ export function buildDraftPrompt(input: DraftInput): { system: string; user: str
   // backwards waiting_on_them drafts).
   const contextBlock =
     input.threadContext && input.threadContext.length > 0
-      ? ['Conversation so far (oldest first):', ...input.threadContext.map((m) => `- ${m.from}: ${m.body}`)].join('\n')
+      ? [
+          'Conversation so far (oldest first):',
+          ...input.threadContext.map(
+            (m) => `- ${m.at ? `[${m.at}] ` : ''}${m.from}: ${m.body}`,
+          ),
+        ].join('\n')
       : '';
 
   const contextNotesLine =
@@ -122,7 +141,9 @@ export function buildDraftPrompt(input: DraftInput): { system: string; user: str
       ? ['Background the manager has saved (use only when relevant):', ...input.contextNotes.map((n) => `- ${n}`)].join('\n')
       : '';
 
+  const receivedNote = input.receivedAt ? ` (received ${input.receivedAt})` : '';
   const user = [
+    input.today ? `Today is ${input.today}.` : '',
     `Reply tone requested: ${input.tone}`,
     toneLine,
     contextNotesLine,
@@ -132,8 +153,8 @@ export function buildDraftPrompt(input: DraftInput): { system: string; user: str
     `Sign off as: ${input.managerName ?? '(the manager)'}`,
     contextBlock,
     isFollowUp
-      ? "The recipient's last message (the follow-up will thread onto it):"
-      : 'Latest message to reply to:',
+      ? `The recipient's last message${receivedNote} (the follow-up will thread onto it):`
+      : `Latest message to reply to${receivedNote}:`,
     input.latestMessage || '(no body available)',
   ]
     .filter(Boolean)

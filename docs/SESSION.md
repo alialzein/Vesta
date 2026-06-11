@@ -4,12 +4,17 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**#49 + #50 MERGED (sidebar pass, app shell);
-PHASE 11 — Daily Brief & Focus Mode BUILT on `feat/phase-11-daily-brief-focus`
-— PR open, awaiting owner review.** 366 tests green, typecheck/lint/build
-clean.)
-**Repo state:** `main` = app shell everywhere (#50) + sidebar pass (#49) +
-Phase 10; Phase 11 branch pushed.
+**Last updated:** 2026-06-11 (**Phase 11 MERGED (#51). Owner found a real
+draft bug while testing → fixed on `fix/draft-time-awareness` (PR open):
+drafts were TIME-BLIND** — no today/received dates in the prompt, so a reply
+to a 2-day-old "meeting today or tomorrow?" email cheerfully accepted times
+already past. **draft-v4**: today's date + "received … (N days ago)" on the
+message + per-message [Jun 9] dates in the thread context + a TIME AWARENESS
+system rule (acknowledge late replies, never confirm past times, propose new
+timing). 368 tests green.)
+**Repo state:** `main` = Phase 11 (#51) + app shell (#50) + sidebar pass
+(#49) + Phase 10; fix branch pushed. NOTE: existing saved drafts keep their
+old text — hit **Regenerate** to get a v4 draft.
 **Owner decisions (2026-06-11 Q&A):** AI-written brief once/morning (cached);
 storage = `daily_briefs` — **already existed from Phase 1, NO migration
 needed**; Focus Mode = full-screen. Also clarified: Phase 11 is about the

@@ -56,6 +56,10 @@ tone, ready to review. You stay in control the whole way: you read it, edit it, 
 - **It won't make things up.** If the email is missing something it needs, the draft
   asks a short question or writes a safe holding reply rather than inventing facts,
   numbers, or commitments.
+- **It knows what day it is.** The draft sees today's date and when each message
+  arrived. If someone asked "today or tomorrow?" two days ago, the reply won't
+  cheerfully accept times that already passed — it briefly acknowledges the late
+  reply and asks for (or proposes) new timing instead.
 - **Every send is logged.** Sent replies are recorded for your audit history.
 
 ## Saving without sending

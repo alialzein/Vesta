@@ -172,7 +172,48 @@ async function loadReplyContext(
   return { item: item as ReplyItem, inbound, recent };
 }
 
-/** Compact "who said what" lines (oldest first) for the draft prompt. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Short date label for thread-context lines, e.g. "Jun 9". */
+function dayLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+/** Full received label with age, e.g. "Tue, Jun 9, 8:39 PM UTC (2 days ago)" —
+ *  the age is what stops the model treating "today/tomorrow" in old mail as
+ *  still current (draft-v4 time awareness). */
+function receivedLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const days = Math.floor((Date.now() - d.getTime()) / DAY_MS);
+  const ago = days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+  const stamp = d.toLocaleString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  });
+  return `${stamp} UTC (${ago})`;
+}
+
+/** Today's date for the prompt, e.g. "Thursday, June 11, 2026". */
+function todayLabel(): string {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/** Compact "who said what (and when)" lines (oldest first) for the draft prompt. */
 function threadContextFor(recent: InboundMsg[]): ThreadContextMsg[] {
   return recent
     .slice()
@@ -182,6 +223,7 @@ function threadContextFor(recent: InboundMsg[]): ThreadContextMsg[] {
         m.direction === 'outbound'
           ? 'the manager'
           : m.sender_name || m.sender_email || 'them',
+      at: dayLabel(m.received_at),
       body:
         bodyForAi({
           body_text: m.body_text,
@@ -391,6 +433,10 @@ export async function generateDraft(
     instruction: opts?.instruction ?? null,
     purpose,
     threadContext: threadContextFor(ctx.recent ?? []),
+    // draft-v4 — time awareness: without these the model replied to days-old
+    // "today or tomorrow?" mail as if no time had passed.
+    today: todayLabel(),
+    receivedAt: receivedLabel(inbound.received_at),
   });
 
   let draft;
