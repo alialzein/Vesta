@@ -120,6 +120,11 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
     title: 'Weekly Review',
     body: 'Your week at a glance — what you finished, the replies you sent, and which senders took your attention.',
   },
+  {
+    icon: 'search',
+    title: 'Personal Briefing',
+    body: 'Daily intelligence from YOUR topics — clients, competitors, regulations — each item with why it matters and a suggested move.',
+  },
 ];
 
 const ROADMAP: { title: string; body: string }[] = [

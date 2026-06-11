@@ -32,6 +32,7 @@ function buildNav(counts: NavCounts): NavGroup[] {
         // Delegation is roadmap (Phase 12) — shown honestly, not a dead click.
         { label: 'Delegation', icon: 'delegate', soon: true },
         { label: 'Memory & Rules', icon: 'brain', view: 'memory' },
+        { label: 'Briefing', icon: 'sun', href: '/briefing' },
         { label: 'Weekly Review', icon: 'trend', href: '/weekly-review' },
       ],
     },

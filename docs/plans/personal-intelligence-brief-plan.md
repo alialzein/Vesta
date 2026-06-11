@@ -2,8 +2,12 @@
 
 **Project:** Vesta AI Chief of Staff  
 **Feature:** Personal Intelligence Brief  
-**Status:** Future feature / product plan  
-**Recommended phase:** After core Outlook + AI dashboard pilot is stable  
+**Status:** **v1 BUILT (2026-06-11)** — phases B+C+D+E shipped together as a
+real v1 (owner-approved): `/briefing` page, preferences (topics/companies/
+region/engine), Google News RSS + AI web-search engines, AI ranking with
+why-it-matters, once-a-day caching in `briefing_preferences`/`briefing_items`
+(migration `20260611190001_personal_briefing.sql`). Lean 2-table model (not
+the 5-table draft below). Phase F (company-wide) remains future.  
 **Target file path:** `docs/plans/personal-intelligence-brief-plan.md`
 
 ---

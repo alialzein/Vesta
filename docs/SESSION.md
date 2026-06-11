@@ -4,19 +4,62 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (**timezone pass MERGED (#53)** — `main` now =
-#49–#53: sidebar pass, app shell everywhere, Phase 11 Daily Brief & Focus
-Mode, draft-v4 time awareness, manager-timezone. 378 tests green.)
-**Owner verify when convenient:** Settings → Timezone card shows the real
-zone "(automatic)" after one dashboard load; a "tomorrow 9am" task dues at
-the manager's 9 AM; an evening completion lands on today's Weekly Review bar.
-**Next: pick the next track (owner deciding):** Phase 12 feature (AI
-Decision Desk / Promise tracker — discuss scope first), Microsoft Teams
-(Phase 13), Personal Intelligence Brief (news track, phases A–F), "Ask
-Vesta" chat made real (reads 'personal' memories), or the Phase 8 leftover
-(reminder processor / notifications bell). Pre-launch checklist still
-standing (rotate keys/passwords, re-enable email confirmation, remove dev
-user, Mail.Send on prod Azure app).**
+**Last updated:** 2026-06-11 (**PERSONAL INTELLIGENCE BRIEF v1 built on
+`feat/personal-briefing` — PR open. ⚠️ NEEDS THE MIGRATION RUN
+(`supabase/migrations/20260611190001_personal_briefing.sql`, owner-approved
+SQL) in the Supabase SQL editor before the feature works.** Owner decisions:
+real v1 in one go (skip demo phase); news engine is MANAGER-SELECTABLE
+(Google News RSS default / AI web-search with silent RSS fallback); lean
+2-table model. 394 tests green.)
+**Repo state:** `main` = #49–#53; briefing branch pushed.
+**Next: 1) owner merges the briefing PR + RUNS THE MIGRATION + verifies (see
+below) → 2) pick next: AI Decision Desk (Phase 12, discuss scope) / Teams /
+"Ask Vesta" chat real / reminder processor. Pre-launch checklist standing
+(rotate keys/passwords, re-enable email confirmation, remove dev user,
+Mail.Send on prod Azure app).**
+
+## 📰 Personal Intelligence Brief v1 (built 2026-06-11, `feat/personal-briefing`)
+
+The plan's phases B+C+D+E shipped together (owner choice). **Migration
+required** (approved in chat): `briefing_preferences` + `briefing_items`,
+own-rows RLS — run `20260611190001_personal_briefing.sql` in Supabase.
+
+- **Page:** `/briefing` (sidebar → Intelligence → Briefing, between Memory &
+  Rules and Weekly Review; in the app shell). First run = inline preferences
+  ("What should Vesta watch for you?"): topic chips (suggested + custom),
+  tracked companies, region, items/day (5–15), style, and the **news engine
+  radio** (Google News / AI web search). Privacy line everywhere: only topic
+  keywords leave the app, never mailbox content.
+- **Engines:** `lib/briefing/rss.ts` (pure, tested — Google News search-RSS
+  per query, entity/CDATA-safe parser, title-hash dedupe, blocked-source +
+  72h-staleness merge) and `lib/briefing/ai-search.ts` (OpenAI Responses API
+  `web_search` tool returning structured candidates; ANY failure → null →
+  silent RSS fallback).
+- **AI ranking:** `lib/ai/briefing.ts` (`briefing-v1`, tested) — model picks
+  from given candidates ONLY (candidateIndex validated; invented items
+  dropped), de-clickbaits, writes manager-specific why-it-matters + suggested
+  action, categories (must_know / regulation_risk / client_competitor / …).
+- **Actions:** `app/actions/briefing.ts` — generateBriefing (once per
+  manager-tz day; Refresh forces, keeping saved items), cross-day dedupe via
+  `(user_id, dedupe_key)` unique index, save/dismiss/unread, preferences
+  upsert. AI usage → ledger feature `brief` (kinds briefing_rank /
+  briefing_search). Loader in `lib/briefing/data.ts` ('use server' files
+  can't export non-functions).
+- **Cards:** category chip, relevance, source + LocalTime, headline, summary,
+  ⭐why-it-matters, →suggested action, Read source (new tab), Save (→ "Saved
+  for later" shelf, persists across days), Dismiss (optimistic).
+- Landing grid gains "Personal Briefing" (10 cards, shots re-verified);
+  guide `docs/guides/briefing.md` + README; plan doc + phases.md marked v1
+  built (Phase F company-wide remains future).
+- Tests 394: rss suite, briefing prompt/parser suite, BriefingView component
+  suite (first-run, auto-build-once, dismiss optimistic, refresh-forces),
+  AppShell/landing nav assertions.
+- ⚠️ **Verify live (both themes) after migration:** first visit → preferences
+  → save → briefing builds in seconds; items match your topics with real
+  source links; Refresh rebuilds; Save survives to tomorrow's "Saved for
+  later"; Dismiss removes; switch engine to AI web search → still works (or
+  silently falls back); reload = instant (cached); admin AI page shows
+  `brief` rows (briefing_rank).
 
 ## 🕐 Manager-timezone pass (built 2026-06-11, `fix/manager-timezone`)
 
