@@ -52,16 +52,18 @@ card in the chat — **nothing happens until you tap Confirm** on that card.
 - `Snooze the TeamViewer thread until Monday 9am.`
 - `Remind me to call Ahmad tomorrow at 3pm.` — adds a task to your radar.
 - `Draft a reply to Zahraa: I can meet Thursday at 2pm.` — the draft waits in
-  **Draft Replies** for your approval. Chat never sends email.
+  **Draft Replies** for your approval. Chat never sends email on its own.
+- `Email me a reminder about this thread at 3pm — every hour, 3 times.` —
+  schedules real reminder **emails** to your inbox (or to an email you type).
+  See and cancel them anytime in **Settings → Scheduled reminders**.
 
 **What you'll see:** Vesta's reply plus a card like *"Snooze 'TeamViewer
 access' until 2026-06-15 09:00 — [Confirm] [Cancel]"*. Confirm runs it (the
 card turns green with the result); Cancel dismisses it. If Vesta isn't sure
 which item or time you mean, it asks instead of guessing.
 
-Not yet possible from chat (coming next): scheduling Teams meetings, and
-sending reminder emails to other people on a schedule — Vesta will tell you
-so honestly if you ask.
+Not yet possible from chat (coming next): scheduling Teams meetings — Vesta
+will tell you so honestly if you ask.
 
 ## Conversations
 

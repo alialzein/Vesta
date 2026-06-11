@@ -5,6 +5,8 @@ import { hasSendScope } from '@/lib/graph/tokens';
 import { OutlookCard, type OutlookStatus } from '@/components/settings/OutlookCard';
 import { ManagedSenders, type ManagedRule } from '@/components/settings/ManagedSenders';
 import { TimezoneCard } from '@/components/settings/TimezoneCard';
+import { RemindersCard } from '@/components/settings/RemindersCard';
+import { getActiveReminders } from '@/lib/reminders/data';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +33,7 @@ export default async function SettingsPage({
     { data: ruleRows },
     { data: vipRows },
     { data: tzProfile },
+    reminders,
   ] = await Promise.all([
       supabase
         .from('user_integrations')
@@ -49,6 +52,7 @@ export default async function SettingsPage({
         .in('rule_type', ['allow', 'suppression']),
       supabase.from('people').select('email, display_name').eq('is_vip', true),
       supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle(),
+      getActiveReminders(),
     ]);
 
   const connected = integration?.status === 'connected';
@@ -99,6 +103,11 @@ export default async function SettingsPage({
         timezone={tzProfile?.timezone ?? 'UTC'}
         manual={user.user_metadata?.tz_manual === true}
       />
+
+      <h2 className="m-0 mt-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+        Scheduled reminders
+      </h2>
+      <RemindersCard reminders={reminders} />
     </section>
   );
 }

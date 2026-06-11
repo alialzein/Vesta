@@ -42,6 +42,15 @@ the AI sees when writing replies.
 
 The card always shows which timezone is currently in effect.
 
+## Scheduled reminders
+
+Under **Scheduled reminders** you'll find every email reminder you created
+through Ask Vesta (e.g. *"email me about this thread at 3pm, hourly, 3
+times"*). Each row shows what it's about, who receives it, the schedule, and
+the **next send time** — with a **Cancel** button that stops the series
+instantly (emails already sent stay sent). A reminder is never an invisible
+background process: if it's running, it's listed here.
+
 ## Light & dark mode
 
 Vesta fully supports both **light** and **dark** themes on every screen. **Dark is

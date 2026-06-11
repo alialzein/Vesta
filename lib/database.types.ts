@@ -605,6 +605,12 @@ export type Database = {
           delivery_channels: string[];
           last_sent_at: Timestamptz | null;
           snoozed_until: Timestamptz | null;
+          send_to_email: string | null;
+          body: string | null;
+          repeat_every_minutes: number | null;
+          remaining_sends: number;
+          sent_count: number;
+          created_from: string;
           metadata: Json;
           created_at: Timestamptz;
           updated_at: Timestamptz;
@@ -621,6 +627,12 @@ export type Database = {
           delivery_channels?: string[];
           last_sent_at?: Timestamptz | null;
           snoozed_until?: Timestamptz | null;
+          send_to_email?: string | null;
+          body?: string | null;
+          repeat_every_minutes?: number | null;
+          remaining_sends?: number;
+          sent_count?: number;
+          created_from?: string;
           metadata?: Json;
           created_at?: Timestamptz;
           updated_at?: Timestamptz;

@@ -13,7 +13,7 @@
  */
 import { extractJson } from './schema';
 
-export const CHAT_PROMPT_VERSION = 'chat-v3';
+export const CHAT_PROMPT_VERSION = 'chat-v4';
 
 /** Memory types the chat may write — exactly the manager_memories vocabulary. */
 export const CHAT_MEMORY_TYPES = [
@@ -31,9 +31,9 @@ export type ChatMemoryType = (typeof CHAT_MEMORY_TYPES)[number];
 export type ChatMemoryProposal = { type: ChatMemoryType; text: string };
 
 /**
- * Phase A chat orders — the model may PROPOSE one action per turn; it never
- * executes. Items are referenced by index into the work list it was given
- * (the briefing's anti-hallucination trick), local times as
+ * Chat orders (Phases A+B) — the model may PROPOSE one action per turn; it
+ * never executes. Items are referenced by index into the work list it was
+ * given (the briefing's anti-hallucination trick), local times as
  * "YYYY-MM-DD HH:mm" in the manager's timezone. Everything is validated here
  * and re-validated server-side; the manager confirms with a tap.
  */
@@ -41,7 +41,21 @@ export type ChatActionProposal =
   | { kind: 'mark_done'; itemIndex: number }
   | { kind: 'snooze'; itemIndex: number; untilLocal: string }
   | { kind: 'create_task'; title: string; dueLocal: string | null }
-  | { kind: 'draft_reply'; itemIndex: number; instruction: string };
+  | { kind: 'draft_reply'; itemIndex: number; instruction: string }
+  | {
+      kind: 'create_reminder';
+      /** Tie the reminder to an open item (null = standalone subject). */
+      itemIndex: number | null;
+      /** What the reminder email is about. */
+      subject: string;
+      /** Recipient; null = the manager himself. */
+      toEmail: string | null;
+      firstAtLocal: string;
+      /** null = one-shot; minutes between sends otherwise (min 15). */
+      repeatMinutes: number | null;
+      /** Total sends, 1–10 ("hourly, 3 times" → 3). */
+      count: number;
+    };
 
 export type ParsedChatReply = {
   reply: string;
@@ -90,6 +104,7 @@ const CHAT_JSON_HINT = `{
           | { "kind": "snooze", "itemIndex": 0, "untilLocal": "YYYY-MM-DD HH:mm" }
           | { "kind": "create_task", "title": "...", "dueLocal": "YYYY-MM-DD HH:mm" | null }
           | { "kind": "draft_reply", "itemIndex": 0, "instruction": "what the reply should say" }
+          | { "kind": "create_reminder", "itemIndex": 0 | null, "subject": "what it is about", "toEmail": "a@b.com" | null, "firstAtLocal": "YYYY-MM-DD HH:mm", "repeatMinutes": 60 | null, "count": 1 }
 }`;
 
 const HISTORY_CAP = 20; // turns sent back to the model
@@ -123,12 +138,13 @@ export function buildChatPrompt(input: {
     '- Plain conversational text: short paragraphs, hyphen bullets when listing. No markdown headers, no asterisks, no emoji.',
     '',
     'How to act (the "action" field) — orders the manager gives you:',
-    `- When ${name} clearly tells you to DO one of these, propose it: mark an item done (mark_done), snooze an item until a time (snooze), create a task/reminder on the radar (create_task), or draft a reply on an item (draft_reply — the draft will wait for their approval, you never send).`,
+    `- When ${name} clearly tells you to DO one of these, propose it: mark an item done (mark_done), snooze an item until a time (snooze), create a task on the radar (create_task), draft a reply on an item (draft_reply — the draft will wait for their approval, you never send), or schedule an EMAIL reminder (create_reminder — e.g. "email me about this thread at 3pm, every hour, 3 times": firstAtLocal=the 3pm slot, repeatMinutes=60, count=3; toEmail null means the manager himself; never invent another person's email — use one only when ${name} typed it).`,
+    '- "Remind me to X tomorrow 3pm" alone = create_task (a radar item). Use create_reminder only when they clearly want an EMAIL (they say email/send/inbox or a repeat pattern).',
     '- You only PROPOSE: the manager confirms with a tap before anything happens. Your reply should state what you are proposing in one short sentence.',
     '- Reference items ONLY by their [index] from the open-items list below. If you cannot tell which item they mean, or a time/date is missing, ask in the reply and set action to null.',
     `- Times are the manager's LOCAL time as "YYYY-MM-DD HH:mm" (24h). Resolve words like "tomorrow 3pm" or "Monday morning" (morning=09:00, noon=12:00, afternoon=15:00, evening=18:00) from the local time given below.`,
     '- One action per turn, only when explicitly ordered. Questions, opinions, and "should I…?" are NOT orders — answer them with action null.',
-    '- You cannot send email, schedule meetings, or email reminders to others yet. For those, say so honestly and point to the right screen.',
+    '- You cannot send regular email or schedule meetings yet (coming soon). For those, say so honestly and point to the right screen.',
     '',
     'How to learn (the "remember" field) — this is what makes you THEIR Vesta:',
     `- After answering, extract durable facts from what ${name} just said — things a great chief of staff would note down: people and how to treat them (vip), standing preferences and working style (preference, tone), projects and companies (project_context, company_context), delegation habits (delegation_rule), hard limits (do_not_do), and personal context like family, health, dates that matter (personal).`,
@@ -237,6 +253,31 @@ function asAction(v: unknown, itemCount: number): ChatActionProposal | null {
     const instruction = cap(String(a.instruction ?? ''), 500);
     return validIdx && instruction.length >= 3 ? { kind, itemIndex: idx, instruction } : null;
   }
+  if (kind === 'create_reminder') {
+    const subject = cap(String(a.subject ?? ''), 150);
+    const firstAtLocal = String(a.firstAtLocal ?? '').trim();
+    if (subject.length < 3 || !LOCAL_TIME_RE.test(firstAtLocal)) return null;
+    const rawEmail = a.toEmail == null ? null : String(a.toEmail).trim().toLowerCase();
+    const toEmail = rawEmail && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rawEmail) ? rawEmail : null;
+    const rawRepeat = a.repeatMinutes == null ? null : Number(a.repeatMinutes);
+    const repeatMinutes =
+      rawRepeat != null && Number.isFinite(rawRepeat) && rawRepeat > 0
+        ? Math.max(15, Math.round(rawRepeat))
+        : null;
+    const rawCount = Number(a.count);
+    const count = Number.isFinite(rawCount)
+      ? Math.max(1, Math.min(10, Math.round(rawCount)))
+      : 1;
+    return {
+      kind,
+      itemIndex: validIdx ? idx : null,
+      subject,
+      toEmail,
+      firstAtLocal,
+      repeatMinutes: count > 1 ? repeatMinutes : null,
+      count: repeatMinutes ? count : 1,
+    };
+  }
   return null;
 }
 
@@ -281,6 +322,14 @@ export function actionLabel(action: ChatActionProposal, itemTitle?: string | nul
         : `Add task "${cap(action.title, 70)}"`;
     case 'draft_reply':
       return `Draft a reply on ${title} (for your approval)`;
+    case 'create_reminder': {
+      const to = action.toEmail ? `to ${action.toEmail}` : 'to you';
+      const series =
+        action.repeatMinutes && action.count > 1
+          ? `, ${action.repeatMinutes === 60 ? 'hourly' : `every ${action.repeatMinutes} min`} × ${action.count}`
+          : '';
+      return `Email reminder ${to} about "${cap(action.subject, 60)}" starting ${action.firstAtLocal}${series}`;
+    }
   }
 }
 

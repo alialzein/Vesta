@@ -7,10 +7,21 @@ import type { Database } from '@/lib/database.types';
  * file: 'use server' modules may only export async functions.)
  */
 
-export type ChatActionKind = 'mark_done' | 'snooze' | 'create_task' | 'draft_reply';
+export type ChatActionKind =
+  | 'mark_done'
+  | 'snooze'
+  | 'create_task'
+  | 'draft_reply'
+  | 'create_reminder';
 export type ChatActionStatus = 'proposed' | 'done' | 'failed' | 'cancelled';
 
-const ACTION_KINDS: ChatActionKind[] = ['mark_done', 'snooze', 'create_task', 'draft_reply'];
+const ACTION_KINDS: ChatActionKind[] = [
+  'mark_done',
+  'snooze',
+  'create_task',
+  'draft_reply',
+  'create_reminder',
+];
 const ACTION_STATUSES: ChatActionStatus[] = ['proposed', 'done', 'failed', 'cancelled'];
 
 /** A chat-order proposal as stored on the assistant message
@@ -28,6 +39,12 @@ export type StoredChatAction = {
   task_title: string | null;
   due_local: string | null;
   instruction: string | null;
+  /** create_reminder fields (Phase B). */
+  reminder_subject?: string | null;
+  to_email?: string | null;
+  first_at_local?: string | null;
+  repeat_minutes?: number | null;
+  send_count?: number | null;
   /** Result line after execution (or the failure reason). */
   result?: string | null;
 };
