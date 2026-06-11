@@ -12,8 +12,15 @@ export type NavItem = {
   badge?: number;
   /** Switches the in-page dashboard view. */
   view?: NavView;
+  /** Pre-applies a radar filter alongside the view switch (e.g. Follow-ups). */
+  filter?: string;
   /** Navigates to a route (e.g. /inbox). Mutually exclusive with `view`. */
   href?: string;
+  /** Roadmap item — rendered honestly as a non-clickable "Soon" row. */
+  soon?: boolean;
+  /** Overrides the default `view === activeView` highlight (used to keep
+   *  Today and Follow-ups — both view:'today' — from lighting up together). */
+  active?: boolean;
 };
 
 export type NavGroup = {
@@ -25,7 +32,7 @@ type SidebarNavProps = {
   groups: NavGroup[];
   collapsed: boolean;
   activeView: NavView;
-  onSelectView: (view: NavView) => void;
+  onSelectView: (view: NavView, filter?: string) => void;
 };
 
 export function SidebarNav({ groups, collapsed, activeView, onSelectView }: SidebarNavProps) {
@@ -37,7 +44,11 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
   function showTip(e: React.SyntheticEvent<HTMLElement>, item: NavItem) {
     if (!collapsed) return;
     const r = e.currentTarget.getBoundingClientRect();
-    const text = item.badge !== undefined ? `${item.label} · ${item.badge}` : item.label;
+    const text = item.soon
+      ? `${item.label} · Soon`
+      : item.badge !== undefined
+        ? `${item.label} · ${item.badge}`
+        : item.label;
     setTip({ text, top: r.top + r.height / 2, left: r.right + 10 });
   }
   const hideTip = () => setTip(null);
@@ -55,15 +66,17 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
           )}
 
           {group.items.map((item) => {
-            const isActive = item.view !== undefined && item.view === activeView;
+            const isActive = item.active ?? (item.view !== undefined && item.view === activeView);
             const hasBadge = item.badge !== undefined;
 
             const className = [
-              'group/nav relative flex cursor-pointer items-center rounded-xl text-sm font-medium transition',
+              'group/nav relative flex items-center rounded-xl text-sm font-medium transition',
               collapsed ? 'h-11 w-11 justify-center self-center' : 'gap-[11px] px-3 py-[10px]',
-              isActive
-                ? 'bg-[image:var(--side-active-bg)] text-[color:var(--side-ink)] shadow-[inset_0_0_0_1px_var(--side-card-border)]'
-                : 'text-[color:var(--side-link)] hover:bg-[color:var(--side-hover)] hover:text-[color:var(--side-ink)]',
+              item.soon
+                ? 'cursor-default text-[color:var(--side-link)] opacity-60'
+                : isActive
+                  ? 'cursor-pointer bg-[image:var(--side-active-bg)] text-[color:var(--side-ink)] shadow-[inset_0_0_0_1px_var(--side-card-border)]'
+                  : 'cursor-pointer text-[color:var(--side-link)] hover:bg-[color:var(--side-hover)] hover:text-[color:var(--side-ink)]',
             ].join(' ');
 
             const inner = (
@@ -90,6 +103,14 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
 
                 {!collapsed && <span className="truncate">{item.label}</span>}
 
+                {/* Roadmap rows wear the landing page's violet "Soon" pill —
+                    the same honesty promise, inside the app. */}
+                {!collapsed && item.soon && (
+                  <span className="ml-auto rounded-full border border-[#8b7cf6]/40 px-[8px] py-[2px] font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#8b7cf6]">
+                    Soon
+                  </span>
+                )}
+
                 {!collapsed && hasBadge && (
                   <span
                     className={[
@@ -112,6 +133,21 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
               onBlur: hideTip,
             };
 
+            // Roadmap item — visible but honestly inert (no dead click).
+            if (item.soon) {
+              return (
+                <div
+                  key={item.label}
+                  aria-disabled="true"
+                  aria-label={collapsed ? `${item.label} (coming soon)` : undefined}
+                  className={className}
+                  {...hoverProps}
+                >
+                  {inner}
+                </div>
+              );
+            }
+
             // Route link (e.g. Inbox) vs in-page view switch.
             if (item.href) {
               return (
@@ -132,7 +168,7 @@ export function SidebarNav({ groups, collapsed, activeView, onSelectView }: Side
               <button
                 key={item.label}
                 type="button"
-                onClick={() => item.view && onSelectView(item.view)}
+                onClick={() => item.view && onSelectView(item.view, item.filter)}
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={collapsed && hasBadge ? `${item.label} (${item.badge})` : item.label}
                 className={className}

@@ -16,6 +16,20 @@ score). **Click a metric tile to filter the Radar** to that slice — e.g. click
 You can filter the Radar by type using the chips at the top (All, Overdue, Tasks,
 Waiting on them, Decisions, Blockers, Follow-ups, Promises, Can delegate, Drafts).
 
+### The left sidebar — every button does something
+
+- **Today** — the full Radar (clicking it also clears any filter).
+- **Inbox** / **Hidden** — your synced mail and the noise Vesta filtered out.
+- **Waiting on Me** — the full ranked Priorities list (below).
+- **Follow-ups** — one click shows the Radar filtered to follow-up items only
+  (the badge is the live count). Click **Today** to go back to everything.
+- **Draft Replies** — every saved reply waiting for your review, with a badge for
+  how many (see [Draft replies](draft-replies.md)).
+- **Memory & Rules** and **Weekly Review** — the Intelligence tools
+  ([Memory & Rules](memory-and-rules.md), [Weekly Review](weekly-review.md)).
+- **Delegation** wears a violet **Soon** tag — it's on the roadmap, not built yet,
+  so the button honestly does nothing.
+
 > What's on the Radar is **real data from your mailbox**, not a demo. If nothing is
 > waiting on you, you'll see an honest "You're all clear" state — not filler.
 

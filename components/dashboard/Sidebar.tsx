@@ -9,29 +9,46 @@ import type { AccountView } from '@/lib/supabase/account';
 export type NavView = 'today' | 'memory';
 
 /** Real counts shown as nav badges (omitted/zero → no badge, never a fake number). */
-export type NavCounts = { today?: number; waiting?: number; followup?: number };
+export type NavCounts = { today?: number; waiting?: number; followup?: number; drafts?: number };
 
-function buildNav(counts: NavCounts): NavGroup[] {
+function buildNav(counts: NavCounts, activeView: NavView, activeFilter?: string): NavGroup[] {
   // Only badge what we have real data for; 0 shows no badge (honest, not "empty").
   const badge = (n?: number) => (n && n > 0 ? n : undefined);
+  // Today and Follow-ups both live on the 'today' view; the radar filter decides
+  // which of the two is highlighted (Follow-ups = the followup-filtered radar).
+  const onFollowups = activeView === 'today' && activeFilter === 'followup';
   return [
     {
       heading: 'Workspace',
       items: [
-        { label: 'Today', icon: 'home', view: 'today', badge: badge(counts.today) },
+        {
+          label: 'Today',
+          icon: 'home',
+          view: 'today',
+          badge: badge(counts.today),
+          active: activeView === 'today' && !onFollowups,
+        },
         { label: 'Inbox', icon: 'mail', href: '/inbox' },
         { label: 'Waiting on Me', icon: 'clock', href: '/priorities', badge: badge(counts.waiting) },
-        { label: 'Follow-ups', icon: 'reply', badge: badge(counts.followup) },
-        { label: 'Draft Replies', icon: 'drafts' },
+        {
+          label: 'Follow-ups',
+          icon: 'reply',
+          view: 'today',
+          filter: 'followup',
+          badge: badge(counts.followup),
+          active: onFollowups,
+        },
+        { label: 'Draft Replies', icon: 'drafts', href: '/drafts', badge: badge(counts.drafts) },
         { label: 'Hidden', icon: 'eyeOff', href: '/hidden' },
       ],
     },
     {
       heading: 'Intelligence',
       items: [
-        { label: 'Delegation', icon: 'delegate' },
+        // Delegation is roadmap (Phase 12) — shown honestly, not a dead click.
+        { label: 'Delegation', icon: 'delegate', soon: true },
         { label: 'Memory & Rules', icon: 'brain', view: 'memory' },
-        { label: 'Weekly Review', icon: 'trend' },
+        { label: 'Weekly Review', icon: 'trend', href: '/weekly-review' },
       ],
     },
   ];
@@ -41,7 +58,9 @@ type SidebarProps = {
   collapsed: boolean;
   onToggleCollapsed: () => void;
   activeView: NavView;
-  onSelectView: (view: NavView) => void;
+  /** The radar filter currently applied (drives the Today/Follow-ups highlight). */
+  activeFilter?: string;
+  onSelectView: (view: NavView, filter?: string) => void;
   /** Mobile drawer state (the sidebar is hidden on < lg and shown as an overlay). */
   mobileOpen: boolean;
   onCloseMobile: () => void;
@@ -55,13 +74,14 @@ export function Sidebar({
   collapsed,
   onToggleCollapsed,
   activeView,
+  activeFilter,
   onSelectView,
   mobileOpen,
   onCloseMobile,
   account,
   counts = {},
 }: SidebarProps) {
-  const nav = buildNav(counts);
+  const nav = buildNav(counts, activeView, activeFilter);
   // Close the mobile drawer on Escape.
   useEffect(() => {
     if (!mobileOpen) return;
@@ -94,8 +114,8 @@ export function Sidebar({
         groups={nav}
         collapsed={mobile ? false : collapsed}
         activeView={activeView}
-        onSelectView={(v) => {
-          onSelectView(v);
+        onSelectView={(v, filter) => {
+          onSelectView(v, filter);
           if (mobile) onCloseMobile();
         }}
       />

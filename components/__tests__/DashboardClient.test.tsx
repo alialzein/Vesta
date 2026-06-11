@@ -182,6 +182,59 @@ describe('DashboardClient shell', () => {
     expect(screen.getByText(/delegation arrives in Phase 8/i)).toBeInTheDocument();
   });
 
+  it('sidebar Follow-ups switches to Today filtered to follow-ups; Today clears it', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    // The sidebar item is a button; the radar chip with the same name is a tab.
+    await user.click(screen.getByRole('button', { name: /Follow-ups/ }));
+    expect(screen.getByRole('tab', { name: 'Follow-ups' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    // Non-followup demo items leave the radar.
+    expect(screen.queryByText('IT laptop purchase request')).not.toBeInTheDocument();
+    expect(screen.getByText('Hiring decision follow-up')).toBeInTheDocument();
+
+    // Clicking Today resets to the full queue.
+    await user.click(screen.getByRole('button', { name: /^Today/ }));
+    expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('IT laptop purchase request')).toBeInTheDocument();
+  });
+
+  it('sidebar Draft Replies and Weekly Review are real links', () => {
+    renderDashboard();
+    expect(screen.getByRole('link', { name: /Draft Replies/ })).toHaveAttribute(
+      'href',
+      '/drafts',
+    );
+    expect(screen.getByRole('link', { name: /Weekly Review/ })).toHaveAttribute(
+      'href',
+      '/weekly-review',
+    );
+  });
+
+  it('sidebar Delegation is an honest Soon row, not a dead button', () => {
+    renderDashboard();
+    expect(screen.getByText('Delegation')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Delegation/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Delegation/ })).not.toBeInTheDocument();
+    // The roadmap pill sits next to the label.
+    expect(screen.getByText('Delegation').parentElement?.textContent).toContain('Soon');
+  });
+
+  it('pre-selects the deep-linked work item (Drafts page → composer handoff)', () => {
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <DashboardClient initialItemId="wi-hiring" />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    // Selected items render in the radar AND the rail.
+    expect(screen.getAllByText('Hiring decision follow-up').length).toBeGreaterThan(1);
+  });
+
   it('renders the full-page Memory & Rules workspace with category tabs and add form', async () => {
     const user = userEvent.setup();
     renderDashboard();

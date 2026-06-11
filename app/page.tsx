@@ -19,7 +19,7 @@ import { getDraftCapabilities } from '@/lib/drafts/capabilities';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { splash?: string };
+  searchParams: { splash?: string; item?: string; compose?: string };
 }) {
   const user = await requireUser();
 
@@ -58,6 +58,10 @@ export default async function DashboardPage({
       brief={dashboard.brief}
       memories={dashboard.memories}
       capabilities={capabilities}
+      // Deep link from the Drafts page: /?item=<workItemId>&compose=1 lands on
+      // the dashboard with that item selected and its composer open.
+      initialItemId={searchParams?.item}
+      initialComposer={searchParams?.compose === '1'}
     />
   );
 }

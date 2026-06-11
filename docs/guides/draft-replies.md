@@ -64,6 +64,20 @@ tone, ready to review. You stay in control the whole way: you read it, edit it, 
   **"Draft ready"** on the item, and re-opening the composer brings back your text.
 - **Discard** throws the draft away.
 
+## All your drafts in one place
+
+Left sidebar → **Draft Replies** opens the list of every saved draft that hasn't
+been sent yet. The badge on the sidebar shows how many are waiting.
+
+- Each row shows the subject, who it goes to, a preview of the text, when it was
+  last touched, and its state — **AI draft** (Vesta wrote it, untouched),
+  **Edited by you**, or **Send failed — retry**.
+- **Click a row** and you land back on the dashboard with that item selected and
+  the composer already open — exactly where you left off. Review → **Approve &
+  Send**.
+- If the item a draft belongs to has since been closed, the draft is kept and the
+  row says so — nothing is deleted behind your back.
+
 ## Turning sending on
 
 Sending needs your permission to send mail on your behalf (the Microsoft
