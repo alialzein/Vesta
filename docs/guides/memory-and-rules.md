@@ -17,9 +17,11 @@ Open it from the sidebar: **Intelligence → Memory & Rules**.
 | **Project context** | "Q3 launch is the top priority" | The AI uses it when ranking and explaining items |
 | **Company context** | "We are a 40-person logistics firm" | Background the AI can rely on instead of guessing |
 | **Preference** | "Always answer the CEO same-day" | General guidance for ranking and replies |
+| **About me (personal)** | "I'm in meetings most mornings — I reply after 2pm; I like bullet points" | Vesta knows *you*: it's used as background in ranking and drafting today, and it's the same memory the future chat assistant will use to understand you |
 
-Type the memory, pick its type, and press **Remember this**. Your own memories
-are active immediately.
+Pick a type and the text field shows a **sample you can copy** for exactly that
+type. Type your version and press **Remember this**. Your own memories are
+active immediately.
 
 ## Start with these five (copy and adapt)
 
@@ -90,6 +92,21 @@ Every saved memory card has:
 
 Memories pinned to a person only fire on that person's threads; everything
 else applies to all your mail.
+
+## Teaching Vesta about yourself
+
+Use **About me (personal)** for facts about you, not about a sender: your
+working hours, how you like information presented, what you never want to be
+bothered with, how you sign off. Examples worth saving:
+
+- `I'm in back-to-back meetings 9–12 — I handle email after lunch.`
+- `Give me bullet points, never long paragraphs.`
+- `I travel often; assume my phone, keep replies short.`
+- `I sign off as "Ali" with internal people, full name with externals.`
+
+These are used today as background when Vesta ranks and drafts — and they are
+exactly what the upcoming **chat assistant** will read to understand you, so
+everything you teach now carries forward.
 
 ## Privacy
 

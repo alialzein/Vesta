@@ -9,6 +9,7 @@ import {
   rejectMemory,
   setMemoryActive,
 } from '@/app/actions/memories';
+import { MEMORY_PLACEHOLDER, MEMORY_TYPE_OPTIONS } from '@/lib/memory/presets';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { NoMemoriesState } from '@/components/ui/StateView';
@@ -23,9 +24,9 @@ import { NoMemoriesState } from '@/components/ui/StateView';
  * hard limits, context) — see lib/ai/memory.ts.
  */
 
-type CategoryId = 'all' | 'people' | 'tone' | 'delegation' | 'safety' | 'context';
+type CategoryId = 'all' | 'people' | 'tone' | 'delegation' | 'safety' | 'context' | 'about';
 
-/** Group the seven memory types into the five manager-facing categories. */
+/** Group the memory types into the manager-facing categories. */
 const CATEGORY_OF: Record<MemoryType, Exclude<CategoryId, 'all'>> = {
   vip: 'people',
   tone: 'tone',
@@ -34,6 +35,7 @@ const CATEGORY_OF: Record<MemoryType, Exclude<CategoryId, 'all'>> = {
   project_context: 'context',
   company_context: 'context',
   preference: 'tone',
+  personal: 'about',
 };
 
 const CATEGORIES: { id: CategoryId; label: string; icon: IconName }[] = [
@@ -43,16 +45,7 @@ const CATEGORIES: { id: CategoryId; label: string; icon: IconName }[] = [
   { id: 'delegation', label: 'Delegation', icon: 'delegate' },
   { id: 'safety', label: 'Safety / Never', icon: 'shield' },
   { id: 'context', label: 'Clients & Context', icon: 'list' },
-];
-
-const TYPE_OPTIONS: { value: MemoryType; label: string }[] = [
-  { value: 'vip', label: 'VIP person' },
-  { value: 'tone', label: 'Tone' },
-  { value: 'delegation_rule', label: 'Delegation rule' },
-  { value: 'do_not_do', label: 'Do NOT do' },
-  { value: 'project_context', label: 'Project context' },
-  { value: 'company_context', label: 'Company context' },
-  { value: 'preference', label: 'Preference' },
+  { id: 'about', label: 'About you', icon: 'info' },
 ];
 
 const TYPE_LABEL: Record<MemoryType, string> = {
@@ -63,6 +56,7 @@ const TYPE_LABEL: Record<MemoryType, string> = {
   project_context: 'Project',
   company_context: 'Company',
   preference: 'Pref',
+  personal: 'Me',
 };
 
 const TAG_TONE: Record<MemoryType, string> = {
@@ -73,6 +67,7 @@ const TAG_TONE: Record<MemoryType, string> = {
   project_context: 'bg-green-soft text-green',
   company_context: 'bg-green-soft text-green',
   preference: 'bg-green-soft text-green',
+  personal: 'bg-accent-soft text-accent',
 };
 
 const TIPS = [
@@ -143,6 +138,7 @@ export function MemoryView({ memories = [] }: { memories?: MemoryRecord[] }) {
       delegation: 0,
       safety: 0,
       context: 0,
+      about: 0,
     };
     for (const m of saved) c[CATEGORY_OF[m.type]]++;
     return c;
@@ -241,9 +237,9 @@ export function MemoryView({ memories = [] }: { memories?: MemoryRecord[] }) {
                 value={type}
                 onChange={(e) => setType(e.target.value as MemoryType)}
                 aria-label="Memory type"
-                className="w-full flex-none cursor-pointer rounded-[11px] border border-line bg-field px-[12px] py-[10px] text-[13px] font-semibold text-ink focus:border-accent sm:w-[170px]"
+                className="w-full flex-none cursor-pointer rounded-[11px] border border-line bg-field px-[12px] py-[10px] text-[13px] font-semibold text-ink focus:border-accent sm:w-[190px]"
               >
-                {TYPE_OPTIONS.map((opt) => (
+                {MEMORY_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -255,7 +251,9 @@ export function MemoryView({ memories = [] }: { memories?: MemoryRecord[] }) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') submitAdd();
                 }}
-                placeholder="e.g. Treat maya@cedars.com as VIP"
+                // A copyable sample for the SELECTED type (guide rule 5a: show
+                // exactly what to write, not just a type name).
+                placeholder={MEMORY_PLACEHOLDER[type]}
                 aria-label="New memory text"
                 className="min-w-0 flex-1 rounded-[11px] border border-line bg-field px-3 py-[10px] text-[13px] text-ink outline-none placeholder:text-muted focus:border-accent"
               />

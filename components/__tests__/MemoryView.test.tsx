@@ -113,6 +113,22 @@ describe('MemoryView (Phase 10)', () => {
     });
   });
 
+  it('shows a copyable sample for the selected type as the input placeholder', async () => {
+    const user = userEvent.setup();
+    renderView([]);
+    const input = screen.getByLabelText('New memory text');
+    expect(input).toHaveAttribute('placeholder', expect.stringContaining('as VIP')); // vip default
+    await user.selectOptions(screen.getByLabelText('Memory type'), 'do_not_do');
+    expect(input).toHaveAttribute('placeholder', expect.stringContaining('Never commit'));
+    await user.selectOptions(screen.getByLabelText('Memory type'), 'personal');
+    expect(input).toHaveAttribute('placeholder', expect.stringContaining('bullet points'));
+  });
+
+  it('offers the About me (personal) type', () => {
+    renderView([]);
+    expect(screen.getByRole('option', { name: 'About me (personal)' })).toBeInTheDocument();
+  });
+
   it('pauses and deletes via the server actions', async () => {
     const user = userEvent.setup();
     renderView();
