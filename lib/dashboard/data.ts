@@ -1,7 +1,17 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
-import type { DraftView, KpiMetric, MorningBrief, WorkItem, WorkItemCategory } from '@/lib/types';
+import type {
+  DraftView,
+  KpiMetric,
+  ManagerMemory,
+  MemoryRecord,
+  MemoryType,
+  MorningBrief,
+  WorkItem,
+  WorkItemCategory,
+} from '@/lib/types';
 import { encodeThreadId } from '@/lib/thread';
+import { appliesTo, type MemoryRow as AiMemoryRow } from '@/lib/ai/memory';
 import { toDraftView, ACTIVE_DRAFT_STATUSES, type DraftRow } from '@/lib/drafts/serialize';
 import {
   CATEGORY_LABEL,
@@ -49,6 +59,7 @@ function toWorkItem(
   unread?: boolean,
   draft?: DraftView,
   sender?: SenderInfo,
+  memoryUsed: ManagerMemory[] = [],
 ): WorkItem {
   const category = (w.category ?? 'fyi') as WorkItemCategory;
   const score = w.priority_score ?? 0;
@@ -99,7 +110,7 @@ function toWorkItem(
         ? 'Generate an AI reply for this thread, then review and approve before it sends.'
         : 'This is a task, not an email thread — there is nothing to reply to.'),
     riskChips: chipsFor(category, score),
-    memoryUsed: [],
+    memoryUsed,
     activity: [
       { label: 'Priority', value: `${score}/100` },
       { label: 'Category', value: CATEGORY_LABEL[category] ?? category },
@@ -165,7 +176,46 @@ function buildBrief(items: WorkItem[]): MorningBrief {
   };
 }
 
-export type DashboardData = { workItems: WorkItem[]; kpis: KpiMetric[]; brief: MorningBrief };
+export type DashboardData = {
+  workItems: WorkItem[];
+  kpis: KpiMetric[];
+  brief: MorningBrief;
+  /** The manager's Memory & Rules rows (active + paused + pending suggestions). */
+  memories: MemoryRecord[];
+};
+
+/** Raw manager_memories slice the dashboard reads. */
+type MemoryDbRow = AiMemoryRow & {
+  source: string | null;
+  metadata: unknown;
+  created_at: string;
+};
+
+const MEMORY_COLS = 'id, memory_type, memory_text, scope, scope_ref, source, is_active, metadata, created_at';
+
+function toMemoryRecord(r: MemoryDbRow): MemoryRecord {
+  const status = (r.metadata as { status?: string } | null)?.status;
+  return {
+    id: r.id,
+    type: r.memory_type as MemoryType,
+    text: r.memory_text,
+    scopeEmail: r.scope === 'person' ? (r.scope_ref ?? null) : null,
+    source: r.source ?? 'manual',
+    isActive: r.is_active,
+    // Pending = a suggestion that was parked inactive awaiting approval.
+    // (Paused-by-the-manager rows are inactive too, but never status='pending'.)
+    pending: !r.is_active && status === 'pending',
+    createdAt: r.created_at,
+  };
+}
+
+/** The active memories that apply to this sender — the rail's "memory used". */
+function memoryUsedFor(rows: MemoryDbRow[], sender?: SenderInfo): ManagerMemory[] {
+  return rows
+    .filter((r) => r.is_active && appliesTo(r, { email: sender?.email, name: sender?.name }))
+    .slice(0, 6)
+    .map((r) => ({ id: r.id, type: r.memory_type as MemoryType, text: r.memory_text }));
+}
 
 /**
  * The signed-in manager's real Today dashboard data (RLS-scoped via the
@@ -235,32 +285,49 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 
   // Any already-generated/edited draft replies for these items, so the rail can
-  // show "draft ready" and the composer reopens with the saved text.
+  // show "draft ready" and the composer reopens with the saved text. The same
+  // round also loads Memory & Rules (Phase 10) — the workspace list plus each
+  // item's "memory used" in the rail.
   const itemIds = rows.map((r) => r.id);
   const draftByItem = new Map<string, DraftView>();
-  if (itemIds.length > 0) {
-    const { data: drafts } = await supabase
-      .from('draft_replies')
-      .select('*')
-      .in('work_item_id', itemIds)
-      .in('status', [...ACTIVE_DRAFT_STATUSES])
-      .order('updated_at', { ascending: false });
-    // Newest-first, so the first draft seen per item is the live one.
-    for (const d of (drafts ?? []) as DraftRow[]) {
-      if (d.work_item_id && !draftByItem.has(d.work_item_id)) {
-        draftByItem.set(d.work_item_id, toDraftView(d));
-      }
+  const [draftsRes, memoriesRes] = await Promise.all([
+    itemIds.length > 0
+      ? supabase
+          .from('draft_replies')
+          .select('*')
+          .in('work_item_id', itemIds)
+          .in('status', [...ACTIVE_DRAFT_STATUSES])
+          .order('updated_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from('manager_memories')
+      .select(MEMORY_COLS)
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ]);
+  // Newest-first, so the first draft seen per item is the live one.
+  for (const d of ((draftsRes.data ?? []) as DraftRow[])) {
+    if (d.work_item_id && !draftByItem.has(d.work_item_id)) {
+      draftByItem.set(d.work_item_id, toDraftView(d));
     }
   }
+  const memoryRows = (memoriesRes.data ?? []) as MemoryDbRow[];
 
-  const workItems = rows.map((w) =>
-    toWorkItem(
+  const workItems = rows.map((w) => {
+    const sender = w.source_external_id ? senderByConv.get(w.source_external_id) : undefined;
+    return toWorkItem(
       w,
       w.source_external_id ? lastByConv.get(w.source_external_id) : undefined,
       w.source_external_id ? unreadByConv.get(w.source_external_id) : undefined,
       draftByItem.get(w.id),
-      w.source_external_id ? senderByConv.get(w.source_external_id) : undefined,
-    ),
-  );
-  return { workItems, kpis: buildKpis(workItems), brief: buildBrief(workItems) };
+      sender,
+      memoryUsedFor(memoryRows, sender),
+    );
+  });
+  return {
+    workItems,
+    kpis: buildKpis(workItems),
+    brief: buildBrief(workItems),
+    memories: memoryRows.map(toMemoryRecord),
+  };
 }

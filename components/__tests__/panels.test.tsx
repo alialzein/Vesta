@@ -10,6 +10,16 @@ import { ManagerMemoryPanel } from '@/components/dashboard/ManagerMemoryPanel';
 import { ToastProvider } from '@/components/ui/Toast';
 import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 
+// The rail's Memory tab imports the Phase 10 memory actions (server-only).
+vi.mock('@/app/actions/memories', () => ({
+  addMemory: vi.fn(async () => ({ ok: true })),
+  updateMemoryText: vi.fn(async () => ({ ok: true })),
+  setMemoryActive: vi.fn(async () => ({ ok: true })),
+  deleteMemory: vi.fn(async () => ({ ok: true })),
+  approveMemory: vi.fn(async () => ({ ok: true })),
+  rejectMemory: vi.fn(async () => ({ ok: true })),
+}));
+
 /** Some components use the toast context; wrap them in a provider. */
 function renderWithToast(ui: ReactElement) {
   return render(<ToastProvider>{ui}</ToastProvider>);

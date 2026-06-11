@@ -37,10 +37,14 @@ tone, ready to review. You stay in control the whole way: you read it, edit it, 
 - **Reply all** — by default the reply goes to the person who wrote to you; tick
   **Reply to everyone on the thread** to fill To/Cc with everyone on it (then trim as
   you like).
-- **Tone** — Professional, Warm, Concise, Formal, or Friendly. Vesta also leans on
-  the tone you set during first-run setup, so drafts sound like you.
+- **Tone** — Professional, Warm, Concise, Formal, or Friendly. Vesta also follows
+  your [Memory & Rules](memory-and-rules.md): tone and preference memories shape
+  the writing, **"Do NOT do" rules are hard limits the draft will not cross**, and
+  saved project/company context is used instead of guessing.
 - **Tell Vesta how to reply** — an optional one-line instruction that steers the
-  draft when you regenerate.
+  draft when you regenerate. If you send a draft you steered this way, Vesta may
+  **suggest** saving that instruction as a preference for that person — the
+  suggestion waits in Memory & Rules until you approve or reject it.
 
 ## Vesta keeps you safe
 

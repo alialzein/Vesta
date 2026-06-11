@@ -76,6 +76,34 @@ describe('buildDraftPrompt', () => {
     expect(user).toContain('Politely decline.');
   });
 
+  it('carries hard rules into the system prompt and context notes into the user prompt (Phase 10)', () => {
+    const { system, user } = buildDraftPrompt({
+      subject: 'Delivery date',
+      recipientName: 'Maya',
+      managerName: 'Ali',
+      latestMessage: 'Can you deliver by Monday?',
+      tone: 'professional',
+      hardRules: ['Never promise same-day delivery.'],
+      contextNotes: ['Cedars Group is our key client.'],
+    });
+    expect(system).toContain("The manager's hard rules");
+    expect(system).toContain('- Never promise same-day delivery.');
+    expect(user).toContain('Background the manager has saved (use only when relevant):');
+    expect(user).toContain('- Cedars Group is our key client.');
+  });
+
+  it('omits the memory blocks when none are given', () => {
+    const { system, user } = buildDraftPrompt({
+      subject: null,
+      recipientName: null,
+      managerName: null,
+      latestMessage: 'hi',
+      tone: 'professional',
+    });
+    expect(system).not.toContain('hard rules');
+    expect(user).not.toContain('Background the manager has saved');
+  });
+
   it('defaults to a reply (the manager owes the answer)', () => {
     const { system } = buildDraftPrompt({
       subject: 'Q3 budget',

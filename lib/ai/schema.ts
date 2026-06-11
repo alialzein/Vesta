@@ -8,7 +8,9 @@
 import { AI_CATEGORIES, type AiAnalysis, type AiCategory } from './types';
 
 // v2: prompt gains today's date + a compact both-direction conversation block.
-export const PROMPT_VERSION = 'v2';
+// v3: prompt gains the manager's memory — standing notes (VIPs, delegation
+//     rules, hard limits, context) + a sender-is-VIP signal (Phase 10).
+export const PROMPT_VERSION = 'v3';
 
 /** The shape we ask the model to return (embedded in the prompt). */
 export const ANALYSIS_JSON_HINT = `{

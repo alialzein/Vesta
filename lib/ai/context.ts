@@ -27,6 +27,11 @@ export type AnalysisInput = {
    *  the latest inbound alone hid earlier asks, stated deadlines, and the
    *  manager's own replies. */
   threadContext?: ThreadContextMsg[];
+  /** The manager's standing memory notes that apply here (Phase 10): VIPs,
+   *  delegation rules, hard limits, project/company context. */
+  managerNotes?: string[];
+  /** The sender is a VIP (people.is_vip or a VIP memory) — rank accordingly. */
+  senderIsVip?: boolean;
 };
 
 /** Strip HTML to readable text (no tags, decoded common entities). */
@@ -90,6 +95,7 @@ export function buildPrompt(input: AnalysisInput): { system: string; user: strin
       '- "critical": urgent AND high-stakes (use sparingly).',
       'Rules: reminders from the sender mean THEY are waiting on the manager → use "waiting", never "followup". Automated / no-reply / "do not reply" / verify-your-account / closed-ticket messages are "fyi", not "waiting".',
     ].join('\n'),
+    "If the manager's standing notes are provided, let them shape the priority, category, and next action: VIP senders/topics rank higher; a matching delegation rule usually makes \"delegate\" the right category (name the delegate in next_action); never suggest an action the notes forbid.",
     `Return exactly this JSON shape:\n${ANALYSIS_JSON_HINT}`,
   ].join('\n');
 
@@ -98,10 +104,20 @@ export function buildPrompt(input: AnalysisInput): { system: string; user: strin
       ? ['Conversation so far (oldest first):', ...input.threadContext.map((m) => `- ${m.from}: ${m.body}`)].join('\n')
       : '';
 
+  const notesBlock =
+    input.managerNotes && input.managerNotes.length > 0
+      ? [
+          "Manager's standing notes (apply where relevant):",
+          ...input.managerNotes.map((n) => `- ${n}`),
+        ].join('\n')
+      : '';
+
   const user = [
     `Subject: ${input.subject ?? '(none)'}`,
     `From: ${input.senderName ?? '(unknown)'}`,
+    input.senderIsVip ? 'This sender is a VIP for the manager.' : '',
     input.today ? `Today's date: ${input.today}` : '',
+    notesBlock,
     `Messages in thread: ${input.messageCount}`,
     `Reminders the sender has sent: ${input.followupCount}`,
     input.isWaitingOnManager

@@ -271,9 +271,12 @@ export function buildWorkItemDrafts(
   tagged: Tagged[],
   ctx: SyncContext,
   now = Date.now(),
-  opts: { replyIntentMode?: ReplyIntentMode } = {},
+  opts: { replyIntentMode?: ReplyIntentMode; vipEmails?: string[] } = {},
 ): WorkItemDraft[] {
   const replyIntentMode = opts.replyIntentMode ?? 'pregate_ai';
+  // VIP senders (people.is_vip) get the engine's +20 boost — previously the
+  // flag only affected triage inclusion, never the priority (Phase 10 fix).
+  const vips = new Set((opts.vipEmails ?? []).map((e) => e.toLowerCase()));
   const drafts: WorkItemDraft[] = [];
   for (const [convId, msgs] of groupByConversation(tagged)) {
     const state = computeThreadState(
@@ -323,8 +326,11 @@ export function buildWorkItemDrafts(
     // Skip broadcasts the manager is merely Cc'd on / not addressed in.
     if (latestInbound && !isAddressedToManager(latestInbound, ctx.managerEmails ?? [])) continue;
 
+    const senderEmail = (latestInbound?.from ?? latestInbound?.sender)?.emailAddress?.address
+      ?.trim()
+      .toLowerCase();
     const category = categorizeThread(state);
-    const priority = scoreThread(state, { now });
+    const priority = scoreThread(state, { now, isVip: !!senderEmail && vips.has(senderEmail) });
     const followNote =
       state.followupCount > 0 ? ` They have followed up ${state.followupCount + 1} times.` : '';
 
@@ -609,6 +615,7 @@ async function processStoredMail(
   // reply-intent setting gates the engine too, not just the AI confirm step.
   const drafts = buildWorkItemDrafts(visible, ctx, Date.now(), {
     replyIntentMode: await getEffectiveReplyIntentMode(ctx.userId),
+    vipEmails: config.vipEmails,
   });
   const wantedIds = new Set(drafts.map((d) => d.conversationId));
   const { data: existing } = await supabase

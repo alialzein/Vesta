@@ -10,7 +10,9 @@
  *   subject · body_text · tone · warnings · requires_human_review.
  */
 
-export const DRAFT_PROMPT_VERSION = 'draft-v2';
+// draft-v3: the prompt reads the manager's memory — hard "never do" limits
+// (system rules) + project/company/person context notes (Phase 10).
+export const DRAFT_PROMPT_VERSION = 'draft-v3';
 
 /**
  * What the draft is FOR — drives the writing instruction:
@@ -55,8 +57,12 @@ export type DraftInput = {
   latestMessage: string;
   /** The manager's requested tone for this draft. */
   tone: DraftTone;
-  /** Optional manager tone/preference lines (from onboarding memories). */
+  /** Optional manager tone/preference lines (from Memory & Rules). */
   toneNotes?: string[];
+  /** Hard "never do" limits from Memory & Rules — the model MUST obey these. */
+  hardRules?: string[];
+  /** Background facts (project/company/person context) to use when relevant. */
+  contextNotes?: string[];
   /** Optional free-form instruction from the manager ("decline politely", "ask for the deck"). */
   instruction?: string | null;
   /** Reply (default) or follow-up nudge — see DraftPurpose. */
@@ -88,6 +94,12 @@ export function buildDraftPrompt(input: DraftInput): { system: string; user: str
     '- Keep it brief and purposeful: greeting, the substance, a clear close. Match the requested tone.',
     '- If the topic is sensitive (legal, contract, finance/payment, HR/termination, medical, security, confidential, or an upset client), keep the reply careful, add a warning, and set requires_human_review to true.',
     '- Sign off as the manager by name when known. Do not fabricate a signature block, title, or contact details.',
+    ...(input.hardRules && input.hardRules.length > 0
+      ? [
+          "The manager's hard rules — these are absolute and override everything else:",
+          ...input.hardRules.map((r) => `- ${r}`),
+        ]
+      : []),
     'Return ONLY a JSON object — no prose, no code fences.',
     `Return exactly this JSON shape:\n${DRAFT_JSON_HINT}`,
   ].join('\n');
@@ -105,9 +117,15 @@ export function buildDraftPrompt(input: DraftInput): { system: string; user: str
       ? ['Conversation so far (oldest first):', ...input.threadContext.map((m) => `- ${m.from}: ${m.body}`)].join('\n')
       : '';
 
+  const contextNotesLine =
+    input.contextNotes && input.contextNotes.length > 0
+      ? ['Background the manager has saved (use only when relevant):', ...input.contextNotes.map((n) => `- ${n}`)].join('\n')
+      : '';
+
   const user = [
     `Reply tone requested: ${input.tone}`,
     toneLine,
+    contextNotesLine,
     input.instruction ? `Manager's instruction for this reply: ${input.instruction}` : '',
     `Subject: ${input.subject ?? '(none)'}`,
     `Writing to: ${input.recipientName ?? '(unknown)'}`,

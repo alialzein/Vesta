@@ -18,6 +18,7 @@ import {
   type ThreadContextMsg,
 } from '@/lib/ai/draft';
 import { bodyForAi } from '@/lib/ai/context';
+import { memoryNotesForDraft, type MemoryRow } from '@/lib/ai/memory';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
 import { getEffectiveAi, getEffectiveSendMode } from '@/lib/ai/runtime';
@@ -350,19 +351,23 @@ export async function generateDraft(
   if (ctx.error || !ctx.inbound || !ctx.item) return { ok: false, error: ctx.error ?? 'Cannot reply.' };
   const { item, inbound } = { item: ctx.item, inbound: ctx.inbound };
 
-  // Manager identity + tone preferences (light, read-only use of onboarding memory).
-  const [{ data: profile }, { data: toneRows }, mailbox] = await Promise.all([
+  // Manager identity + memory (Phase 10): tone/preferences to follow, hard
+  // "never do" limits to obey, and saved context — scoped to the recipient.
+  const [{ data: profile }, { data: memRows }, mailbox] = await Promise.all([
     db.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
     db
       .from('manager_memories')
-      .select('memory_text')
+      .select('id, memory_type, memory_text, scope, scope_ref, is_active')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .in('memory_type', ['tone', 'preference'])
-      .limit(6),
+      .order('created_at', { ascending: false })
+      .limit(200),
     getActiveMailbox(db),
   ]);
-  const toneNotes = (toneRows ?? []).map((r) => r.memory_text).filter(Boolean) as string[];
+  const memoryNotes = memoryNotesForDraft((memRows ?? []) as MemoryRow[], {
+    email: ctx.inbound.sender_email,
+    name: ctx.inbound.sender_name,
+  });
 
   const tone = asTone(opts?.tone);
   const replyAll = opts?.replyAll === true;
@@ -380,7 +385,9 @@ export async function generateDraft(
       body_preview: inbound.body_preview,
     }),
     tone,
-    toneNotes,
+    toneNotes: memoryNotes.toneNotes,
+    hardRules: memoryNotes.hardRules,
+    contextNotes: memoryNotes.contextNotes,
     instruction: opts?.instruction ?? null,
     purpose,
     threadContext: threadContextFor(ctx.recent ?? []),
@@ -729,6 +736,11 @@ export async function sendDraft(
             .eq('id', draft.work_item_id);
         }
       }
+
+      // Phase 10 — if the manager steered this draft with a custom instruction,
+      // suggest remembering it as a per-sender preference. Parked PENDING
+      // (is_active=false): it does nothing until approved in Memory & Rules.
+      await suggestMemoryFromInstruction(db, user.id, draftMeta, to[0], draft.work_item_id);
     }
 
     revalidatePath('/');
@@ -753,6 +765,52 @@ export async function sendDraft(
       after: { error: message.slice(0, 300), work_item_id: draft.work_item_id },
     });
     return { ok: false, needsReconnect: is403, error: message };
+  }
+}
+
+/**
+ * Phase 10 — propose a memory from a reused draft instruction. Deterministic
+ * (no AI call), deduped on exact text, ALWAYS pending until the manager
+ * approves it in Memory & Rules. Best-effort: a failure never blocks a send.
+ */
+async function suggestMemoryFromInstruction(
+  db: SupabaseClient<Database>,
+  userId: string,
+  draftMeta: Record<string, unknown>,
+  recipient: { name?: string | null; email?: string | null } | undefined,
+  workItemId: string | null,
+): Promise<void> {
+  try {
+    const instruction =
+      typeof draftMeta.instruction === 'string' ? draftMeta.instruction.trim() : '';
+    // Too short to be a reusable preference ("shorter", "fix typo", …).
+    if (instruction.length < 12 || !recipient?.email) return;
+    const who = recipient.name?.trim() || recipient.email;
+    const email = recipient.email;
+    const text = `When replying to ${who}: ${instruction}`.slice(0, 300);
+    const { data: dupe } = await db
+      .from('manager_memories')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('memory_text', text)
+      .limit(1);
+    if (dupe && dupe.length > 0) return;
+    await db.from('manager_memories').insert({
+      user_id: userId,
+      memory_type: 'preference',
+      memory_text: text,
+      scope: 'person',
+      scope_ref: email.toLowerCase(),
+      source: 'ai_suggested',
+      is_active: false,
+      metadata: {
+        status: 'pending',
+        suggested_from: 'draft_instruction',
+        work_item_id: workItemId,
+      } as unknown as Json,
+    });
+  } catch {
+    // Suggestion is a nicety — never let it interfere with the send result.
   }
 }
 

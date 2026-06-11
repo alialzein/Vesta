@@ -28,6 +28,13 @@ thread** Vesta already tracks (who's waiting, how many follow-ups, how many
 messages). It does **not** re-read your entire mailbox or whole long histories
 every time — so a 20-message thread costs about the same as a short one.
 
+It also reads **your Memory & Rules**: VIPs, delegation rules, hard limits, and
+saved project/company context (a short, capped list — memories pinned to a person
+only ride along on that person's threads). That's how a VIP sender ranks higher,
+a matching delegation rule turns into a "hand this to…" suggestion, and the AI's
+explanations reflect what you've taught it. See
+[Memory & Rules](memory-and-rules.md).
+
 ## When it runs
 
 Automatically, **after each sync**. To keep it efficient and low-cost:

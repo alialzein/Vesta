@@ -56,6 +56,7 @@ export default async function DashboardPage({
       workItems={dashboard.workItems}
       kpis={dashboard.kpis}
       brief={dashboard.brief}
+      memories={dashboard.memories}
       capabilities={capabilities}
     />
   );

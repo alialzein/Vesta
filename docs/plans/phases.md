@@ -472,18 +472,41 @@ Deliverables:
 
 ## Phase 10 — Memory and Rules
 
-Goal:
+Status: **Done.** The manager teaches Vesta in **Memory & Rules** (sidebar →
+Intelligence) and every active memory is retrieved into the AI paths. No
+migration (reused `manager_memories` + `people`; approval state rides on
+`is_active` + `metadata.status`).
 
-- Manager can teach Vesta preferences.
+- **Retrieval** (`lib/ai/memory.ts`, pure + unit-tested): deterministic
+  type/scope selection (person-scoped memories fire only on that sender),
+  capped lines. Analysis prompt (v3) gains the manager's standing notes
+  (VIP/delegation/do-not-do/context) + a sender-is-VIP signal; the draft
+  prompt (draft-v3) gains hard "never do" rules (system, absolute) + saved
+  context, beyond the existing tone notes.
+- **VIP senders:** a VIP memory naming an email also flips `people.is_vip`
+  (stamped `vip_reason='memory:<id>'`, so removing the memory un-VIPs exactly
+  that flag). Fixed: the sync orchestrator now passes `isVip` into
+  `scoreThread` (the +20 boost existed but was never wired).
+- **UI:** `MemoryView` is real (server actions `app/actions/memories.ts`:
+  add / pause / resume / forget / approve / reject; both themes); the rail's
+  Memory tab shows the memories actually applied to the selected item and
+  quick-adds a sender-scoped memory.
+- **Approval flow:** non-manual memories land `is_active=false` +
+  `metadata.status='pending'` and appear under "Vesta suggests — waiting for
+  your approval"; nothing applies until approved. First producer: sending a
+  draft steered by a custom instruction files a deterministic, deduped
+  suggestion scoped to that recipient.
+- Guide: `docs/guides/memory-and-rules.md` (+ ai-analysis / draft-replies
+  updates).
 
 Deliverables:
 
-- Memory/rules UI.
-- VIP senders.
-- Delegation rules.
-- Tone preferences.
-- Memory approval flow.
-- Memory retrieval in AI analysis/drafting.
+- Memory/rules UI. ✅ (real CRUD + approval queue, both themes)
+- VIP senders. ✅ (memory → people.is_vip → triage + scoring + AI signal)
+- Delegation rules. ✅ (retrieved into analysis; AI names the delegate)
+- Tone preferences. ✅ (all drafts; preferences also shape ranking)
+- Memory approval flow. ✅ (pending suggestions; approve/reject)
+- Memory retrieval in AI analysis/drafting. ✅ (prompt v3 / draft-v3)
 
 ## Phase 11 — Daily Brief and Focus Mode
 
