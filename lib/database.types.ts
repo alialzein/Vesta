@@ -858,6 +858,84 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['daily_briefs']['Insert']>;
         Relationships: [];
       };
+      briefing_preferences: {
+        Row: {
+          user_id: UUID;
+          enabled: boolean;
+          source_engine: string;
+          items_per_day: number;
+          languages: string[];
+          region: string | null;
+          topics: string[];
+          companies: string[];
+          blocked_sources: string[];
+          tone: string;
+          metadata: Json;
+          created_at: Timestamptz;
+          updated_at: Timestamptz;
+        };
+        Insert: {
+          user_id: UUID;
+          enabled?: boolean;
+          source_engine?: string;
+          items_per_day?: number;
+          languages?: string[];
+          region?: string | null;
+          topics?: string[];
+          companies?: string[];
+          blocked_sources?: string[];
+          tone?: string;
+          metadata?: Json;
+          created_at?: Timestamptz;
+          updated_at?: Timestamptz;
+        };
+        Update: Partial<Database['public']['Tables']['briefing_preferences']['Insert']>;
+        Relationships: [];
+      };
+      briefing_items: {
+        Row: {
+          id: UUID;
+          user_id: UUID;
+          brief_date: DateString;
+          rank: number;
+          title: string;
+          summary: string | null;
+          why_it_matters: string | null;
+          suggested_action: string | null;
+          category: string | null;
+          relevance_score: number | null;
+          source_name: string | null;
+          source_url: string | null;
+          published_at: Timestamptz | null;
+          status: string;
+          dedupe_key: string | null;
+          metadata: Json;
+          created_at: Timestamptz;
+          updated_at: Timestamptz;
+        };
+        Insert: {
+          id?: UUID;
+          user_id: UUID;
+          brief_date: DateString;
+          rank?: number;
+          title: string;
+          summary?: string | null;
+          why_it_matters?: string | null;
+          suggested_action?: string | null;
+          category?: string | null;
+          relevance_score?: number | null;
+          source_name?: string | null;
+          source_url?: string | null;
+          published_at?: Timestamptz | null;
+          status?: string;
+          dedupe_key?: string | null;
+          metadata?: Json;
+          created_at?: Timestamptz;
+          updated_at?: Timestamptz;
+        };
+        Update: Partial<Database['public']['Tables']['briefing_items']['Insert']>;
+        Relationships: [];
+      };
       webhook_events: {
         Row: {
           id: UUID;

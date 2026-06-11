@@ -539,10 +539,12 @@ Deliverables:
 - Promise and Commitment Tracker.
 - Strong Focus Mode.
 - Relationship Risk Heatmap later.
-- Personal Intelligence Brief ("Briefing" page) — a separate, future track with its
-  own phases A–F. See `docs/plans/personal-intelligence-brief-plan.md`. Build only
-  after the core Outlook + AI dashboard pilot is stable; news/intelligence must never
-  appear above Today's Radar.
+- Personal Intelligence Brief ("Briefing" page) — **v1 BUILT (2026-06-11)**:
+  `/briefing` with preferences (topics/companies/region/engine), Google News
+  RSS + AI web-search engines, AI ranking with why-it-matters + suggested
+  action, daily caching (`briefing_preferences`/`briefing_items`). Phase F
+  (company-wide) remains future. News never appears above Today's Radar.
+  See `docs/plans/personal-intelligence-brief-plan.md`.
 
 ## Phase 13 — Teams Later
 

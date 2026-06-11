@@ -130,6 +130,8 @@ describe('LandingPage', () => {
     expect(screen.getByText('Senders with faces')).toBeInTheDocument();
     // Weekly Review shipped with the sidebar button pass — it's in the grid now.
     expect(screen.getByText('Weekly Review')).toBeInTheDocument();
+    // Personal Briefing shipped (PIB v1) — daily news intelligence by interests.
+    expect(screen.getByText('Personal Briefing')).toBeInTheDocument();
     expect(screen.getByText(/Nothing is ever sent without your explicit approval/)).toBeInTheDocument();
   });
 

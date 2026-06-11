@@ -39,6 +39,7 @@ describe('AppShell', () => {
     expect(screen.getByText('page content')).toBeInTheDocument();
     // The full nav is present with its real badges.
     expect(screen.getByRole('link', { name: /Draft Replies/ })).toHaveAttribute('href', '/drafts');
+    expect(screen.getByRole('link', { name: /Briefing/ })).toHaveAttribute('href', '/briefing');
     expect(screen.getByRole('link', { name: /Weekly Review/ })).toHaveAttribute(
       'href',
       '/weekly-review',
