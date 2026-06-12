@@ -1,9 +1,9 @@
-# Meetings — your schedule, with Vesta's prep
+# Meetings — your calendar, with Vesta's prep
 
-The **Meetings** page shows your real Outlook calendar — today front and
-center, the next 7 days below — and lets Vesta **prep you for any meeting**
-from what it already knows: the attendees' recent emails and the open items
-you have with them.
+The **Meetings** page is your real Outlook calendar inside Vesta — a modern
+**week grid**, a classic **month view**, and a simple **agenda list** — and it
+lets Vesta **prep you for any meeting** from what it already knows: the
+attendees' recent emails and the open items you have with them.
 
 ## Where to find it
 
@@ -13,22 +13,35 @@ you have with them.
   (Settings → Email connection → Reconnect). Read-only: Vesta never changes
   events here.
 
-## What you see
+## Three views — pick with the switch at the top
 
-- **Today** always comes first — even when it's empty ("No meetings today").
-- Each meeting shows the **time in your timezone**, title, organizer,
-  attendees, and the location. A meeting happening right now wears a live
-  **Now** badge.
+Your choice is remembered; phones start on Agenda.
+
+- **Week** — a time grid like Google Calendar: seven day columns on hour
+  lines, each meeting a block you can tap. Overlapping meetings sit side by
+  side; **today glows**, and a **live "now" line** sweeps across it so you
+  see at a glance how far the day has run. Holidays and all-day events ride
+  a strip at the top. Use **‹ Today ›** to move between weeks.
+- **Month** — the classic grid. Each day shows its meetings as small pills
+  (violet = all-day/holiday); tap a pill for details, tap a day number to
+  jump straight into that day's week.
+- **Agenda** — the plain list: today first (even when empty), then the
+  coming days. Best on the phone.
+
+Tapping any meeting anywhere opens the same **detail card**: time, people,
+**Join**, **Open in Outlook**, and **Prep with Vesta**.
+
+## What every meeting shows
+
+- The **time in your timezone**, title, organizer, attendees, location. A
+  meeting happening right now wears a live **Now** badge.
 - **Join** — online meetings get a one-tap Join button (Teams on work
   accounts, Skype on personal Outlook accounts).
-- **Open in Outlook** — every meeting also has a link straight to the event
-  in Outlook on the web, so the invite (and its link) is always one tap away.
-- The next 7 days appear below, grouped by day — only days that actually have
-  meetings.
+- **Open in Outlook** — a link straight to the event in Outlook on the web,
+  so the invite (and its link) is always one tap away.
 
-> This is deliberately not a month-grid calendar — Outlook already has one.
-> Vesta answers the manager question: *"What's today, what's coming, and what
-> should I know walking in?"*
+> **Holidays:** if your Outlook calendar includes holidays (Outlook →
+> Add calendar → Holidays), they appear here automatically as all-day chips.
 
 ## Prep with Vesta (the real Meeting Prep)
 
@@ -48,9 +61,10 @@ under **prep**).
 
 ## Quick start
 
-1. Open **Meetings** in the morning, next to your Daily Brief.
-2. See a meeting you're not ready for? Tap **Prep with Vesta** → skim the
-   three lists in ten seconds.
+1. Open **Meetings** in the morning — the week grid shows your whole week,
+   the now-line shows where you are in it.
+2. See a meeting you're not ready for? Tap it → **Prep with Vesta** → skim
+   the three lists in ten seconds.
 3. Tap **Join** when it starts.
 4. Want to schedule something? Ask Vesta in chat — *"Set up a Teams meeting
    with @maya tomorrow 3pm"* (the `@` suggests people from your own mail) —

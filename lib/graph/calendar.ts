@@ -37,6 +37,7 @@ export type GraphEvent = {
   /** Legacy field — personal (outlook.com) accounts often put the Skype join
    *  link ONLY here, leaving onlineMeeting null. */
   onlineMeetingUrl?: string | null;
+  isAllDay?: boolean;
   isCancelled?: boolean;
   location?: { displayName?: string | null } | null;
   webLink?: string | null;
@@ -57,6 +58,8 @@ export type CalendarEventView = {
   /** Deep link to the event in Outlook on the web — always present, so the
    *  manager can reach the invite (and its link) even without a joinUrl. */
   webLink: string | null;
+  /** All-day events (holidays, OOO blocks) — placed by DATE, not clock time. */
+  isAllDay: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -90,6 +93,7 @@ export function toEventView(e: GraphEvent): CalendarEventView {
     joinUrl: e.onlineMeeting?.joinUrl ?? e.onlineMeetingUrl ?? null,
     location: e.location?.displayName?.trim() || null,
     webLink: e.webLink ?? null,
+    isAllDay: Boolean(e.isAllDay),
   };
 }
 
@@ -147,7 +151,7 @@ export async function fetchCalendarView(
     $orderby: 'start/dateTime',
     $top: String(top),
     $select:
-      'id,subject,start,end,organizer,attendees,isOnlineMeeting,onlineMeeting,onlineMeetingUrl,isCancelled,location,webLink',
+      'id,subject,start,end,organizer,attendees,isOnlineMeeting,onlineMeeting,onlineMeetingUrl,isAllDay,isCancelled,location,webLink',
   });
   const data = await graphCalendarGet<{ value: GraphEvent[] }>(
     accessToken,

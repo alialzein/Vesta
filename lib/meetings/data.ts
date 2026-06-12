@@ -1,24 +1,50 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { getValidAccessToken, hasCalendarScope } from '@/lib/graph/tokens';
-import { fetchCalendarView } from '@/lib/graph/calendar';
+import { fetchCalendarView, type CalendarEventView } from '@/lib/graph/calendar';
 import { GraphRequestError } from '@/lib/graph/client';
-import { groupMeetingsByDay, type MeetingsDay } from '@/lib/meetings/group';
+import { addDays } from '@/lib/meetings/group';
+import { addMonths, monthKeyOf, weekStartKey } from '@/lib/meetings/calendar';
 import { todayInTz, zonedTimeToUtc } from '@/lib/time/zone';
 
 /**
- * Meetings page loader (Meetings v1) — the manager's schedule for today + the
- * next 7 days from the REAL Outlook calendar (Graph calendarView; recurrences
- * expanded). Reuses the Phase C calendar plumbing the chat already trusts.
- * RLS/own-mailbox scoped; every state is explicit so the page is honest about
- * why it's empty (no mailbox vs missing calendar scope vs a Graph hiccup).
+ * Meetings page loader — the manager's REAL Outlook calendar (Graph
+ * calendarView; recurrences expanded) over a window wide enough for the
+ * calendar views: the current week AND the current month, through 4 weeks
+ * out. The client derives agenda/week/month from the raw events (pure
+ * helpers in lib/meetings/{group,calendar}); navigation beyond the window
+ * fetches more via the getCalendarRange server action.
+ * RLS/own-mailbox scoped; every state is explicit so the page is honest
+ * about why it's empty (no mailbox vs missing calendar scope vs a hiccup).
  */
 
 export type MeetingsData =
   | { status: 'no_mailbox' }
   | { status: 'needs_reconnect' }
   | { status: 'error' }
-  | { status: 'ok'; timezone: string; days: MeetingsDay[] };
+  | {
+      status: 'ok';
+      timezone: string;
+      /** Manager-local YYYY-MM-DD. */
+      todayKey: string;
+      /** Manager-local day keys covered by `events` (inclusive / exclusive). */
+      windowFromKey: string;
+      windowToKey: string;
+      events: CalendarEventView[];
+    };
+
+/** The initial fetch window: everything the default views can reach without
+ *  a round-trip (current week start OR month start, whichever is earlier →
+ *  4 weeks out OR next month start, whichever is later). */
+export function initialWindow(todayKey: string): { fromKey: string; toKey: string } {
+  const weekStart = weekStartKey(todayKey);
+  const monthStart = `${monthKeyOf(todayKey)}-01`;
+  const fromKey = weekStart < monthStart ? weekStart : monthStart;
+  const fourWeeksOut = addDays(weekStart, 28);
+  const nextMonthStart = `${addMonths(monthKeyOf(todayKey), 1)}-01`;
+  const toKey = fourWeeksOut > nextMonthStart ? fourWeeksOut : nextMonthStart;
+  return { fromKey, toKey };
+}
 
 export async function getMeetingsData(): Promise<MeetingsData> {
   const supabase = createClient();
@@ -43,15 +69,21 @@ export async function getMeetingsData(): Promise<MeetingsData> {
 
     const tz = profile?.timezone || 'UTC';
     const todayKey = todayInTz(tz);
-    const windowStart = zonedTimeToUtc(todayKey, '00:00', tz);
-    const windowEnd = new Date(windowStart.getTime() + 8 * 24 * 60 * 60 * 1000);
+    const { fromKey, toKey } = initialWindow(todayKey);
     const events = await fetchCalendarView(
       token,
-      windowStart.toISOString(),
-      windowEnd.toISOString(),
-      50,
+      zonedTimeToUtc(fromKey, '00:00', tz).toISOString(),
+      zonedTimeToUtc(toKey, '00:00', tz).toISOString(),
+      150,
     );
-    return { status: 'ok', timezone: tz, days: groupMeetingsByDay(events, tz, todayKey) };
+    return {
+      status: 'ok',
+      timezone: tz,
+      todayKey,
+      windowFromKey: fromKey,
+      windowToKey: toKey,
+      events,
+    };
   } catch (err) {
     if (err instanceof GraphRequestError && (err.status === 401 || err.status === 403)) {
       return { status: 'needs_reconnect' };

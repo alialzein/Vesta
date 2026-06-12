@@ -15,6 +15,7 @@ function event(id: string, startIso: string, endIso: string): CalendarEventView 
     joinUrl: null,
     location: null,
     webLink: null,
+    isAllDay: false,
   };
 }
 
@@ -66,6 +67,14 @@ describe('groupMeetingsByDay', () => {
       '2026-06-12',
     );
     // Today (empty) + the event on Jun 13 Beirut time.
+    expect(days.map((d) => d.date)).toEqual(['2026-06-12', '2026-06-13']);
+  });
+
+  it('all-day events keep their raw DATE — never tz-shifted to the previous day', () => {
+    const holiday = { ...event('h', '2026-06-13T00:00:00Z', '2026-06-14T00:00:00Z'), isAllDay: true };
+    // East of UTC, midnight UTC converts to the SAME local date here — but a
+    // naive west-of-UTC conversion would land on Jun 12; the raw date wins.
+    const days = groupMeetingsByDay([holiday], 'America/New_York', '2026-06-12');
     expect(days.map((d) => d.date)).toEqual(['2026-06-12', '2026-06-13']);
   });
 });

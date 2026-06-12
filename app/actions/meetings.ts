@@ -13,8 +13,10 @@ import {
 import { getEffectiveAi } from '@/lib/ai/runtime';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
+import { getValidAccessToken, hasCalendarScope } from '@/lib/graph/tokens';
+import { fetchCalendarView, type CalendarEventView } from '@/lib/graph/calendar';
 import { dayKeyInTz } from '@/lib/meetings/group';
-import { longTodayInTz } from '@/lib/time/zone';
+import { longTodayInTz, zonedTimeToUtc } from '@/lib/time/zone';
 
 /**
  * Meeting Prep (Phase 12 v1) — one AI call per click: gather what Vesta
@@ -150,5 +152,58 @@ export async function generateMeetingPrep(input: {
       metadata: { prompt_version: MEETING_PREP_PROMPT_VERSION },
     });
     return { ok: false, error: 'Could not write the prep — try again in a moment.' };
+  }
+}
+
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export type CalendarRangeResult =
+  | { ok: true; events: CalendarEventView[] }
+  | { ok: false; error: string };
+
+/**
+ * Calendar navigation — fetch the manager's events for a manager-local day
+ * range (from inclusive, to exclusive) when the week/month views move beyond
+ * the initial server-rendered window. Read-only, same plumbing the Meetings
+ * page and chat trust; range capped so a bad client can't ask for a year.
+ */
+export async function getCalendarRange(input: {
+  fromKey: string;
+  toKey: string;
+}): Promise<CalendarRangeResult> {
+  await requireUser();
+  const { fromKey, toKey } = input;
+  if (!DAY_KEY_RE.test(fromKey ?? '') || !DAY_KEY_RE.test(toKey ?? '')) {
+    return { ok: false, error: 'Invalid date range.' };
+  }
+  const supabase = createClient();
+  const [{ data: profile }, { data: mailbox }] = await Promise.all([
+    supabase.from('profiles').select('timezone').maybeSingle(),
+    supabase
+      .from('mailboxes')
+      .select('integration_id')
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (!mailbox?.integration_id) return { ok: false, error: 'No connected mailbox.' };
+
+  const tz = profile?.timezone || 'UTC';
+  const from = zonedTimeToUtc(fromKey, '00:00', tz);
+  const to = zonedTimeToUtc(toKey, '00:00', tz);
+  const spanDays = (to.getTime() - from.getTime()) / MS_PER_DAY;
+  if (!(spanDays > 0) || spanDays > 62) return { ok: false, error: 'Invalid date range.' };
+
+  try {
+    if (!(await hasCalendarScope(mailbox.integration_id))) {
+      return { ok: false, error: 'Calendar access is not granted yet — reconnect Outlook in Settings.' };
+    }
+    const token = await getValidAccessToken(mailbox.integration_id);
+    if (!token) return { ok: false, error: 'Outlook token unavailable — try reconnecting in Settings.' };
+    const events = await fetchCalendarView(token, from.toISOString(), to.toISOString(), 150);
+    return { ok: true, events };
+  } catch {
+    return { ok: false, error: "Couldn't reach your calendar just now — try again in a moment." };
   }
 }
