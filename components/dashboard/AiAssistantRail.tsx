@@ -135,21 +135,29 @@ export function AiAssistantRail({
           </span>
           <div className="min-w-0">
             <p className="m-0 text-[14px] font-semibold leading-snug text-ink">{item.title}</p>
-            <p className="m-0 mt-[3px] truncate font-mono text-[11px] text-muted">
+            {/* Meta line WRAPS instead of truncating — a long sender address
+                used to swallow the date ("… · Jun …"). Name/email may each
+                truncate, but the time always stays whole on its own segment. */}
+            <p className="m-0 mt-[3px] flex flex-wrap items-center gap-x-[6px] gap-y-[1px] font-mono text-[11px] text-muted">
               {item.person ? (
-                <>
-                  {item.person}
-                  {item.personEmail && item.personEmail !== item.person
-                    ? ` · ${item.personEmail}`
-                    : ''}
-                </>
+                <span className="max-w-full truncate">{item.person}</span>
               ) : (
-                SOURCE_LABEL[item.source]
+                <span>{SOURCE_LABEL[item.source]}</span>
+              )}
+              {item.person && item.personEmail && item.personEmail !== item.person && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="max-w-full truncate" title={item.personEmail}>
+                    {item.personEmail}
+                  </span>
+                </>
               )}
               {item.lastActivityAt && (
                 <>
-                  {' · '}
-                  <LocalTime iso={item.lastActivityAt} />
+                  <span aria-hidden="true">·</span>
+                  <span className="flex-none whitespace-nowrap">
+                    <LocalTime iso={item.lastActivityAt} />
+                  </span>
                 </>
               )}
             </p>

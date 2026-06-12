@@ -38,7 +38,6 @@ export const demoMorningBrief: MorningBrief = {
   body: 'You have <b>5 critical items</b>, <b>3 follow-ups</b>, and <b>1 approval blocking finance</b>. The top risk is the <b>Cedars Group</b> contract thread — they have followed up twice and need confirmation before 4 PM.',
   summaryLine:
     '5 critical · 3 follow-ups · 1 finance blocker. Cedars Group needs confirmation before 4 PM.',
-  topUrgencyScore: 92,
 };
 
 /**

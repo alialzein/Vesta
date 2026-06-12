@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { WorkItem, WorkItemCategory } from '@/lib/types';
 import { filterWorkItems } from '@/lib/priority';
 import { WorkItemRow, type QuickAction } from './WorkItemRow';
@@ -77,6 +77,42 @@ export function TodaysRadar({
     return sender ? byCategory.filter((i) => senderKeyOf(i) === sender.key) : byCategory;
   }, [items, filter, sender]);
 
+  // FLIP re-sort (declutter PR 3): when the SAME rows change order — the AI
+  // re-ranked items on a background refresh — each row glides from its old
+  // position to the new one instead of teleporting. Mount/filter changes keep
+  // the staggered-rise entry (the list is re-keyed); this only animates rows
+  // that existed in the previous frame. Reduced motion: rows just move.
+  const listRef = useRef<HTMLDivElement>(null);
+  const prevTops = useRef<Map<string, number>>(new Map());
+  const prevListKey = useRef<string>('');
+  useLayoutEffect(() => {
+    const container = listRef.current;
+    if (!container) return;
+    // A filter/sender switch remounts the list (animate-rise replays) — start
+    // the position map fresh so FLIP never stacks on top of the entry stagger.
+    const listKey = `${filter}:${sender?.key ?? ''}`;
+    if (prevListKey.current !== listKey) {
+      prevListKey.current = listKey;
+      prevTops.current = new Map();
+    }
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const rows = container.querySelectorAll<HTMLElement>('[data-work-item-id]');
+    const next = new Map<string, number>();
+    rows.forEach((el) => {
+      const id = el.dataset.workItemId!;
+      const top = el.getBoundingClientRect().top;
+      const prev = prevTops.current.get(id);
+      if (prev !== undefined && !reduce && Math.abs(prev - top) > 4 && typeof el.animate === 'function') {
+        el.animate(
+          [{ transform: `translateY(${prev - top}px)` }, { transform: 'translateY(0)' }],
+          { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)' },
+        );
+      }
+      next.set(id, top);
+    });
+    prevTops.current = next;
+  }, [visible, filter, sender]);
+
   // Per-slice counts shown inside the chips (the old KPI strip's numbers,
   // now in the control that filters). Empty slices keep no chip — except the
   // active one, so a filter driven from outside (sidebar, brief) stays visible
@@ -130,7 +166,9 @@ export function TodaysRadar({
             >
               {f.label}
               {/* The count lives in the chip (was the KPI strip). Overdue keeps
-                  its red urgency when unselected. */}
+                  its red urgency when unselected. bg-line (not bg-panel) so the
+                  bubble is visible on the chip in BOTH themes — white-on-white
+                  disappeared in light mode (2026-06-12 color pass). */}
               <span
                 className={[
                   'rounded-full px-[6px] py-[1px] font-mono text-[10.5px] font-bold leading-[14px]',
@@ -138,7 +176,7 @@ export function TodaysRadar({
                     ? 'bg-white/20 text-white'
                     : f.tone === 'red'
                       ? 'bg-red-soft text-red'
-                      : 'bg-panel text-muted',
+                      : 'bg-line text-ink-soft',
                 ].join(' ')}
               >
                 {f.count}
@@ -150,7 +188,7 @@ export function TodaysRadar({
 
       {/* Keyed by filter so switching tabs remounts the list and replays the
           staggered rise — a soft beat of feedback instead of an instant jump. */}
-      <div key={`${filter}:${sender?.key ?? ''}`} className="flex flex-col gap-[7px]">
+      <div ref={listRef} key={`${filter}:${sender?.key ?? ''}`} className="flex flex-col gap-[7px]">
         {visible.length > 0 ? (
           visible.map((item, i) => (
             <WorkItemRow

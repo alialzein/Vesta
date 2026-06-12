@@ -97,28 +97,35 @@ html[data-theme='dark'] {
   --login-grid-line: rgba(120, 170, 230, 0.06);
 }
 
-/* ---------- LIGHT MODE (premium light SaaS — Phase 0.1 v2) ---------- */
+/* ---------- LIGHT MODE (premium light SaaS — Phase 0.1 v2) ----------
+   Surface hierarchy reworked 2026-06-12 (owner: "everything is too white,
+   the three zones blend"). Three distinct layers now:
+     page background (#e9f1fb, blue-gray)
+       < left sidebar (gray-white gradient — NOT white)
+       < content panels (#ffffff, white cards pop on both)
+   and the AI rail keeps its own blue tint. Borders darkened a step so panel
+   edges stay visible against the deeper background. */
 html[data-theme='light'] {
-  /* Soft blue-tinted page background. */
-  --bg: #eef5ff;
+  /* Blue-gray page background — deep enough that white panels read as panels. */
+  --bg: #e9f1fb;
   --bg-grad-1: rgba(47, 125, 235, 0.08);
   --bg-grad-2: rgba(67, 199, 255, 0.1);
   /* Clean white cards. */
   --panel: #ffffff;
   --panel-solid: #ffffff;
-  /* Soft card background for nested surfaces. */
-  --panel-2: #f7faff;
-  --panel-soft: #f7faff;
+  /* Soft card background for nested surfaces (a step grayer than white). */
+  --panel-2: #f3f7fd;
+  --panel-soft: #f3f7fd;
   /* Radar ticket surface — visibly bluer than the white panel (see dark note). */
-  --card: #f2f7ff;
+  --card: #edf4fc;
   /* Readable text contrast. Muted darkened slightly (Phase 0.5 final QA) so
      small muted labels/chips clear WCAG AA (~4.8:1 on white, was ~4.0:1). */
   --ink: #1c2f4a;
   --ink-soft: #44587a;
   --muted: #61748a;
-  /* Softer borders. */
-  --line: #dce7f5;
-  --line-strong: #c8d8ee;
+  /* Borders — one step stronger than the old values so edges read on #e9f1fb. */
+  --line: #d8e3f2;
+  --line-strong: #c2d3ea;
   --accent: #2f7deb;
   --accent-2: #43c7ff;
   --accent-soft: rgba(47, 125, 235, 0.1);
@@ -128,17 +135,19 @@ html[data-theme='light'] {
   --amber-soft: rgba(243, 184, 74, 0.16);
   --green: #1ca888;
   --green-soft: rgba(56, 221, 182, 0.14);
-  --side-bg: linear-gradient(180deg, #ffffff, #f3f8ff);
-  --side-border: #e2ecf9;
+  /* Left sidebar: gray-white, intentionally NOT the white of content cards —
+     the panel zones must read as different surfaces at a glance. */
+  --side-bg: linear-gradient(180deg, #f6f9fd, #ecf3fb);
+  --side-border: #d9e5f4;
   --side-ink: #1c2f4a;
   --side-muted: #6f8197;
   --side-link: #44587a;
   --side-hover: rgba(47, 125, 235, 0.07);
   --side-active-bg: linear-gradient(100deg, rgba(47, 125, 235, 0.14), rgba(67, 199, 255, 0.05));
-  --side-badge-bg: #eef3fb;
+  --side-badge-bg: #e6eef9;
   --side-badge-ink: #44587a;
-  --side-card: #f4f8ff;
-  --side-card-border: #e2ecf9;
+  --side-card: #eef4fc;
+  --side-card-border: #d9e5f4;
   --side-lbl: #9aa9bd;
   /* Softer, layered shadows. */
   --shadow: 0 24px 60px rgba(28, 47, 74, 0.1);
@@ -153,7 +162,7 @@ html[data-theme='light'] {
      assistant zone (clearly separate from the white content cards and the page
      background). Nested cards inside the rail stay white to pop. */
   --rail-bg: linear-gradient(180deg, #e9f1ff, #eaf3ff 60%, #e6eeff);
-  --rail-border: #d3e2f7;
+  --rail-border: #ccdcf4;
   /* AI Command Center gradient cards (light, soft tints). */
   --cmd-1a: rgba(47, 125, 235, 0.14);
   --cmd-1b: rgba(67, 199, 255, 0.1);
@@ -449,7 +458,7 @@ html[data-theme='light'] .vesta-splash {
   --splash-grid-line: rgba(47, 125, 235, 0.08);
   background: radial-gradient(120% 85% at 50% 122%, rgba(67, 199, 255, 0.16), transparent 55%),
     radial-gradient(95% 75% at 50% -12%, rgba(47, 125, 235, 0.14), transparent 55%),
-    radial-gradient(70% 70% at 50% 44%, #ffffff, transparent 72%), #eef5ff;
+    radial-gradient(70% 70% at 50% 44%, #ffffff, transparent 72%), #e9f1fb;
 }
 /* Faint engineering grid, masked to a soft circular vignette around the core. */
 .vesta-splash-grid {
@@ -505,6 +514,26 @@ html[data-theme='light'] .vesta-splash {
   animation: vesta-ink-sheen 9s ease-in-out infinite;
 }
 
+/* Brief "writes itself in": per-word rise used by <TypeIn> when the AI text
+   replaces the deterministic brief. Words are in the DOM from frame one
+   (accessibility/tests); only opacity/transform animate. */
+@keyframes vesta-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.vesta-word-in {
+  opacity: 0;
+  animation: vesta-word-in 0.4s var(--ease) forwards;
+}
+
 /* Premium sheen that sweeps across the Sign in button on hover/while loading. */
 @keyframes vesta-btn-shimmer {
   0% {
@@ -541,6 +570,11 @@ html[data-theme='light'] .vesta-splash {
     background-image: none;
     -webkit-text-fill-color: currentColor;
     color: var(--ink);
+  }
+  /* Reduced motion: TypeIn words are simply visible. */
+  .vesta-word-in {
+    animation: none;
+    opacity: 1;
   }
   /* Reduced-motion still fades the loader out (no movement, just opacity). */
   .animate-vesta-fade-out {

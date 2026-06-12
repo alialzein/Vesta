@@ -21,6 +21,7 @@ import {
   personFrom,
   senderDisplay,
 } from '@/lib/dashboard/present';
+import { isBriefStale, type BriefSections } from '@/lib/dashboard/brief-guard';
 import { todayInTz } from '@/lib/time/zone';
 
 /**
@@ -139,15 +140,11 @@ function buildBrief(items: WorkItem[]): MorningBrief {
       headline: "You're all clear.",
       body: 'Nothing is waiting on you right now. New items will appear as mail syncs.',
       summaryLine: 'No open items waiting on you.',
-      topUrgencyScore: 0,
     };
   }
   const waiting = items.filter((i) => i.categories.includes('waiting')).length;
   const followup = items.filter((i) => i.categories.includes('followup')).length;
   const top = items[0];
-  const topScore = items.reduce((m, i) => Math.max(m, i.priorityScore), 0);
-  // "1 of 5 needs you today" — reads with the Open Items KPI, never against it
-  // (the old "1 thing needs your attention" next to "5 Open Items" clashed).
   const headline = top.person
     ? `${top.person} is waiting on your reply.`
     : waiting > 0
@@ -157,7 +154,6 @@ function buildBrief(items: WorkItem[]): MorningBrief {
     headline,
     body: `You have <b>${items.length}</b> open ${items.length === 1 ? 'item' : 'items'}: <b>${waiting}</b> waiting on you and <b>${followup}</b> with follow-ups. The top one is <b>${escapeHtml(top.title)}</b>.`,
     summaryLine: `${waiting} waiting · ${followup} follow-up${followup === 1 ? '' : 's'} · Top: ${top.title}`,
-    topUrgencyScore: topScore,
   };
 }
 
@@ -326,23 +322,30 @@ export async function getDashboardData(): Promise<DashboardData> {
     );
   });
 
-  // Overlay today's cached AI brief onto the deterministic one (counts and the
-  // top-priority chip stay live; the AI supplies the words + the focus pick).
+  // Overlay today's cached AI brief onto the deterministic one (counts stay
+  // live in the UI; the AI supplies the narrative + the focus pick) — but ONLY
+  // when the cached narrative still matches the live queue. A brief written
+  // before something became overdue (or whose focus pick is gone) is a lie;
+  // the deterministic brief stays and the dashboard regenerates once.
   const brief = buildBrief(workItems);
   const aiBrief = briefRes.data;
   if (aiBrief?.title && aiBrief.summary && workItems.length > 0) {
-    const sections =
-      (aiBrief.sections as { focus_item_id?: string | null; focus_reason?: string | null } | null) ?? {};
-    // The focus pick only survives while that item is still on the radar.
-    const focusItemId =
-      sections.focus_item_id && workItems.some((w) => w.id === sections.focus_item_id)
-        ? sections.focus_item_id
-        : null;
-    brief.headline = aiBrief.title;
-    brief.summaryLine = aiBrief.summary;
-    brief.aiGenerated = true;
-    brief.focusItemId = focusItemId;
-    brief.focusReason = focusItemId ? (sections.focus_reason ?? null) : null;
+    const sections = (aiBrief.sections as BriefSections | null) ?? {};
+    if (isBriefStale(sections, workItems)) {
+      brief.stale = true;
+    } else {
+      // The focus pick only survives while that item is still on the radar
+      // (the guard already checks this; kept as defense in depth).
+      const focusItemId =
+        sections.focus_item_id && workItems.some((w) => w.id === sections.focus_item_id)
+          ? sections.focus_item_id
+          : null;
+      brief.headline = aiBrief.title;
+      brief.summaryLine = aiBrief.summary;
+      brief.aiGenerated = true;
+      brief.focusItemId = focusItemId;
+      brief.focusReason = focusItemId ? (sections.focus_reason ?? null) : null;
+    }
   }
 
   return {

@@ -8,7 +8,7 @@
  */
 import { extractJson } from './schema';
 
-export const BRIEF_PROMPT_VERSION = 'brief-v1';
+export const BRIEF_PROMPT_VERSION = 'brief-v2';
 
 /** Compact, prompt-ready view of one open work item. */
 export type BriefItem = {
@@ -59,7 +59,8 @@ export function buildBriefPrompt(input: {
     '- Be honest and concrete. Never invent items, deadlines, or senders; use only what is given.',
     '- The headline names the single most important thing (a person or an overdue deadline beats a count).',
     '- The body is 2-3 short sentences: what actually needs the manager today, what is overdue or about to be, and anything that can wait. Plain language, no emojis, no hype.',
-    '- Pick exactly ONE focusItemId — the item to start with. Prefer: overdue > a person blocked waiting > highest score. Its focusReason is one plain sentence.',
+    '- NEVER state queue-wide facts: no item counts ("two items in your queue"), no "nothing is overdue", no "neither has a due date". The app shows live numbers right next to your words, and the queue changes during the day — a stale claim destroys trust. Name specific people and specific items instead.',
+    '- Pick exactly ONE focusItemId — the item to start with. Prefer: overdue > a person blocked waiting > highest score. Its focusReason is one plain sentence about THAT item (never about the rest of the queue).',
     '- If the queue is empty, say so plainly and set focusItemId/focusReason to null.',
     `Return exactly this shape:\n${BRIEF_JSON_HINT}`,
   ].join('\n');
