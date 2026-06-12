@@ -5,7 +5,18 @@
 > Claude updates it at the end of each session and pushes it.
 
 **Last updated:** 2026-06-12 (second session, work laptop). `main` =
-**#45–#72 MERGED. PR #73 OPEN — awaiting owner merge**:
+**#45–#73 ALL MERGED, no PRs open, all branches deleted.**
+**⚠️ Owner to-do (blocks two live features):** RECONNECT Outlook once
+(Settings → Email connection → Reconnect) to grant the calendar scope —
+until then BOTH the new /meetings page and chat meeting orders show
+"Reconnect to enable". Then verify on a real phone (both themes): /meetings
+times in your tz + Join + "Prep with Vesta" (admits when no email history);
+login page scrolls; inbox faster + last row visible above the tab bar; item
+sheet closes by dragging the handle down; thread last message readable.
+**Next session: pick the next feature track — AI Decision Desk (Phase 12,
+discuss scope) / Teams radar (Phase 13) / notifications bell (reminders
+engine already powers it).**
+Merged this session (latest):
 `feat/meetings-and-mobile-fixes` = **MEETINGS v1 + real AI Meeting Prep +
 mobile bug sweep**. (a) `/meetings` (sidebar Workspace → Meetings; phone
 Menu): Outlook calendarView today+7d via Phase C plumbing (`lib/meetings/
