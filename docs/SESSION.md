@@ -4,38 +4,42 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-11 (`main` = #49–#60 all MERGED (Ask Vesta chat +
-dock, briefing images/rows, chat-v2 ack fix); chat migration applied.
-#61 (Phase A chat orders) MERGED; owner granted Calendars.ReadWrite in
-Azure (Phase C unblocked — mailbox re-consent still needed when C ships).
-**PR #62 `feat/reminders-engine` OPEN, awaiting owner merge — Phase B
-EMAIL REMINDERS (chat-v4):** create_reminder order ("email me about this
-thread at 3pm, hourly, 3 times") → Confirm card → row in the EXTENDED
-Phase 1 `reminders` table (title=subject, remind_at=next firing) →
-/api/cron/reminders sends via the manager's own mailbox (sendNewMail,
-Mail.Send), series advances drift-free; Settings → Scheduled reminders
-panel lists + cancels. Guards: ≥15min interval, ≤10 sends, 5-failure cap,
-model can't invent recipient emails. 452 tests green.
-**⚠️ After #62 merges, owner must: (1) run
-`supabase/migrations/20260611230001_reminders.sql` (ALTER TABLE only);
-(2) schedule `/api/cron/reminders` every 5 min (same CRON_SECRET pattern
-as the sync cron) — until then reminders queue but don't send.**
-**Next: Phase C calendar/Teams meetings** (Calendars.ReadWrite granted;
-needs mailbox re-consent; attendee autocomplete = local people ranking
-first per plan). Decision recorded: deleting a chat does NOT delete learned
-memories (metadata.conversation_id enables a future "forget" option).)
-**Owner verify (both themes, after Vercel deploys + migration):**
-Briefing → Refresh → cards show article images, hero top story, "NN% match"
-chips (old items show gradient art until rebuilt; some sites block previews
-→ that's the intended fallback). Chat → sidebar Ask Vesta (or dashboard
-floating button) → starter chip answers from the real radar; say
-"Remember that I prefer short, direct emails" → blue "Saved to memory" chip
-→ confirm it appears in Memory & Rules (source chat) and is deletable;
-conversation survives in the left rail; admin AI page shows `chat` rows.
-**Next: pick next track: AI Decision Desk (Phase 12, discuss scope first) /
-Teams (Phase 13) / reminder processor + notifications bell (Phase 8
-leftover). Pre-launch checklist standing (rotate keys/passwords, re-enable
-email confirmation, remove dev user, Mail.Send on prod Azure app).**
+**Last updated:** 2026-06-12 (`main` = #45–#62 all MERGED. Reminders
+migration `20260611230001` IS APPLIED (verified by selecting the new
+columns); zero reminders queued yet.
+**🔥 2026-06-12 incident SOLVED — radar emptied after Outlook
+disconnect/reconnect:** disconnect deletes the mailbox → threads cascade
+away, work_items lose mailbox_id (SET NULL) → next sync's legacy-orphan
+sweep removes them (by design — rebuild expected). The REBUILD was broken:
+multi-row PostgREST insert sends explicit NULL for keys missing from some
+rows (union-of-keys, default NOT applied) → a batch mixing waiting_on_them
+(has metadata) with waiting (no metadata) violated work_items.metadata NOT
+NULL → WHOLE batch failed silently every sync. Fix on PR branch
+`fix/work-items-batch-insert`: every draft sets metadata ({}), and
+work_items write errors are now logged (PostgREST resolves with {error},
+never throws). Verified live: cron sync rebuilt all 6 items + AI re-ran.
+**Branch `feat/chat-quick-actions-landing-sync`:** order starter chips
+(task/snooze/reminder/draft) in dock + full chat, dock/page intro mentions
+orders+Confirm, landing Ask Vesta card now sells orders+reminders (rule
+5b), ask-vesta guide chips note, guides README line, NEW
+`docs/reference/cron-setup.md` (pg_cron SQL for sync/reminders/renew/purge).
+**⚠️ Owner actions pending: (1) merge both PR branches; (2) run the pg_cron
+SQL from `docs/reference/cron-setup.md` in the Supabase SQL editor (check
+`select * from cron.job` first — reminders won't SEND until the
+`vesta-reminders` job exists; sync/renew/purge may also be missing).**
+**Next: Phase C calendar/Teams meetings** (Calendars.ReadWrite granted in
+Azure 2026-06-11 → Phase C is UNBLOCKED; code must add the scope to
+`lib/graph/oauth.ts` scopes and the owner re-consents the mailbox via
+Settings → Reconnect; attendee autocomplete = local people ranking first
+per plan). Decision recorded: deleting a chat does NOT delete learned
+memories (metadata.conversation_id enables a future "forget" option).
+**Owner verify (both themes, after merges + Vercel deploy):** disconnect +
+reconnect Outlook → radar repopulates within one sync; chat dock empty
+state shows 8 chips incl. orders; tap "Remind me to call Ahmad tomorrow at
+3pm." → Confirm card → task lands on radar; /welcome Ask Vesta card
+mentions orders. Pre-launch checklist standing (rotate keys/passwords,
+re-enable email confirmation, remove dev user, Mail.Send on prod Azure
+app).**
 
 ## 📰 Personal Intelligence Brief v1 (built 2026-06-11, `feat/personal-briefing`)
 

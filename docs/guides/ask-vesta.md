@@ -25,6 +25,10 @@ Two ways, for two situations:
 - `What's in my briefing today?` — your news, summarized.
 - `When is the Cedars contract due, and what's my next step?`
 
+**Shortcut:** when a chat is empty, tappable example chips appear — questions
+AND ready-made orders (add a task, snooze, reminder email, draft). Tap one and
+edit the wording to your case; orders always show a Confirm card first.
+
 ## How to teach it (this is the superpower)
 
 Just tell it things, in plain words — Vesta decides what's worth keeping and

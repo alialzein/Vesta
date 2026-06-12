@@ -115,7 +115,8 @@ export function ChatDock({ open, onClose }: { open: boolean; onClose: () => void
         {messages.length === 0 && !sending ? (
           <div className="m-auto flex flex-col items-center gap-2 text-center">
             <p className="m-0 text-[12.5px] leading-relaxed text-muted">
-              Quick questions while you work — Vesta knows your radar, memory, and briefing.
+              Quick questions or orders while you work — Vesta knows your radar, memory, and
+              briefing, and asks you to confirm before any action runs.
             </p>
             <div className="flex flex-wrap justify-center gap-[6px]">
               {CHAT_STARTERS.map((s) => (
