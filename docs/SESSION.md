@@ -5,13 +5,27 @@
 > Claude updates it at the end of each session and pushes it.
 
 **Last updated:** 2026-06-12 (third session, work laptop). `main` =
-**#45–#75 MERGED.** (Owner DID the Outlook reconnect — calendar scope live;
-chat meeting orders + /meetings verified working in production.)
-**OPEN PRs: #76** (`fix/week-grid-compact-blocks` — 30-min week-grid blocks
-clipped the title; blocks <38px now render ONE compact line: title + start
-time) — awaiting owner merge. **IN PROGRESS: PR 3 = thread reading room**
-(`feat/thread-reading-room`, AI redesign of /thread/[id]: collapse quoted
-history, Vesta summary header from the work item, theme-aware cards).
+**#45–#79 MERGED.** (Outlook reconnect done; calendar + chat orders live.)
+**OPEN PR: #80** (`feat/thread-reply-composer`) — (a) reply to ANY thread
+from the reading room: manual or "Write with Vesta" (typed text becomes the
+AI instruction), riding the EXISTING draft/send pipeline via a stub work
+item bridge (app/actions/thread ensureThreadWorkItem, status 'done' so the
+radar stays clean); draft_only mode honestly reported; (b) signature emails
+(img + ≤3 tables) now render theme-native (imgs dropped in text extraction;
+>3 tables or background → iframe stays).
+Merged this session: #74 (chat meeting link/reminder/starters/@-mention),
+#75 (meetings calendar: week grid + month + agenda), #76 (compact week
+blocks), #77 (thread reading room v1), #78 (native email render + Vesta
+quote-block splitter), #79 (ADMIN MISSION CONTROL: full-width, LiveRefresh
+30s poll in topbar, AI analytics byKind/daily-bars/heaviest via pure
+lib/admin/ai-usage, Overview needs-attention strip + assistant queues,
+ai_usage errors in feed; dev tool scripts/ai-usage-report.mjs).
+**DB finding (2026-06-12):** ONE brief/briefing_search call = 19,159 tokens
+(~30× a briefing_rank) — cap its search context next optimization pass.
+**Auto-actions proposed to owner (not yet approved):** (1) auto-pause AI on
+daily cost cap + alert, (2) auto-renew Graph webhook subs + one auto-retry
+for stale syncs, (3) daily operator digest email when unhealthy, (4) alert
+on repeatedly-failing reminders.
 Owner goal to honor everywhere: "the user must feel AI everywhere — a
 space of AI".
 **#75** (`feat/meetings-calendar`): /meetings is a real calendar — WEEK
