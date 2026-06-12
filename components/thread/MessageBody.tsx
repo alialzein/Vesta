@@ -1,26 +1,47 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { linkifySegments, simpleEmailText } from '@/lib/email/render';
 
 /**
- * Render one email's full body.
+ * Render one email's body, picking the clearest safe presentation:
  *
- * HTML emails are shown inside a **sandboxed iframe** with `allow-same-origin` but
- * NOT `allow-scripts` — so the original formatting (tables, signatures, inline
- * images) is preserved, no script in the email can ever run (XSS-safe), and the
- * parent can still measure the content to auto-size the frame. Plain-text emails
- * fall back to a pre block. The email renders on a white "paper" surface (emails
- * assume a light background); the surrounding card chrome stays theme-aware.
+ * 1. **Simple HTML** (plain correspondence — no tables/images/backgrounds)
+ *    renders as THEME-NATIVE text: readable in dark and light mode, links
+ *    clickable, nothing from the email can execute or restyle the app
+ *    (extraction is text-only — lib/email/render).
+ * 2. **Rich HTML** (marketing, branded layouts) keeps the sandboxed iframe
+ *    with `allow-same-origin` but NOT `allow-scripts`, on a white "paper"
+ *    surface — that HTML is authored for a light background.
+ * 3. Plain-text bodies render as a pre block.
  */
 export function MessageBody({ html, text }: { html: string | null; text: string | null }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(140);
 
-  if (!html) {
+  const native = html ? simpleEmailText(html) : null;
+  if (!html || native) {
+    const value = native ?? text?.trim();
     return (
-      <pre className="whitespace-pre-wrap break-words font-sans text-[13.5px] leading-relaxed text-ink-soft">
-        {text?.trim() || 'No message content was stored. Open in Outlook to read the full email.'}
-      </pre>
+      <div className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed text-ink-soft">
+        {value
+          ? linkifySegments(value).map((seg, i) =>
+              seg.type === 'link' ? (
+                <a
+                  key={i}
+                  href={seg.value}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-accent underline underline-offset-2 hover:brightness-110"
+                >
+                  {seg.value}
+                </a>
+              ) : (
+                <span key={i}>{seg.value}</span>
+              ),
+            )
+          : 'No message content was stored. Open in Outlook to read the full email.'}
+      </div>
     );
   }
 

@@ -25,6 +25,22 @@ describe('splitQuotedHtml', () => {
     expect(desktop.quoted).toContain('#E1E1E1');
   });
 
+  it("cuts at Vesta's own reply-quote block (the send flow builds it)", () => {
+    // The exact shape buildQuotedOriginal produces (lib/email/reply).
+    const html =
+      '<p>Your request to be off next Monday is not approved.</p>\n' +
+      '<div style="border-top:1px solid #d0d0d0;margin-top:14px;padding-top:10px;color:#666;font-size:12px"><b>From:</b> Ali &lt;ali@x.com&gt;<br><b>Sent:</b> Tue, 09 Jun 2026</div>\n' +
+      '<blockquote style="margin:8px 0 0">original</blockquote>';
+    const { main, quoted } = splitQuotedHtml(html);
+    expect(main.trim()).toBe('<p>Your request to be off next Monday is not approved.</p>');
+    expect(quoted).toContain('<b>From:</b>');
+  });
+
+  it('falls back to a generic bolded From: header block', () => {
+    const html = '<p>Sure.</p><div><p><b>From:</b> Maya<br><b>Sent:</b> Monday</p>old</div>';
+    expect(splitQuotedHtml(html).main).toBe('<p>Sure.</p><div><p>');
+  });
+
   it('uses the EARLIEST marker when several exist', () => {
     const html =
       '<p>hi</p><div class="gmail_quote">a</div><div id="divRplyFwdMsg">b</div>';
