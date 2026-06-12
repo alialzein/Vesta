@@ -10,10 +10,23 @@ describe('simpleEmailText', () => {
     );
   });
 
-  it('keeps rich mail (tables, images, backgrounds) on the iframe path', () => {
-    expect(simpleEmailText('<table><tr><td>promo</td></tr></table>')).toBeNull();
-    expect(simpleEmailText('<p>hi</p><img src="https://x/logo.png">')).toBeNull();
+  it('a signature with images and a table stays native (images dropped)', () => {
+    const html =
+      '<p>Hello,</p><p>This is test email two</p><p><b>Best regards,</b></p>' +
+      '<table><tr><td><img src="cid:logo"></td><td><b>Ali Alzein</b><br>Solution Support Team Leader<br>' +
+      'T: 00961 | M: +96176056494<br><img src="https://x/fb.png"><img src="https://x/li.png"></td></tr></table>';
+    const text = simpleEmailText(html)!;
+    expect(text).toContain('This is test email two');
+    expect(text).toContain('Solution Support Team Leader');
+    expect(text).not.toContain('cid:');
+  });
+
+  it('keeps genuinely rich mail (heavy tables, backgrounds, image-only) on the iframe path', () => {
+    expect(
+      simpleEmailText('<table><tr><td><table><tr><td><table></table><table></table>promo</td></tr></table></td></tr></table>'),
+    ).toBeNull(); // > 3 tables = designed layout
     expect(simpleEmailText('<div style="background-color:#001133">dark brand</div>')).toBeNull();
+    expect(simpleEmailText('<img src="https://x/banner.png">')).toBeNull(); // image-only → empty text
   });
 
   it('survives lists, entities, and links', () => {

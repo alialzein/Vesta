@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { generateDraft } from '@/app/actions/drafts';
+import { ensureBlankDraft, generateDraft, sendDraft } from '@/app/actions/drafts';
+import { ensureThreadWorkItem } from '@/app/actions/thread';
 import { MessageBody } from '@/components/thread/MessageBody';
 import { BackButton } from '@/components/thread/BackButton';
 import { Icon } from '@/components/ui/Icon';
@@ -50,11 +51,13 @@ export function ThreadView({
   messages,
   aiRead,
   outlookLink,
+  conversationId,
 }: {
   subject: string;
   messages: ThreadMessageVM[];
   aiRead: AiRead | null;
   outlookLink: string | null;
+  conversationId: string;
 }) {
   const lastId = messages[messages.length - 1]?.id;
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(lastId ? [lastId] : []));
@@ -110,7 +113,142 @@ export function ThreadView({
           />
         ))}
       </ul>
+
+      <ReplyComposer conversationId={conversationId} />
     </main>
+  );
+}
+
+/**
+ * Reply to the thread without leaving the reading room — type it yourself or
+ * let Vesta write it (your text becomes the instruction), then YOU send. Runs
+ * through the same draft/send pipeline as the dashboard: approval semantics,
+ * audit log, send mode (draft_only lands in Outlook Drafts), and the radar
+ * item closes when a real reply goes out.
+ */
+function ReplyComposer({ conversationId }: { conversationId: string }) {
+  const { showToast } = useToast();
+  const [text, setText] = useState('');
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<'idle' | 'writing' | 'sending'>('idle');
+  const [sentNote, setSentNote] = useState<string | null>(null);
+
+  async function workItem(): Promise<string | null> {
+    const res = await ensureThreadWorkItem(conversationId);
+    if (!res.ok) {
+      showToast(res.error);
+      return null;
+    }
+    return res.workItemId;
+  }
+
+  async function writeWithVesta() {
+    if (busy !== 'idle') return;
+    setBusy('writing');
+    setSentNote(null);
+    const itemId = await workItem();
+    if (!itemId) {
+      setBusy('idle');
+      return;
+    }
+    const res = await generateDraft(itemId, {
+      instruction: text.trim() ? text.trim() : undefined,
+    });
+    setBusy('idle');
+    if (!res.ok || !res.draft) {
+      showToast(res.error ?? 'Vesta could not write the reply just now.');
+      return;
+    }
+    setText(res.draft.bodyText);
+    setDraftId(res.draft.id);
+  }
+
+  async function send() {
+    const body = text.trim();
+    if (!body || busy !== 'idle') return;
+    setBusy('sending');
+    setSentNote(null);
+    let id = draftId;
+    if (!id) {
+      const itemId = await workItem();
+      if (!itemId) {
+        setBusy('idle');
+        return;
+      }
+      const blank = await ensureBlankDraft(itemId);
+      if (!blank.ok || !blank.draft) {
+        setBusy('idle');
+        showToast(blank.error ?? 'Could not start the reply.');
+        return;
+      }
+      id = blank.draft.id;
+    }
+    const res = await sendDraft(id, { bodyText: body });
+    setBusy('idle');
+    if (!res.ok) {
+      showToast(res.error ?? 'Could not send the reply.');
+      return;
+    }
+    setText('');
+    setDraftId(null);
+    setSentNote(
+      res.draft?.status === 'sent'
+        ? 'Reply sent — it threads onto this conversation in Outlook.'
+        : 'Reply saved to your Outlook Drafts (send mode is draft-only) — open Outlook to send it.',
+    );
+  }
+
+  return (
+    <section
+      aria-label="Reply to this thread"
+      className="mt-5 rounded-[14px] border border-line bg-panel p-4 shadow-soft"
+    >
+      <p className="m-0 mb-2 flex items-center gap-[7px] font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">
+        <Icon name="send" className="h-[12px] w-[12px] text-accent" />
+        Reply to this thread
+      </p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={Math.min(10, Math.max(3, text.split('\n').length))}
+        disabled={busy === 'writing'}
+        placeholder="Write your reply — or describe it and let Vesta write it (e.g. “confirm I'll attend tomorrow's session”)…"
+        aria-label="Reply text"
+        className="v-scroll w-full resize-none rounded-[11px] border border-line bg-panel-2 px-3 py-[10px] text-[13.5px] leading-relaxed text-ink outline-none transition placeholder:text-muted focus:border-accent disabled:opacity-60"
+      />
+      <div className="mt-[10px] flex flex-wrap items-center gap-[8px]">
+        <button
+          type="button"
+          onClick={() => void writeWithVesta()}
+          disabled={busy !== 'idle'}
+          className="inline-flex items-center gap-[6px] rounded-[11px] border border-line-strong bg-panel-solid px-[13px] py-[8px] text-[12.5px] font-semibold text-ink transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Icon
+            name="sparkle"
+            className={`h-[13px] w-[13px] ${busy === 'writing' ? 'animate-vesta-pulse' : ''}`}
+          />
+          {busy === 'writing' ? 'Vesta is writing…' : draftId ? 'Rewrite with Vesta' : 'Write with Vesta'}
+        </button>
+        <button
+          type="button"
+          onClick={() => void send()}
+          disabled={busy !== 'idle' || !text.trim()}
+          className="inline-flex items-center gap-[6px] rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[14px] py-[8px] text-[12.5px] font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
+        >
+          <Icon name="send" className="h-[13px] w-[13px]" />
+          {busy === 'sending' ? 'Sending…' : 'Send reply'}
+        </button>
+        <span className="text-[11px] text-muted">
+          Replies to the latest message. Vesta writes — only you send.
+        </span>
+      </div>
+      {sentNote && (
+        <p className="m-0 mt-[8px] flex items-start gap-[6px] text-[12.5px] leading-snug text-green">
+          <Icon name="check" className="mt-px h-[13px] w-[13px] flex-none" />
+          {sentNote}
+        </p>
+      )}
+    </section>
   );
 }
 

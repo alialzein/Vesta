@@ -112,6 +112,12 @@ export default async function ThreadPage({ params }: { params: { id: string } })
       : null;
 
   return (
-    <ThreadView subject={subject} messages={messages} aiRead={aiRead} outlookLink={outlookLink} />
+    <ThreadView
+      subject={subject}
+      messages={messages}
+      aiRead={aiRead}
+      outlookLink={outlookLink}
+      conversationId={conversationId}
+    />
   );
 }

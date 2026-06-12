@@ -42,6 +42,20 @@ Priorities row) opens the **reading room** — the conversation as Vesta sees it
 
 There's an **Open in Outlook** button if you want the native client.
 
+**Reply right here — manual or with Vesta.** Under the last message there's a
+reply box:
+
+- **Type it yourself** and hit **Send reply** — it threads onto the
+  conversation in Outlook like a normal reply.
+- **Or describe what you want** (e.g. *"confirm I'll attend tomorrow's
+  session"*) and tap **Write with Vesta** — Vesta writes the full reply into
+  the box using your tone and memory; edit anything, then **you** hit Send.
+  Vesta never sends on its own.
+
+Sends are audit-logged, respect your send mode (draft-only mode saves to your
+Outlook Drafts instead), and if the thread was on your radar as *waiting on
+you*, sending the reply marks it done automatically.
+
 > Full bodies are saved going forward. Emails synced before this feature show their
 > body once your mailbox re-syncs them.
 

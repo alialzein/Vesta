@@ -5,8 +5,16 @@ import { ThreadView, type ThreadMessageVM } from '@/components/thread/ThreadView
 import { ToastProvider } from '@/components/ui/Toast';
 
 const generateDraft = vi.fn();
+const ensureBlankDraft = vi.fn();
+const sendDraft = vi.fn();
+const ensureThreadWorkItem = vi.fn();
 vi.mock('@/app/actions/drafts', () => ({
   generateDraft: (...args: unknown[]) => generateDraft(...(args as [string])),
+  ensureBlankDraft: (...args: unknown[]) => ensureBlankDraft(...(args as [string])),
+  sendDraft: (...args: unknown[]) => sendDraft(...(args as [string, unknown])),
+}));
+vi.mock('@/app/actions/thread', () => ({
+  ensureThreadWorkItem: (...args: unknown[]) => ensureThreadWorkItem(...(args as [string])),
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ back: vi.fn(), push: vi.fn(), prefetch: vi.fn() }),
@@ -60,13 +68,20 @@ function renderThread(aiRead: typeof AI_READ | null = AI_READ) {
         messages={MESSAGES}
         aiRead={aiRead}
         outlookLink="https://outlook.live.com/mail/x"
+        conversationId="conv-1"
       />
     </ToastProvider>,
   );
 }
 
 describe('ThreadView', () => {
-  beforeEach(() => generateDraft.mockReset());
+  beforeEach(() => {
+    generateDraft.mockReset();
+    ensureBlankDraft.mockReset();
+    sendDraft.mockReset();
+    ensureThreadWorkItem.mockReset();
+    ensureThreadWorkItem.mockResolvedValue({ ok: true, workItemId: 'wi-thread' });
+  });
 
   it('renders the header, Vesta read, and collapses all but the newest message', () => {
     renderThread();
@@ -127,5 +142,57 @@ describe('ThreadView', () => {
     renderThread(null);
     expect(screen.queryByText(/Vesta's read/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Draft a reply/ })).not.toBeInTheDocument();
+  });
+
+  it('sends a MANUAL reply through the draft pipeline (works without a radar item)', async () => {
+    ensureBlankDraft.mockResolvedValue({ ok: true, draft: { id: 'd1' } });
+    sendDraft.mockResolvedValue({ ok: true, draft: { id: 'd1', status: 'sent' } });
+    const user = userEvent.setup();
+    renderThread(null);
+
+    await user.type(screen.getByLabelText('Reply text'), 'Approved, see you Monday.');
+    await user.click(screen.getByRole('button', { name: /Send reply/ }));
+
+    expect(ensureThreadWorkItem).toHaveBeenCalledWith('conv-1');
+    expect(ensureBlankDraft).toHaveBeenCalledWith('wi-thread');
+    expect(sendDraft).toHaveBeenCalledWith('d1', { bodyText: 'Approved, see you Monday.' });
+    expect(await screen.findByText(/Reply sent — it threads onto this conversation/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Reply text')).toHaveValue('');
+  });
+
+  it('Write with Vesta fills the composer (the typed text becomes the instruction) and sends that draft', async () => {
+    generateDraft.mockResolvedValue({
+      ok: true,
+      draft: { id: 'd-ai', bodyText: 'Hello Zahraa,\n\nYour Monday off is approved.' },
+    });
+    sendDraft.mockResolvedValue({ ok: true, draft: { id: 'd-ai', status: 'sent' } });
+    const user = userEvent.setup();
+    renderThread(null);
+
+    await user.type(screen.getByLabelText('Reply text'), 'approve it warmly');
+    await user.click(screen.getByRole('button', { name: 'Write with Vesta' }));
+
+    expect(generateDraft).toHaveBeenCalledWith('wi-thread', { instruction: 'approve it warmly' });
+    expect(screen.getByLabelText('Reply text')).toHaveValue(
+      'Hello Zahraa,\n\nYour Monday off is approved.',
+    );
+
+    // Sending reuses the AI draft id — no blank draft needed.
+    await user.click(screen.getByRole('button', { name: /Send reply/ }));
+    expect(ensureBlankDraft).not.toHaveBeenCalled();
+    expect(sendDraft).toHaveBeenCalledWith('d-ai', {
+      bodyText: 'Hello Zahraa,\n\nYour Monday off is approved.',
+    });
+  });
+
+  it('the draft-only send mode is reported honestly', async () => {
+    ensureBlankDraft.mockResolvedValue({ ok: true, draft: { id: 'd2' } });
+    sendDraft.mockResolvedValue({ ok: true, draft: { id: 'd2', status: 'draft' } });
+    const user = userEvent.setup();
+    renderThread(null);
+
+    await user.type(screen.getByLabelText('Reply text'), 'ok');
+    await user.click(screen.getByRole('button', { name: /Send reply/ }));
+    expect(await screen.findByText(/saved to your Outlook Drafts/)).toBeInTheDocument();
   });
 });
