@@ -331,10 +331,13 @@ export function AttendeeEditor({
   attendees,
   onChange,
   disabled,
+  caption = 'Invites go to exactly this list when you confirm.',
 }: {
   attendees: string[];
   onChange: (next: string[]) => void;
   disabled?: boolean;
+  /** The footnote under the list (the thread Forward panel overrides it). */
+  caption?: string;
 }) {
   const [input, setInput] = useState('');
   const [suggestions, setSuggestions] = useState<AttendeeSuggestion[]>([]);
@@ -420,9 +423,7 @@ export function AttendeeEditor({
           ))}
         </div>
       )}
-      <p className="m-0 mt-[5px] text-[10.5px] text-muted">
-        Invites go to exactly this list when you confirm.
-      </p>
+      <p className="m-0 mt-[5px] text-[10.5px] text-muted">{caption}</p>
     </div>
   );
 }

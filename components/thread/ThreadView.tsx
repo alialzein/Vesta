@@ -1,9 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ensureBlankDraft, generateDraft, sendDraft } from '@/app/actions/drafts';
-import { ensureThreadWorkItem } from '@/app/actions/thread';
+import {
+  downloadAttachment,
+  ensureThreadWorkItem,
+  forwardThreadMessage,
+  getInlineBody,
+  getMessageAttachments,
+} from '@/app/actions/thread';
+import type { AttachmentMeta } from '@/lib/graph/attachments';
+import { splitQuotedHtml } from '@/lib/email/quotes';
+import { simpleEmailText } from '@/lib/email/render';
+import { AttendeeEditor } from '@/components/chat/parts';
 import { MessageBody } from '@/components/thread/MessageBody';
 import { BackButton } from '@/components/thread/BackButton';
 import { Icon } from '@/components/ui/Icon';
@@ -35,6 +45,9 @@ export type ThreadMessageVM = {
   quotedHtml: string | null;
   quotedText: string | null;
   preview: string;
+  hasAttachments: boolean;
+  /** True when the original html references cid: inline images. */
+  needsInlineImages: boolean;
 };
 
 export type AiRead = {
@@ -361,7 +374,24 @@ function MessageCard({
   onToggle: () => void;
 }) {
   const [showQuoted, setShowQuoted] = useState(false);
+  const [showForward, setShowForward] = useState(false);
+  // The original html with cid: images swapped for data URIs (split again
+  // client-side — the splitter is pure), fetched once on first expand.
+  const [inlined, setInlined] = useState<{ main: string; quoted: string | null } | null>(null);
   const hasQuoted = Boolean(msg.quotedHtml || msg.quotedText);
+  // Inline images only matter on the iframe path (native render drops imgs).
+  const wantsInline =
+    msg.needsInlineImages && Boolean(msg.bodyHtml) && simpleEmailText(msg.bodyHtml ?? '') === null;
+
+  useEffect(() => {
+    if (!expanded || !wantsInline || inlined) return;
+    void getInlineBody(msg.id).then((res) => {
+      if (res.ok) setInlined(splitQuotedHtml(res.html));
+    });
+  }, [expanded, wantsInline, inlined, msg.id]);
+
+  const bodyHtml = inlined?.main ?? msg.bodyHtml;
+  const quotedHtml = inlined?.quoted ?? msg.quotedHtml;
 
   return (
     <li className="relative">
@@ -412,9 +442,10 @@ function MessageCard({
 
         {expanded && (
           <div className="px-4 pb-4">
-            <MessageBody html={msg.bodyHtml} text={msg.bodyText} />
-            {hasQuoted && (
-              <div className="mt-[8px]">
+            <MessageBody html={bodyHtml} text={msg.bodyText} />
+            {msg.hasAttachments && <AttachmentsRow messageId={msg.id} />}
+            <div className="mt-[10px] flex flex-wrap items-center gap-[8px]">
+              {hasQuoted && (
                 <button
                   type="button"
                   onClick={() => setShowQuoted((v) => !v)}
@@ -424,16 +455,158 @@ function MessageCard({
                   <Icon name={showQuoted ? 'chevronUp' : 'chevronDown'} className="h-[11px] w-[11px]" />
                   {showQuoted ? 'Hide quoted history' : 'Show quoted history'}
                 </button>
-                {showQuoted && (
-                  <div className="mt-[8px] opacity-80">
-                    <MessageBody html={msg.quotedHtml} text={msg.quotedText} />
-                  </div>
-                )}
+              )}
+              <button
+                type="button"
+                onClick={() => setShowForward((v) => !v)}
+                aria-expanded={showForward}
+                className="inline-flex items-center gap-[6px] rounded-[9px] border border-line bg-panel-2 px-[10px] py-[6px] text-[11.5px] font-semibold text-muted transition hover:border-accent hover:text-accent"
+              >
+                <Icon name="arrow" className="h-[11px] w-[11px]" />
+                Forward
+              </button>
+            </div>
+            {showQuoted && (
+              <div className="mt-[8px] opacity-80">
+                <MessageBody html={quotedHtml} text={msg.quotedText} />
               </div>
+            )}
+            {showForward && (
+              <ForwardPanel messageId={msg.id} onClose={() => setShowForward(false)} />
             )}
           </div>
         )}
       </div>
     </li>
+  );
+}
+
+function fmtSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
+/** The message's real files, fetched from Outlook on demand — click to
+ *  download (bytes stream through the server; nothing is stored). */
+function AttachmentsRow({ messageId }: { messageId: string }) {
+  const { showToast } = useToast();
+  const [files, setFiles] = useState<AttachmentMeta[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void getMessageAttachments(messageId).then((res) => {
+      if (alive) setFiles(res.ok ? res.attachments : []);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [messageId]);
+
+  async function download(file: AttachmentMeta) {
+    if (busyId) return;
+    setBusyId(file.id);
+    const res = await downloadAttachment(messageId, file.id);
+    setBusyId(null);
+    if (!res.ok) {
+      showToast(res.error);
+      return;
+    }
+    const bytes = Uint8Array.from(atob(res.base64), (c) => c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: res.contentType }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = res.name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if (files === null) {
+    return <p className="m-0 mt-[8px] text-[11.5px] text-muted">Checking attachments…</p>;
+  }
+  if (files.length === 0) return null;
+  return (
+    <div className="mt-[10px] flex flex-wrap gap-[6px]">
+      {files.map((f) => (
+        <button
+          key={f.id}
+          type="button"
+          onClick={() => void download(f)}
+          disabled={busyId !== null}
+          title={f.isFile ? 'Download' : 'Open the message in Outlook for this attachment'}
+          className="inline-flex max-w-full items-center gap-[7px] rounded-[10px] border border-line bg-panel-2 px-[10px] py-[6px] text-[12px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent disabled:opacity-60"
+        >
+          <Icon
+            name="drafts"
+            className={`h-[13px] w-[13px] flex-none ${busyId === f.id ? 'animate-vesta-pulse' : ''}`}
+          />
+          <span className="truncate">{f.name}</span>
+          <span className="flex-none font-mono text-[10.5px] text-muted">{fmtSize(f.size)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Forward the original message (Outlook carries the formatting AND the
+ *  attachments) — recipients come from the same people autocomplete the
+ *  meeting cards use; a note on top is optional. */
+function ForwardPanel({ messageId, onClose }: { messageId: string; onClose: () => void }) {
+  const { showToast } = useToast();
+  const [to, setTo] = useState<string[]>([]);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (busy) return;
+    setBusy(true);
+    const res = await forwardThreadMessage(messageId, { to, note });
+    setBusy(false);
+    if (!res.ok) {
+      showToast(res.error);
+      return;
+    }
+    showToast('Forwarded — the original message and its attachments are on the way.');
+    onClose();
+  }
+
+  return (
+    <div className="mt-[10px] rounded-[12px] border border-line bg-panel-2 p-3">
+      <AttendeeEditor
+        attendees={to}
+        onChange={setTo}
+        disabled={busy}
+        caption="The original message — with its attachments — goes to exactly this list."
+      />
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={2}
+        disabled={busy}
+        placeholder="Add a note on top (optional)…"
+        aria-label="Forward note"
+        className="v-scroll mt-[8px] w-full resize-none rounded-[10px] border border-line bg-panel px-3 py-[8px] text-[13px] leading-relaxed text-ink outline-none transition placeholder:text-muted focus:border-accent"
+      />
+      <div className="mt-[8px] flex items-center gap-[8px]">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={busy || to.length === 0}
+          className="inline-flex items-center gap-[6px] rounded-[10px] bg-gradient-to-br from-accent to-accent-2 px-[13px] py-[7px] text-[12px] font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
+        >
+          <Icon name="arrow" className="h-[12px] w-[12px]" />
+          {busy ? 'Forwarding…' : 'Forward'}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={busy}
+          className="rounded-[10px] border border-line bg-panel px-[12px] py-[7px] text-[12px] font-semibold text-muted transition hover:text-ink"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
