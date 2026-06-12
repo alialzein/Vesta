@@ -247,8 +247,32 @@ describe('parseChatReply — actions', () => {
         count: 1,
       }),
       0,
+      ['zahraa@example.com'], // typed by the manager or a known person
     ).action;
     expect(single).toMatchObject({ repeatMinutes: null, count: 1, toEmail: 'zahraa@example.com' });
+  });
+
+  it('reminder recipients pass the same anti-invention gate as meeting attendees', () => {
+    const reminder = (toEmail: string, allowed: string[]) =>
+      parseChatReply(
+        wrap({
+          kind: 'create_reminder',
+          subject: 'Holiday request follow-up',
+          toEmail,
+          firstAtLocal: '2026-06-13 11:00',
+          repeatMinutes: null,
+          count: 1,
+        }),
+        0,
+        allowed,
+      ).action;
+    // "Send a reminder to Zahraa tomorrow 11am" — her email is in known people.
+    expect(reminder('Zahraa.Daher@gmail.com', ['zahraa.daher@gmail.com'])).toMatchObject({
+      toEmail: 'zahraa.daher@gmail.com',
+    });
+    // An email-shaped address that is neither known nor typed → the WHOLE
+    // proposal dies (never silently rerouted to the manager himself).
+    expect(reminder('guessed@nowhere.com', ['zahraa.daher@gmail.com'])).toBeNull();
   });
 
   it('create_meeting (Phase C): valid proposal with allowed attendees', () => {

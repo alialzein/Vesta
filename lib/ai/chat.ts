@@ -13,7 +13,7 @@
  */
 import { extractJson } from './schema';
 
-export const CHAT_PROMPT_VERSION = 'chat-v5';
+export const CHAT_PROMPT_VERSION = 'chat-v6';
 
 /** Memory types the chat may write — exactly the manager_memories vocabulary. */
 export const CHAT_MEMORY_TYPES = [
@@ -157,7 +157,7 @@ export function buildChatPrompt(input: {
     '- Plain conversational text: short paragraphs, hyphen bullets when listing. No markdown headers, no asterisks, no emoji.',
     '',
     'How to act (the "action" field) — orders the manager gives you:',
-    `- When ${name} clearly tells you to DO one of these, propose it: mark an item done (mark_done), snooze an item until a time (snooze), create a task on the radar (create_task), draft a reply on an item (draft_reply — the draft will wait for their approval, you never send), schedule an EMAIL reminder (create_reminder — e.g. "email me about this thread at 3pm, every hour, 3 times": firstAtLocal=the 3pm slot, repeatMinutes=60, count=3; toEmail null means the manager himself; never invent another person's email — use one only when ${name} typed it), or schedule a meeting (create_meeting — a calendar event with an online-meeting link, e.g. "set up a Teams meeting with Maya tomorrow 3pm for 45 minutes").`,
+    `- When ${name} clearly tells you to DO one of these, propose it: mark an item done (mark_done), snooze an item until a time (snooze), create a task on the radar (create_task), draft a reply on an item (draft_reply — the draft will wait for their approval, you never send), schedule an EMAIL reminder (create_reminder — e.g. "email me about this thread at 3pm, every hour, 3 times": firstAtLocal=the 3pm slot, repeatMinutes=60, count=3; toEmail null means the manager himself; reminders CAN go to other people — "send a reminder to Zahraa tomorrow 11am" — but never invent an email: use one only when ${name} typed it or that person is in the known-people list below; otherwise ask for the address and set action to null), or schedule a meeting (create_meeting — a calendar event with an online-meeting link, e.g. "set up a Teams meeting with Maya tomorrow 3pm for 45 minutes").`,
     `- create_meeting attendees: use ONLY emails ${name} typed, or emails from the known-people list below when ${name} names that person unambiguously. If a named attendee is not in the list and no email was given, ask for the email in the reply and set action to null. Attendees may be empty (a solo calendar block). Default durationMinutes 30 when unstated.`,
     '- "Remind me to X tomorrow 3pm" alone = create_task (a radar item). Use create_reminder only when they clearly want an EMAIL (they say email/send/inbox or a repeat pattern).',
     '- You only PROPOSE: the manager confirms with a tap before anything happens. Your reply should state what you are proposing in one short sentence.',
@@ -228,7 +228,7 @@ export function buildChatPrompt(input: {
   const peopleBlock =
     ctx.people.length > 0
       ? [
-          'People the manager corresponds with (the ONLY emails you may use for meeting attendees, besides ones the manager types):',
+          'People the manager corresponds with (the ONLY emails you may use for meeting attendees and reminder recipients, besides ones the manager types):',
           ...ctx.people.slice(0, 15).map((p) => `- ${p.name ? `${cap(p.name, 40)} ` : ''}<${p.email}>`),
         ].join('\n')
       : '';
@@ -307,7 +307,15 @@ function asAction(
     const firstAtLocal = String(a.firstAtLocal ?? '').trim();
     if (subject.length < 3 || !LOCAL_TIME_RE.test(firstAtLocal)) return null;
     const rawEmail = a.toEmail == null ? null : String(a.toEmail).trim().toLowerCase();
-    const toEmail = rawEmail && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rawEmail) ? rawEmail : null;
+    let toEmail: string | null = null;
+    if (rawEmail && EMAIL_RE.test(rawEmail)) {
+      // Same anti-invention gate as meeting attendees: a recipient that is
+      // neither a known person nor typed by the manager kills the proposal —
+      // silently falling back to "self" could hide that the reminder never
+      // reaches the person the manager named.
+      if (!allowedEmails.has(rawEmail)) return null;
+      toEmail = rawEmail;
+    }
     const rawRepeat = a.repeatMinutes == null ? null : Number(a.repeatMinutes);
     const repeatMinutes =
       rawRepeat != null && Number.isFinite(rawRepeat) && rawRepeat > 0

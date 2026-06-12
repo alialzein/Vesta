@@ -59,8 +59,12 @@ card in the chat — **nothing happens until you tap Confirm** on that card.
 - `Draft a reply to Zahraa: I can meet Thursday at 2pm.` — the draft waits in
   **Draft Replies** for your approval. Chat never sends email on its own.
 - `Email me a reminder about this thread at 3pm — every hour, 3 times.` —
-  schedules real reminder **emails** to your inbox (or to an email you type).
-  See and cancel them anytime in **Settings → Scheduled reminders**.
+  schedules real reminder **emails** to your inbox. See and cancel them
+  anytime in **Settings → Scheduled reminders**.
+- `Send a reminder to Zahraa tomorrow at 11am about the holiday request.` —
+  reminders can go to **other people** too: anyone whose email you type, or a
+  sender Vesta already knows by name. If Vesta doesn't know the person, it
+  asks for their address — it never guesses one.
 - `Schedule a meeting with Maya tomorrow at 3pm for 45 minutes.` — creates a
   real calendar event with an online-meeting link and sends the invites. See
   "Meetings" below.
