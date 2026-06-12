@@ -5,27 +5,33 @@
 > Claude updates it at the end of each session and pushes it.
 
 **Last updated:** 2026-06-12 (third session, work laptop). `main` =
-**#45–#79 MERGED.** (Outlook reconnect done; calendar + chat orders live.)
-**OPEN PR: #80** (`feat/thread-reply-composer`) — (a) reply to ANY thread
-from the reading room: manual or "Write with Vesta" (typed text becomes the
-AI instruction), riding the EXISTING draft/send pipeline via a stub work
-item bridge (app/actions/thread ensureThreadWorkItem, status 'done' so the
-radar stays clean); draft_only mode honestly reported; (b) signature emails
-(img + ≤3 tables) now render theme-native (imgs dropped in text extraction;
->3 tables or background → iframe stays).
+**#45–#83 MERGED** (note: #81 was merged into #80's branch by mistake —
+stacked-PR lesson #2: NEVER stack again; #82 = its clean cherry-pick).
+**OPEN PR: #84** (`feat/ops-automation`) — the confirmed auto-actions:
+lib/system-mail (Resend; RESEND_API_KEY is IN Vercel; recipients = admin
+email, ALERT_EMAIL overrides; until a domain is verified Resend only
+delivers to the Resend account owner's address), /api/cron/ops (~15min):
+cost-cap alarm (pure detectCapBreaches; pause already in getEffectiveAi),
+self-healing (stale-sync retry ×2/run + renewAllSubscriptions; email only
+on failure), morning digest at DIGEST_HOUR_UTC (default 05 UTC ≈ 8am
+Beirut) using the SAME lib/admin/attention builder as the Overview strip;
+all deduped/audited via audit_logs system_alert/system_digest.
+**⚠️ Owner after merging #84: add scheduler entry /api/cron/ops every
+15 min (same CRON_SECRET bearer as /api/cron/sync).**
 Merged this session: #74 (chat meeting link/reminder/starters/@-mention),
-#75 (meetings calendar: week grid + month + agenda), #76 (compact week
-blocks), #77 (thread reading room v1), #78 (native email render + Vesta
-quote-block splitter), #79 (ADMIN MISSION CONTROL: full-width, LiveRefresh
-30s poll in topbar, AI analytics byKind/daily-bars/heaviest via pure
-lib/admin/ai-usage, Overview needs-attention strip + assistant queues,
-ai_usage errors in feed; dev tool scripts/ai-usage-report.mjs).
+#75 (meetings calendar), #76 (compact week blocks), #77 (reading room),
+#78 (native email render + quote splitter), #79 (admin mission control),
+#80 (thread reply composer + signature-native render), #82 (=#81:
+attachments on demand + inline cid images + Forward), #83 (SUPER-ADMIN
+IDENTITY: admins hidden from Users/counts, /admin/settings page with
+password change + OPTIONAL TOTP 2FA [Supabase MFA toggle: owner enabled
+it] + maintenance switch [app_settings.feature_flags.maintenance,
+enforced in requireUser, /maintenance page] + own activity log; 12h admin
+sessions via lib/admin/session + middleware, login error=admin_session).
+Owner state: TOTP enabled in Supabase ✓, RESEND_API_KEY in Vercel ✓,
+admin stays ali.alzein.eng@gmail.com (rotate later via grant-admin.mjs).
 **DB finding (2026-06-12):** ONE brief/briefing_search call = 19,159 tokens
 (~30× a briefing_rank) — cap its search context next optimization pass.
-**Auto-actions proposed to owner (not yet approved):** (1) auto-pause AI on
-daily cost cap + alert, (2) auto-renew Graph webhook subs + one auto-retry
-for stale syncs, (3) daily operator digest email when unhealthy, (4) alert
-on repeatedly-failing reminders.
 Owner goal to honor everywhere: "the user must feel AI everywhere — a
 space of AI".
 **#75** (`feat/meetings-calendar`): /meetings is a real calendar — WEEK
