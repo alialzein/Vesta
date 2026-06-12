@@ -4,9 +4,23 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#71
-all MERGED** (#71 merged while #72 was being opened — branch deleted).
-**PR #72 OPEN — awaiting owner merge.**
+**Last updated:** 2026-06-12 (second session, work laptop). `main` =
+**#45–#72 ALL MERGED, no PRs open, all branches deleted.** The whole
+design-audit arc shipped today: #69 declutter ("one fact, one place") →
+#70 truthful brief + AI motion (GSAP FocusThread, TypeIn, FLIP) + light-mode
+surfaces → #71 mobile action sheet + color tokens → #72 **Vesta Mobile**
+(bottom tab bar, app-style dense rows, phone-collapsed brief, installable
+PWA — no offline by design, icons via scripts/generate-pwa-icons.mjs;
+"How the assistant works" strip removed).
+**Owner verify on a REAL phone after the Vercel deploy (both themes):**
+install via Safari Share → Add to Home Screen (flame icon, full-screen);
+tab bar Today·Inbox·Vesta·Briefing·Menu; 5-6 dense rows per screen; tap row
+→ action sheet (Done/Snooze/Draft); brief expands via "Full brief & actions".
+Guide: docs/guides/vesta-on-your-phone.md.
+**Next session: pick the next feature track — AI Decision Desk (Phase 12,
+discuss scope) / Teams radar (Phase 13) / notifications bell (reminders
+engine already powers it). Also still pending from earlier: owner to walk
+the Phase C calendar test list (below) after the Outlook reconnect.**
 **PR #72** (`feat/vesta-mobile`, stacked on #71) = **Vesta Mobile** (owner Q&A,
 all recommended options chosen): (a) **bottom tab bar**
 `components/app/MobileTabBar` (lg:hidden, rendered by BOTH shells): Today ·
