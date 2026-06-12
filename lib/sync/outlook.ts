@@ -350,6 +350,11 @@ export function buildWorkItemDrafts(
         requires_reply: true,
         urgency_reason: `${latestInbound?.from?.emailAddress?.name ?? 'Someone'} is waiting on your reply.${followNote}`,
         due_at: null,
+        // Every draft must set metadata: in a multi-row PostgREST insert the
+        // column set is the UNION of all rows' keys, and rows missing a key get
+        // an explicit NULL (not the column default) — which violates the
+        // metadata NOT NULL constraint and fails the whole batch.
+        metadata: {},
       },
     });
   }
@@ -734,7 +739,16 @@ async function processStoredMail(
     }
   }
   if (inserts.length > 0) workItemUpdates.push(supabase.from('work_items').insert(inserts));
-  if (workItemUpdates.length > 0) await Promise.all(workItemUpdates);
+  if (workItemUpdates.length > 0) {
+    // PostgREST write failures resolve with { error } instead of throwing, so a
+    // failed insert/update would otherwise vanish without a trace (this hid a
+    // NOT NULL violation that emptied the radar after an Outlook reconnect).
+    const results = await Promise.all(workItemUpdates);
+    for (const r of results) {
+      const err = (r as { error?: { message?: string; code?: string } | null }).error;
+      if (err) console.error(`[sync] work_items write failed (${err.code}): ${err.message}`);
+    }
+  }
 
   return { threads: threadRows.length, workItems: drafts.length, hidden };
 }
