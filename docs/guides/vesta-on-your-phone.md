@@ -28,7 +28,7 @@ On the phone, navigation lives at the bottom, under your thumb:
 - **Inbox** — your synced conversations.
 - **Vesta** (the raised blue bubble in the middle) — the full Ask Vesta chat.
 - **Briefing** — your daily news briefing.
-- **Menu** — everything else (Waiting on you, Draft Replies, Hidden,
+- **Menu** — everything else (Meetings, Waiting on you, Draft Replies, Hidden,
   Memory & Rules, Weekly Review, Settings).
 
 ## What's different on the phone

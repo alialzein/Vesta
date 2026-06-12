@@ -71,7 +71,9 @@ export default async function ThreadPage({ params }: { params: { id: string } })
   const lastWebLink = [...messages].reverse().find((m) => m.web_link)?.web_link ?? null;
 
   return (
-    <main className="v-scroll mx-auto h-screen w-full max-w-[860px] overflow-y-auto px-5 py-8">
+    // dvh + a generous safe-area bottom pad so the last message is fully
+    // readable on phones (mobile pass, 2026-06-12).
+    <main className="v-scroll mx-auto h-[100dvh] w-full max-w-[860px] overflow-y-auto px-4 pb-[max(48px,env(safe-area-inset-bottom))] pt-6 sm:px-5 sm:pt-8">
       <div className="mb-6 flex items-center gap-3">
         <BackButton />
         <div className="min-w-0 flex-1">

@@ -102,8 +102,12 @@ export default function UpdatePasswordPage() {
     'w-full rounded-[11px] border border-line bg-field py-[11px] pl-10 pr-3 text-[14px] text-ink outline-none transition placeholder:text-muted focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)]';
 
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden px-4 py-10">
-      <div className="relative z-[1] w-full max-w-[420px]">
+    // Own scroll container (body is overflow:hidden) — same mobile-scroll fix
+    // as the login page (2026-06-12). The inner min-h-full flex wrapper keeps
+    // the card centered when it fits and scrollable FROM THE TOP when it
+    // doesn't (grid centering clips the top of overflowing content).
+    <main className="v-scroll relative h-[100dvh] overflow-y-auto overflow-x-hidden">
+      <div className="relative z-[1] mx-auto flex min-h-full w-full max-w-[420px] flex-col justify-center px-4 py-10">
         <div className="mb-6 text-center">
           <h1 className="m-0 font-display text-[24px] font-semibold tracking-tight text-ink">
             Choose a new password

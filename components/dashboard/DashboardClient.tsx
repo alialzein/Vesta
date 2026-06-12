@@ -457,8 +457,10 @@ export function DashboardClient({
               : 'xl:grid-cols-[minmax(0,1fr)]',
           ].join(' ')}
         >
-          {/* Main column — bottom padding below lg clears the fixed tab bar. */}
-          <main className="v-scroll flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pb-[72px] pr-1 lg:pb-0">
+          {/* Main column — bottom padding below lg clears the fixed tab bar
+              PLUS the home-indicator safe area (72px alone hid the last rows
+              on notched phones). */}
+          <main className="v-scroll flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pb-[calc(82px+env(safe-area-inset-bottom))] pr-1 lg:pb-0">
             <Topbar onOpenSidebar={() => setSidebarMobileOpen(true)} account={account} />
 
             {onToday ? (

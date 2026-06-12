@@ -9,6 +9,7 @@ export type AiFeature =
   | 'capture'
   | 'brief'
   | 'chat'
+  | 'prep'
   | 'triage'
   | 'other';
 

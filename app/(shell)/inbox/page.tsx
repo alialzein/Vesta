@@ -58,7 +58,13 @@ export default async function InboxPage() {
       t.unread = t.unread || m.is_read === false;
     }
   }
-  const items = [...threads.values()];
+  // Cap the rendered list (perf fix, 2026-06-12): every row hydrates two
+  // client islands (LocalTime + SenderActions), and 150 conversations made
+  // the page noticeably slow to open — on phones especially. 60 newest
+  // threads cover the working set; older mail stays reachable in Outlook.
+  const all = [...threads.values()];
+  const items = all.slice(0, 60);
+  const truncated = all.length - items.length;
 
   if (items.length === 0) {
     return (
@@ -85,6 +91,7 @@ export default async function InboxPage() {
   }
 
   return (
+    <>
     <ul className="flex list-none flex-col gap-2 p-0">
       {items.map(({ latest: m, count, unread }) => {
         const href = m.graph_conversation_id
@@ -138,5 +145,11 @@ export default async function InboxPage() {
         );
       })}
     </ul>
+    {truncated > 0 && (
+      <p className="mt-3 text-center text-[12px] text-muted">
+        Showing your latest {items.length} conversations — older mail lives in Outlook.
+      </p>
+    )}
+    </>
   );
 }

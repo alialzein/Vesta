@@ -75,8 +75,12 @@ export function OnboardingWizard({ firstName }: { firstName: string }) {
   }
 
   return (
-    <main className="relative grid min-h-screen place-items-center px-4 py-10">
-      <div className="relative z-[1] w-full max-w-[560px]">
+    // Own scroll container (body is overflow:hidden) — the wizard is taller
+    // than a phone screen, and `min-h-screen` alone made it unscrollable
+    // (mobile-scroll fix, 2026-06-12). The min-h-full flex wrapper centers
+    // when it fits, scrolls from the top when it doesn't.
+    <main className="v-scroll relative h-[100dvh] overflow-y-auto overflow-x-hidden">
+      <div className="relative z-[1] mx-auto flex min-h-full w-full max-w-[560px] flex-col justify-center px-4 py-10">
         {/* Header */}
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <VestaAuthCore />

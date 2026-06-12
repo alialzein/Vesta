@@ -126,17 +126,19 @@ async function graphCalendarGet<T>(accessToken: string, path: string): Promise<T
 }
 
 /** The manager's meetings between two UTC instants (calendarView expands
- *  recurrences). Cancelled events are dropped. */
+ *  recurrences). Cancelled events are dropped. `top` defaults to a day's worth;
+ *  the Meetings page asks for a week (50). */
 export async function fetchCalendarView(
   accessToken: string,
   startIso: string,
   endIso: string,
+  top = 25,
 ): Promise<CalendarEventView[]> {
   const params = new URLSearchParams({
     startDateTime: startIso,
     endDateTime: endIso,
     $orderby: 'start/dateTime',
-    $top: '25',
+    $top: String(top),
     $select:
       'id,subject,start,end,organizer,attendees,isOnlineMeeting,onlineMeeting,isCancelled,location,webLink',
   });

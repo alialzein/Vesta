@@ -21,6 +21,10 @@ import type { AccountView } from '@/lib/supabase/account';
 
 const PAGE_HEADERS: Record<string, { title: string; subtitle: string }> = {
   '/inbox': { title: 'Inbox', subtitle: 'Conversations Vesta synced from your mailbox.' },
+  '/meetings': {
+    title: 'Meetings',
+    subtitle: "Your Outlook schedule for today and the week ahead — with Vesta's prep.",
+  },
   '/priorities': {
     title: 'Waiting on you',
     subtitle: 'People waiting on your reply, ranked by urgency.',
@@ -100,7 +104,9 @@ export function AppShell({
           counts={counts}
         />
 
-        <main className="v-scroll relative z-[1] flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pb-[72px] pr-1 lg:pb-0">
+        {/* Bottom padding below lg = tab bar height + the home-indicator safe
+            area — a fixed 72px hid the last rows on notched phones. */}
+        <main className="v-scroll relative z-[1] flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pb-[calc(82px+env(safe-area-inset-bottom))] pr-1 lg:pb-0">
           <Topbar
             onOpenSidebar={() => setMobileOpen(true)}
             account={account}

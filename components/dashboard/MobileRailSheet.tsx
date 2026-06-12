@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Icon } from '@/components/ui/Icon';
 
 /**
@@ -12,7 +12,9 @@ import { Icon } from '@/components/ui/Icon';
  * Snooze / Draft reply, Memory, Activity) — one rail, two containers.
  *
  * `xl:hidden` end to end: on desktop this renders nothing visible and the
- * side rail stays the only surface. Esc / backdrop / the grab-handle close it.
+ * side rail stays the only surface. Closes via Esc / backdrop / the ✕ — and
+ * by **dragging the grab-handle down** (the native sheet gesture the owner
+ * asked for: "scroll the ticket down to close it and go back to Today").
  */
 export function MobileRailSheet({
   open,
@@ -23,6 +25,9 @@ export function MobileRailSheet({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const drag = useRef({ startY: 0, delta: 0, active: false });
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -31,6 +36,32 @@ export function MobileRailSheet({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  // Swipe-down to dismiss — attached to the HEADER only, so scrolling the
+  // rail content inside the sheet is never hijacked. The sheet follows the
+  // finger (downward only); past the threshold on release it closes,
+  // otherwise it springs back.
+  function onTouchStart(e: React.TouchEvent) {
+    drag.current = { startY: e.touches[0].clientY, delta: 0, active: true };
+    const el = sheetRef.current;
+    if (el) el.style.transition = 'none';
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (!drag.current.active) return;
+    const delta = Math.max(0, e.touches[0].clientY - drag.current.startY);
+    drag.current.delta = delta;
+    const el = sheetRef.current;
+    if (el) el.style.transform = `translateY(${delta}px)`;
+  }
+  function onTouchEnd() {
+    const el = sheetRef.current;
+    if (el) {
+      el.style.transition = '';
+      el.style.transform = '';
+    }
+    if (drag.current.active && drag.current.delta > 90) onClose();
+    drag.current = { startY: 0, delta: 0, active: false };
+  }
 
   return (
     <div className="xl:hidden" aria-hidden={!open}>
@@ -45,6 +76,7 @@ export function MobileRailSheet({
       />
 
       <div
+        ref={sheetRef}
         role="dialog"
         aria-modal="true"
         aria-label="Item actions"
@@ -55,8 +87,14 @@ export function MobileRailSheet({
           open ? 'translate-y-0' : 'pointer-events-none translate-y-full',
         ].join(' ')}
       >
-        {/* Grab handle + close — a familiar sheet affordance. */}
-        <div className="relative grid place-items-center pb-1 pt-[10px]">
+        {/* Grab handle + close — drag it down to dismiss (touch-action none so
+            the browser doesn't treat the drag as a page scroll). */}
+        <div
+          className="relative grid touch-none place-items-center pb-1 pt-[10px]"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           <button
             type="button"
             onClick={onClose}
