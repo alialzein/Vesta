@@ -4,7 +4,29 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 end of day (`main` = **#45–#68 all MERGED**).
+**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#68
+all MERGED**; **PR #69 OPEN — awaiting owner merge**: `feat/dashboard-declutter`,
+PR 1 of the dashboard declutter plan ("one fact, one place", −396 lines): cards
+lose the duplicate suggested-action pill + "High priority" chip + get 1-line
+summaries; KPI strip DELETED — counts moved inside the radar filter chips
+(only non-empty chips render); rail loses the 2nd LIVE badge, the context grid,
+"94/100", and the dead Delegate button; brief loses the "Top priority" chip +
+demo Meeting Prep button and gains a calm headline aurora sheen
+(`vesta-headline-sheen`, both themes, reduced-motion safe); ONE vocabulary —
+"Waiting on you" (was Waiting on Me / Blockers); dead components deleted
+(MetricsStrip, KpiCards, MeetingPrepDrawer + demoKpis/KpiMetric/
+WorkItem.suggestedAction). Tests 469 green. **Queued next: declutter PR 2 — a
+brief that can't lie** (live counts computed at render, never from the cached
+AI text; stale-claim guard — the brief said "no overdue item" next to a red
+Overdue card; merge "Start here" + rail "Next Best Action" into ONE
+recommendation) — **and PR 3: AI motion layer** (brief types itself in, glow
+thread from "Start here" to its radar card, FLIP re-sort + count-up badges).
+**GitHub branch cleanup done (owner asked):** 78 merged remote branches + 3
+local deleted. Two UNMERGED stale branches remain (deletion needs owner call):
+`docs/session-update` (old handoff text, superseded) and
+`feature/phase-0-dashboard-shell` (Phase 0 era).
+A clear Phase C walkthrough (reconnect first, 8 numbered tests) was given in
+chat 2026-06-12 — owner still to run it.
 Today: radar-wipe fix (#63), chat quick-actions + cron doc (#64), due-time
 PROMPT v4 (#65), **PHASE C calendar & meetings, chat-v5** (#66, landed on
 main via rescue PR **#67** — #66 was a stacked PR merged into its base
