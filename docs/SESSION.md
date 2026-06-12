@@ -4,8 +4,30 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#68
-all MERGED**; **PR #69 OPEN — awaiting owner merge**: `feat/dashboard-declutter`,
+**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#69
+all MERGED** (#69 dashboard declutter PR 1 merged by owner same day).
+**PR #70 OPEN — awaiting owner merge**: `feat/brief-truth-and-motion` =
+declutter **PR 2+3 together** (owner asked) + two owner-reported fixes:
+(a) **brief that can't lie** — NEW pure `lib/dashboard/brief-guard.ts`
+(fingerprint {open,overdue} stored in daily_briefs.sections.state at write
+time; stale when overdue increased / focus pick gone / pre-v2 cache → overlay
+skipped, `brief.stale`, dashboard regenerates ONCE via
+`generateDailyBrief({force:true})`); prompt **brief-v2** bans queue-wide
+claims (no counts / "nothing is overdue"); LIVE facts line in the brief
+("5 open · 1 overdue · 2 waiting on you") computed from current optimistic
+items; ONE voice — dashboard opens with the brief's focus item selected;
+(b) **AI motion layer** — `TypeIn` (brief writes itself in word-by-word),
+`FocusThread` (GSAP, lazy `next/dynamic` chunk: glow thread draws from
+"Start here" to its radar card; hover replays; auto once/session via
+sessionStorage `vesta-thread-shown`), FLIP re-sort in TodaysRadar (WAAPI),
+count-up score badges; (c) **rail meta line wraps** (long sender emails were
+truncating the date to "Jun …"); (d) **light-mode surface rework** (owner:
+"all very white") — bg #e9f1fb, sidebar gray-white gradient #f6f9fd→#ecf3fb,
+panel-2/card a step grayer, borders a step stronger, chip count bubble
+bg-panel→bg-line (was white-on-white). Tests **482**; typecheck/lint/build
+clean; guide daily-brief-and-focus.md updated. **Verify per PR #70 body —
+especially LIGHT theme zones + the stale-brief rewrite.**
+Previous entry (#69, merged): `feat/dashboard-declutter`,
 PR 1 of the dashboard declutter plan ("one fact, one place", −396 lines): cards
 lose the duplicate suggested-action pill + "High priority" chip + get 1-line
 summaries; KPI strip DELETED — counts moved inside the radar filter chips
