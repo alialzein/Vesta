@@ -5,7 +5,31 @@
 > Claude updates it at the end of each session and pushes it.
 
 **Last updated:** 2026-06-12 (second session, work laptop). `main` =
-**#45–#72 ALL MERGED, no PRs open, all branches deleted.** The whole
+**#45–#72 MERGED. PR #73 OPEN — awaiting owner merge**:
+`feat/meetings-and-mobile-fixes` = **MEETINGS v1 + real AI Meeting Prep +
+mobile bug sweep**. (a) `/meetings` (sidebar Workspace → Meetings; phone
+Menu): Outlook calendarView today+7d via Phase C plumbing (`lib/meetings/
+data.ts`, pure day-grouping `lib/meetings/group.ts` — manager-tz buckets,
+Today always first), Join button, live Now badge, honest no_mailbox/
+needs_reconnect/error states; read-only (creation stays in chat).
+(b) **Prep with Vesta** (Phase 12 Meeting Prep, real): `lib/ai/meeting-prep`
+(meeting-prep-v1, grounded-only, honest-blank rule) + `app/actions/meetings`
+generateMeetingPrep (attendee threads filtered case-safe in JS, open
+work_items via conversation ids, ai_usage feature **'prep'** added).
+(c) Mobile fixes (owner-reported): login/update-password/onboarding were
+UNSCROLLABLE (min-h-screen+overflow-hidden under overflow:hidden body) → own
+100dvh scroll containers w/ min-h-full wrapper (scrolls from top); tab-bar
+pad now includes safe-area-inset (72px hid last rows on notched phones);
+item sheet closes by DRAGGING the grab-handle down (90px threshold); thread
+view 100dvh + safe-area bottom pad; **inbox slowness**: capped at 60 newest
+threads (was 150 × 2 client islands per row) + honest footer.
+Tests **499**; NEW guide docs/guides/meetings.md + README + phone guide.
+**⚠️ Meetings page needs the Outlook RECONNECT (calendar scope) — same one
+pending from the Phase C list. Verify after merge (phone + desktop, both
+themes): /meetings times in your tz + Join + Prep (admits when no email
+history); login scrolls on phone; inbox faster + last row visible; sheet
+drag-down closes; thread last message readable.**
+Previous entry: The whole
 design-audit arc shipped today: #69 declutter ("one fact, one place") →
 #70 truthful brief + AI motion (GSAP FocusThread, TypeIn, FLIP) + light-mode
 surfaces → #71 mobile action sheet + color tokens → #72 **Vesta Mobile**
