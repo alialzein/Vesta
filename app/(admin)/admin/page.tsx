@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getHealthOverview } from '@/lib/admin/data';
+import { buildAttention } from '@/lib/admin/attention';
 import { KpiCard, Section, Panel, Badge, EmptyState } from '@/components/admin/ui';
 import { fmtUsd, fmtInt, fmtRel } from '@/lib/admin/format';
 
@@ -43,39 +44,9 @@ export default async function AdminOverviewPage({
   const queueTone = h.webhooks.pending > 50 ? 'warn' : 'default';
   const rangeLabel = RANGES[range].label.toLowerCase();
 
-  // Everything that deserves the operator's eyes RIGHT NOW, in one strip.
-  const attention: { text: string; href: string; severity: 'bad' | 'warn' }[] = [
-    h.sync.errored > 0 && {
-      text: `${h.sync.errored} mailbox sync${h.sync.errored === 1 ? '' : 's'} erroring`,
-      href: '/admin/mailboxes',
-      severity: 'bad' as const,
-    },
-    h.sync.stale > 0 && {
-      text: `${h.sync.stale} mailbox${h.sync.stale === 1 ? '' : 'es'} stale (>30m without a sync)`,
-      href: '/admin/mailboxes',
-      severity: 'warn' as const,
-    },
-    h.webhooks.errored > 0 && {
-      text: `${h.webhooks.errored} webhook error${h.webhooks.errored === 1 ? '' : 's'}`,
-      href: '/admin/mailboxes',
-      severity: 'bad' as const,
-    },
-    h.reminders.overdue > 0 && {
-      text: `${h.reminders.overdue} reminder${h.reminders.overdue === 1 ? '' : 's'} overdue to fire (cron behind?)`,
-      href: '/admin/audit',
-      severity: 'bad' as const,
-    },
-    h.reminders.failed > 0 && {
-      text: `${h.reminders.failed} reminder${h.reminders.failed === 1 ? '' : 's'} failed`,
-      href: '/admin/audit',
-      severity: 'warn' as const,
-    },
-    h.users.suspended > 0 && {
-      text: `${h.users.suspended} account${h.users.suspended === 1 ? '' : 's'} suspended`,
-      href: '/admin/users',
-      severity: 'warn' as const,
-    },
-  ].filter((x): x is { text: string; href: string; severity: 'bad' | 'warn' } => Boolean(x));
+  // Everything that deserves the operator's eyes RIGHT NOW, in one strip —
+  // the SAME builder the ops cron mails as the daily digest.
+  const attention = buildAttention(h);
 
   return (
     <div>
