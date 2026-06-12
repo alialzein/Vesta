@@ -51,6 +51,19 @@ export async function hasSendScope(integrationId: string): Promise<boolean> {
 }
 
 /**
+ * Whether this integration's stored token was granted Calendars.ReadWrite
+ * (Phase C — read today's meetings + create events from confirmed chat orders).
+ * Mailboxes connected before Phase C need one reconnect to grant it.
+ */
+export async function hasCalendarScope(integrationId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { data } = await supabase.rpc('get_graph_token', { p_integration_id: integrationId });
+  const row = Array.isArray(data) ? data[0] : data;
+  const scopes: string[] = row?.granted_scopes ?? [];
+  return scopes.some((s) => /(^|[/.])calendars\.readwrite$/i.test(String(s).trim()));
+}
+
+/**
  * Return a valid access token for an integration, refreshing if needed.
  * Returns null if there are no stored tokens or no config.
  */

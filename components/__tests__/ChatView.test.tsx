@@ -16,6 +16,10 @@ vi.mock('@/app/actions/chat', () => ({
   executeChatAction: (...args: unknown[]) => executeChatAction(...(args as [])),
   cancelChatAction: (...args: unknown[]) => cancelChatAction(...(args as [])),
 }));
+// Attendee autocomplete (meeting cards) — no suggestions in jsdom by default.
+vi.mock('@/app/actions/people', () => ({
+  suggestAttendees: vi.fn(async () => []),
+}));
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -134,6 +138,7 @@ describe('ChatView', () => {
               status: 'proposed',
               label: 'Mark "Cedars contract approval" as done',
               result: null,
+              attendees: null,
             },
           },
         ],
@@ -144,9 +149,45 @@ describe('ChatView', () => {
     expect(screen.getByText(/Nothing runs until you confirm/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Confirm' }));
-    expect(executeChatAction).toHaveBeenCalledWith('m2');
+    expect(executeChatAction).toHaveBeenCalledWith('m2', undefined);
     await waitFor(() => expect(screen.getByText('Done — marked complete.')).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+  });
+
+  it('a meeting card shows editable attendees and confirms with the edited list', async () => {
+    executeChatAction.mockResolvedValue({ ok: true, result: 'Meeting scheduled.' });
+    const user = userEvent.setup();
+    renderChat(
+      makeData({
+        activeId: 'c1',
+        conversations: [{ id: 'c1', title: 'T', lastMessageAt: '2026-06-11T08:00:00Z' }],
+        messages: [
+          {
+            ...AI_MSG,
+            learned: [],
+            action: {
+              kind: 'create_meeting',
+              status: 'proposed',
+              label: 'Schedule meeting "Sync" with maya@cedars.com — 2026-06-13 15:00, 30 min',
+              result: null,
+              attendees: ['maya@cedars.com'],
+            },
+          },
+        ],
+      }),
+    );
+
+    // The proposed attendee renders as a removable chip.
+    expect(screen.getByText('maya@cedars.com')).toBeInTheDocument();
+    // Add another attendee by typing a full email + Enter.
+    await user.type(screen.getByLabelText('Add attendee'), 'sam@northwind.com{Enter}');
+    expect(screen.getByText('sam@northwind.com')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+    expect(executeChatAction).toHaveBeenCalledWith('m2', {
+      attendees: ['maya@cedars.com', 'sam@northwind.com'],
+    });
+    await waitFor(() => expect(screen.getByText('Meeting scheduled.')).toBeInTheDocument());
   });
 
   it('Cancel settles the card without executing', async () => {
@@ -159,7 +200,13 @@ describe('ChatView', () => {
           {
             ...AI_MSG,
             learned: [],
-            action: { kind: 'snooze', status: 'proposed', label: 'Snooze it', result: null },
+            action: {
+              kind: 'snooze',
+              status: 'proposed',
+              label: 'Snooze it',
+              result: null,
+              attendees: null,
+            },
           },
         ],
       }),

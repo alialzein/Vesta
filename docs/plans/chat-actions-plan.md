@@ -1,13 +1,23 @@
 # Chat Actions — giving Vesta orders (Plan, drafted 2026-06-11)
 
-**Status: Phases A + B BUILT 2026-06-11. A (chat-v3): mark_done / snooze /
-create_task / draft_reply with Confirm cards. B (chat-v4): create_reminder
-email engine — the Phase 1 `reminders` table EXTENDED (not duplicated; see
-20260611230001_reminders.sql: title=subject, remind_at=next firing), cron
-route /api/cron/reminders, Settings → Scheduled reminders panel with
-Cancel. ⚠️ Owner must run the migration + schedule the cron (every 5 min,
-same CRON_SECRET as the sync cron). Phase C next — owner granted
-Calendars.ReadWrite in Azure 2026-06-11 (mailbox re-consent needed).**
+**Status: ALL THREE PHASES BUILT. A (chat-v3, 2026-06-11): mark_done /
+snooze / create_task / draft_reply with Confirm cards. B (chat-v4,
+2026-06-11): create_reminder email engine — the Phase 1 `reminders` table
+EXTENDED (migration applied 2026-06-12), cron route /api/cron/reminders,
+Settings → Scheduled reminders panel. ⚠️ The `vesta-reminders` pg_cron job
+is still missing (see docs/reference/cron-setup.md) — reminders queue but
+don't send until the owner schedules it. C (chat-v5, 2026-06-12):
+Calendars.ReadWrite added to GRAPH_SCOPES; chat context gains today's
+calendarView + a known-people list; create_meeting order with the
+anti-invention attendee gate (only known-people emails or ones the manager
+typed; otherwise the model must ask); confirmation card has an EDITABLE
+attendee list with local-people autocomplete (app/actions/people
+suggestAttendees — VIPs first, then recency; Graph People.Read remains a
+future richer source); executor creates the event via lib/graph/calendar
+(teamsForBusiness → skypeForConsumer → plain-event fallback for personal
+accounts); Settings shows "Calendar & meetings: Enabled / Reconnect to
+enable". ⚠️ Owner must RECONNECT the mailbox once (Settings) to grant the
+calendar scope.**
 
 The goal: the manager types orders in Ask Vesta the way he'd tell a chief of
 staff — and Vesta executes them through the SAME server actions the buttons

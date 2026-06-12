@@ -26,8 +26,9 @@ Two ways, for two situations:
 - `When is the Cedars contract due, and what's my next step?`
 
 **Shortcut:** when a chat is empty, tappable example chips appear — questions
-AND ready-made orders (add a task, snooze, reminder email, draft). Tap one and
-edit the wording to your case; orders always show a Confirm card first.
+AND ready-made orders (add a task, snooze, reminder email, draft, today's
+meetings). Tap one and edit the wording to your case; orders always show a
+Confirm card first.
 
 ## How to teach it (this is the superpower)
 
@@ -60,14 +61,41 @@ card in the chat — **nothing happens until you tap Confirm** on that card.
 - `Email me a reminder about this thread at 3pm — every hour, 3 times.` —
   schedules real reminder **emails** to your inbox (or to an email you type).
   See and cancel them anytime in **Settings → Scheduled reminders**.
+- `Schedule a meeting with Maya tomorrow at 3pm for 45 minutes.` — creates a
+  real calendar event with an online-meeting link and sends the invites. See
+  "Meetings" below.
 
 **What you'll see:** Vesta's reply plus a card like *"Snooze 'TeamViewer
 access' until 2026-06-15 09:00 — [Confirm] [Cancel]"*. Confirm runs it (the
 card turns green with the result); Cancel dismisses it. If Vesta isn't sure
 which item or time you mean, it asks instead of guessing.
 
-Not yet possible from chat (coming next): scheduling Teams meetings — Vesta
-will tell you so honestly if you ask.
+## Meetings (new)
+
+Vesta can read your calendar and schedule meetings — after a **one-time
+reconnect** (Settings → Email connection → Reconnect Outlook) to grant
+calendar access. The Settings card shows **"Calendar & meetings: Enabled"**
+when it's on.
+
+**Ask about your day:**
+
+- `What meetings do I have today?` — times, organizers, and attendee counts.
+- `Am I in the budget meeting today?`
+
+**Schedule one:**
+
+- `Set up a Teams meeting with Maya tomorrow 3pm, 45 minutes.`
+- `Block 30 minutes for me Friday at 9am.` (no attendees = a private block)
+
+The confirmation card shows the title, time, and an **editable attendee
+list**: remove anyone with ×, or type a name in "Add people" — Vesta suggests
+emails from the senders it already knows (VIPs first); typing a full email
+also works. **Invites go to exactly that list when you tap Confirm**, and the
+event lands on your real Outlook calendar with an online-meeting link when
+your account supports one.
+
+Vesta never guesses an email address: if you name someone it doesn't know, it
+asks for their address instead of inventing one.
 
 ## Conversations
 
