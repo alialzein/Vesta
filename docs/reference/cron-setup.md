@@ -1,6 +1,6 @@
 # Scheduled jobs (pg_cron) — setup & reference
 
-Vesta's background work runs through four secured HTTP endpoints. The
+Vesta's background work runs through five secured HTTP endpoints. The
 scheduler is **Supabase pg_cron + pg_net** calling the production app —
 host-agnostic, free, any frequency (no Vercel Pro cron needed). Every route
 requires `Authorization: Bearer <CRON_SECRET>` (see `lib/cron/auth.ts`) and
@@ -10,8 +10,21 @@ no-ops safely when there is nothing to do.
 |---|---|---|---|---|
 | Mail sync | `/api/cron/sync` | every 1 min (`*/1 * * * *`) | ✅ `vesta-sync` | Delta-sync all connected mailboxes, drain webhook queue, rebuild threads + work items, AI analysis |
 | Subscription renewal | `/api/cron/renew-subscriptions` | daily 06:00 (`0 6 * * *`) | ✅ `vesta-renew-subscriptions` | Renew Graph webhook subscriptions before their ~3-day expiry |
-| **Reminders** | `/api/cron/reminders` | every 5 min | ❌ **missing — reminders queue but never send** | Send due scheduled reminder emails (Phase B chat orders) |
-| Retention purge | `/api/cron/purge` | daily 03:00 | ❌ missing | Hard-delete soft-deleted mail past grace + apply retention windows |
+| Reminders | `/api/cron/reminders` | every 5 min | ✅ `vesta-reminders` | Send due scheduled reminder emails (Phase B chat orders) |
+| Retention purge | `/api/cron/purge` | daily 03:00 | ✅ `vesta-purge` | Hard-delete soft-deleted mail past grace + apply retention windows |
+| **Ops automation** | `/api/cron/ops` | every 15 min (`*/15 * * * *`) | ⏳ owner adding (merged in #84) | Cost-cap breach alarms, stale-sync self-heal, webhook-renewal failure alerts, 8am operator digest (Resend) |
+
+```sql
+-- Ops automation (PR #84) — run once in the Supabase SQL editor:
+select cron.schedule(
+  'vesta-ops',
+  '*/15 * * * *',
+  $$ select net.http_get(
+       url     := 'https://vesta-ai-radar.vercel.app/api/cron/ops',
+       headers := jsonb_build_object('Authorization', 'Bearer <CRON_SECRET>')
+     ); $$
+);
+```
 
 ## Adding the missing jobs (run in the Supabase SQL editor)
 
