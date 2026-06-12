@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { deleteChatConversation, sendChatMessage } from '@/app/actions/chat';
 import type { ChatConversationView, ChatData, ChatMessageView } from '@/lib/chat/data';
-import { CHAT_STARTERS, MessageBubble, ThinkingIndicator } from './parts';
+import {
+  MentionMenu,
+  MessageBubble,
+  StarterBoard,
+  ThinkingIndicator,
+  useAttendeeMention,
+} from './parts';
 import { Icon } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
 import { useToast } from '@/components/ui/Toast';
@@ -45,6 +51,14 @@ export function ChatView({ data }: { data: ChatData }) {
     const el = bodyRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, sending]);
+
+  // @-mention people autocomplete + the action starters that prefill the box.
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const mention = useAttendeeMention(input, setInput);
+  function prefill(text: string) {
+    setInput(text);
+    composerRef.current?.focus();
+  }
 
   function send(text: string) {
     const q = text.trim();
@@ -175,17 +189,8 @@ export function ChatView({ data }: { data: ChatData }) {
                 quietly learns you with every conversation. It also takes orders (mark done,
                 snooze, tasks, drafts, reminder emails) — always behind your Confirm.
               </p>
-              <div className="mt-1 flex flex-wrap justify-center gap-[7px]">
-                {CHAT_STARTERS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => send(s)}
-                    className="rounded-full border border-line bg-panel-2 px-[12px] py-[7px] text-[12px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-                  >
-                    {s}
-                  </button>
-                ))}
+              <div className="mt-1 w-full">
+                <StarterBoard onSend={send} onPrefill={prefill} />
               </div>
             </div>
           ) : (
@@ -199,8 +204,10 @@ export function ChatView({ data }: { data: ChatData }) {
         </div>
 
         {/* Composer */}
-        <div className="flex items-end gap-[9px] border-t border-line bg-panel-2 px-4 py-[12px]">
+        <div className="relative flex items-end gap-[9px] border-t border-line bg-panel-2 px-4 py-[12px]">
+          <MentionMenu suggestions={mention.suggestions} onPick={mention.accept} />
           <textarea
+            ref={composerRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

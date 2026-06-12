@@ -34,6 +34,9 @@ export type GraphEvent = {
   attendees?: GraphAttendee[];
   isOnlineMeeting?: boolean;
   onlineMeeting?: { joinUrl?: string | null } | null;
+  /** Legacy field — personal (outlook.com) accounts often put the Skype join
+   *  link ONLY here, leaving onlineMeeting null. */
+  onlineMeetingUrl?: string | null;
   isCancelled?: boolean;
   location?: { displayName?: string | null } | null;
   webLink?: string | null;
@@ -51,6 +54,9 @@ export type CalendarEventView = {
   isOnline: boolean;
   joinUrl: string | null;
   location: string | null;
+  /** Deep link to the event in Outlook on the web — always present, so the
+   *  manager can reach the invite (and its link) even without a joinUrl. */
+  webLink: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -81,8 +87,9 @@ export function toEventView(e: GraphEvent): CalendarEventView {
       }))
       .filter((a) => a.email),
     isOnline: Boolean(e.isOnlineMeeting),
-    joinUrl: e.onlineMeeting?.joinUrl ?? null,
+    joinUrl: e.onlineMeeting?.joinUrl ?? e.onlineMeetingUrl ?? null,
     location: e.location?.displayName?.trim() || null,
+    webLink: e.webLink ?? null,
   };
 }
 
@@ -140,7 +147,7 @@ export async function fetchCalendarView(
     $orderby: 'start/dateTime',
     $top: String(top),
     $select:
-      'id,subject,start,end,organizer,attendees,isOnlineMeeting,onlineMeeting,isCancelled,location,webLink',
+      'id,subject,start,end,organizer,attendees,isOnlineMeeting,onlineMeeting,onlineMeetingUrl,isCancelled,location,webLink',
   });
   const data = await graphCalendarGet<{ value: GraphEvent[] }>(
     accessToken,
@@ -221,7 +228,7 @@ export async function createMeeting(
       return {
         id: e.id,
         webLink: e.webLink ?? null,
-        joinUrl: e.onlineMeeting?.joinUrl ?? null,
+        joinUrl: e.onlineMeeting?.joinUrl ?? e.onlineMeetingUrl ?? null,
         onlineProvider: provider,
       };
     } catch (err) {

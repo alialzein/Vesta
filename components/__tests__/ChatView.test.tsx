@@ -16,9 +16,10 @@ vi.mock('@/app/actions/chat', () => ({
   executeChatAction: (...args: unknown[]) => executeChatAction(...(args as [])),
   cancelChatAction: (...args: unknown[]) => cancelChatAction(...(args as [])),
 }));
-// Attendee autocomplete (meeting cards) — no suggestions in jsdom by default.
+// Attendee autocomplete (composer @-mention + meeting cards).
+const suggestAttendees = vi.fn(async (_q: string) => [] as { name: string | null; email: string }[]);
 vi.mock('@/app/actions/people', () => ({
-  suggestAttendees: vi.fn(async () => []),
+  suggestAttendees: (...args: unknown[]) => suggestAttendees(...(args as [string])),
 }));
 
 const refresh = vi.fn();
@@ -54,16 +55,26 @@ describe('ChatView', () => {
     deleteChatConversation.mockClear();
     executeChatAction.mockReset();
     cancelChatAction.mockClear();
+    suggestAttendees.mockReset();
+    suggestAttendees.mockResolvedValue([]);
     window.history.replaceState(null, '', '/chat');
   });
 
-  it('empty state shows the pitch and starter questions', () => {
+  it('empty state shows 4 ask starters, 3 action starters, and the capability toggle', async () => {
+    const user = userEvent.setup();
     renderChat(makeData());
     expect(screen.getByText(/Talk to Vesta like you talk to yourself/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'What should I focus on right now?' })).toBeInTheDocument();
-    // Order starters (chat-v3/v4 quick actions) sit next to the questions.
-    expect(screen.getByRole('button', { name: 'Remind me to call Ahmad tomorrow at 3pm.' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Email me a reminder about my top item at 5pm.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'What meetings do I have today?' })).toBeInTheDocument();
+    // Action starters PREFILL the composer (the manager completes the details).
+    await user.click(screen.getByRole('button', { name: /Schedule a meeting/ }));
+    expect(screen.getByLabelText('Message Vesta')).toHaveValue(
+      'Schedule a 30-minute meeting with @',
+    );
+    // "What can Vesta do?" expands the full capability list.
+    await user.click(screen.getByRole('button', { name: 'What can Vesta do?' }));
+    expect(screen.getByText('Give orders — you always confirm first')).toBeInTheDocument();
+    expect(screen.getByText(/saved to Memory & Rules/)).toBeInTheDocument();
   });
 
   it('sends a message optimistically and renders the reply with its learned chip', async () => {
@@ -139,6 +150,7 @@ describe('ChatView', () => {
               label: 'Mark "Cedars contract approval" as done',
               result: null,
               attendees: null,
+              link: null,
             },
           },
         ],
@@ -154,8 +166,12 @@ describe('ChatView', () => {
     expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
   });
 
-  it('a meeting card shows editable attendees and confirms with the edited list', async () => {
-    executeChatAction.mockResolvedValue({ ok: true, result: 'Meeting scheduled.' });
+  it('a meeting card shows editable attendees, confirms with the edited list, and surfaces the join link', async () => {
+    executeChatAction.mockResolvedValue({
+      ok: true,
+      result: 'Meeting scheduled.',
+      link: 'https://join.skype.com/abc',
+    });
     const user = userEvent.setup();
     renderChat(
       makeData({
@@ -171,6 +187,7 @@ describe('ChatView', () => {
               label: 'Schedule meeting "Sync" with maya@cedars.com — 2026-06-13 15:00, 30 min',
               result: null,
               attendees: ['maya@cedars.com'],
+              link: null,
             },
           },
         ],
@@ -188,6 +205,26 @@ describe('ChatView', () => {
       attendees: ['maya@cedars.com', 'sam@northwind.com'],
     });
     await waitFor(() => expect(screen.getByText('Meeting scheduled.')).toBeInTheDocument());
+    // The created meeting's link is a real, clickable button on the card.
+    expect(screen.getByRole('link', { name: /Open the meeting link/ })).toHaveAttribute(
+      'href',
+      'https://join.skype.com/abc',
+    );
+  });
+
+  it('typing @name in the composer suggests people and inserts the picked email', async () => {
+    suggestAttendees.mockResolvedValue([{ name: 'Zahraa Daher', email: 'zahraadaher17@gmail.com' }]);
+    const user = userEvent.setup();
+    renderChat(makeData());
+
+    await user.type(screen.getByLabelText('Message Vesta'), 'Schedule a meeting with @zah');
+    expect(await screen.findByText('zahraadaher17@gmail.com')).toBeInTheDocument();
+    expect(suggestAttendees).toHaveBeenLastCalledWith('zah');
+
+    await user.click(screen.getByRole('button', { name: /Zahraa Daher/ }));
+    expect(screen.getByLabelText('Message Vesta')).toHaveValue(
+      'Schedule a meeting with zahraadaher17@gmail.com ',
+    );
   });
 
   it('Cancel settles the card without executing', async () => {
@@ -206,6 +243,7 @@ describe('ChatView', () => {
               label: 'Snooze it',
               result: null,
               attendees: null,
+              link: null,
             },
           },
         ],

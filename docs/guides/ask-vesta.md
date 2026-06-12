@@ -25,10 +25,19 @@ Two ways, for two situations:
 - `What's in my briefing today?` — your news, summarized.
 - `When is the Cedars contract due, and what's my next step?`
 
-**Shortcut:** when a chat is empty, tappable example chips appear — questions
-AND ready-made orders (add a task, snooze, reminder email, draft, today's
-meetings). Tap one and edit the wording to your case; orders always show a
-Confirm card first.
+**Shortcut:** when a chat is empty you'll see two rows of chips. The **top
+row** is four questions — tap one and it's sent as-is. The **second row**
+(with the ✦ spark) is three orders — *Schedule a meeting…*, *Remind me…*,
+*Draft a reply…* — tapping one **fills the message box** so you complete the
+details (who, when) and send; orders always show a Confirm card first. Under
+the chips, tap **"What can Vesta do?"** for the full list of everything you
+can ask or order, with copyable example wording.
+
+**Adding people fast:** type `@` followed by a name anywhere in the message —
+`Schedule a meeting with @zah…` — and Vesta suggests matching people from
+your own mail (VIPs first). Pick one and the email address drops into your
+sentence. The *Schedule a meeting…* chip already ends with `@` so you can
+start typing the name immediately.
 
 ## How to teach it (this is the superpower)
 
@@ -97,6 +106,15 @@ emails from the senders it already knows (VIPs first); typing a full email
 also works. **Invites go to exactly that list when you tap Confirm**, and the
 event lands on your real Outlook calendar with an online-meeting link when
 your account supports one.
+
+**After you confirm**, the green card shows an **"Open the meeting link"**
+button — that's your join link (or the event in Outlook), so you never have
+to hunt for it. The same meeting also appears on the **Meetings** page with
+its Join button. And Vesta **emails you a reminder 15 minutes before it
+starts** (with the join link inside) — you'll see "I'll email you a reminder
+15 minutes before" in the result, and you can cancel it anytime in
+**Settings → Scheduled reminders**. Outlook's own pop-up reminder still works
+on top, like for any calendar event.
 
 Vesta never guesses an email address: if you name someone it doesn't know, it
 asks for their address instead of inventing one.
