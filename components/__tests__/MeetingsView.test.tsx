@@ -86,9 +86,12 @@ describe('MeetingsView', () => {
     expect(screen.getByRole('button', { name: 'week' })).toHaveAttribute('aria-pressed', 'true');
     // Week of Jun 8–14 with the meeting positioned as a labelled block.
     expect(screen.getByText('Jun 8 – 14')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Q3 kickoff, 9:00 AM – 9:30 AM/ }),
-    ).toBeInTheDocument();
+    const blockEl = screen.getByRole('button', { name: /Q3 kickoff, 9:00 AM – 9:30 AM/ });
+    // A 30-min block is too short for two lines → compact single-line layout
+    // (title + start time, never a clipped range).
+    expect(blockEl.textContent).toContain('Q3 kickoff');
+    expect(blockEl.textContent).toContain('9:00 AM');
+    expect(blockEl.textContent).not.toContain('–');
     // The Saturday holiday rides the all-day strip.
     expect(screen.getByRole('button', { name: 'Eid holiday' })).toBeInTheDocument();
   });

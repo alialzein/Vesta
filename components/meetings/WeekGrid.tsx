@@ -204,6 +204,13 @@ function EventBlock({
   const top = ((startMin - startHour * 60) / 60) * HOUR_PX;
   const height = Math.max(((endMin - startMin) / 60) * HOUR_PX - 2, 22);
   const width = 100 / cols;
+  // Blocks under ~45 min can't fit two lines — collapse to one (title + start),
+  // Google-Calendar style, so short meetings never render clipped text.
+  const compact = height < 38;
+
+  const liveDot = live && (
+    <span className="mr-[4px] inline-block h-[5px] w-[5px] animate-vesta-pulse rounded-full bg-white align-middle" />
+  );
 
   return (
     <button
@@ -211,7 +218,7 @@ function EventBlock({
       onClick={() => onSelect(event)}
       aria-label={`${event.subject}, ${timeRangeInTz(event.startIso, event.endIso, timezone)}`}
       className={[
-        'absolute z-10 overflow-hidden rounded-[8px] border-l-[3px] px-[6px] py-[3px] text-left shadow-soft transition hover:z-30 hover:brightness-110',
+        'absolute z-10 flex flex-col justify-center overflow-hidden rounded-[8px] border-l-[3px] px-[6px] py-[2px] text-left shadow-soft transition hover:z-30 hover:brightness-110',
         live
           ? 'border-l-accent bg-gradient-to-br from-accent to-accent-2 text-white'
           : 'border-l-accent border border-line bg-card text-ink',
@@ -223,17 +230,38 @@ function EventBlock({
         width: `calc(${width}% - 4px)`,
       }}
     >
-      <span
-        className={`block truncate font-mono text-[9px] font-semibold ${live ? 'text-white/85' : 'text-muted'}`}
-      >
-        {live && (
-          <span className="mr-[4px] inline-block h-[5px] w-[5px] animate-vesta-pulse rounded-full bg-white align-middle" />
-        )}
-        {timeRangeInTz(event.startIso, event.endIso, timezone)}
-      </span>
-      <span className="block truncate text-[11px] font-semibold leading-tight">
-        {event.subject}
-      </span>
+      {compact ? (
+        <span className="flex min-w-0 items-baseline gap-[6px]">
+          <span className="truncate text-[11px] font-semibold leading-none">
+            {liveDot}
+            {event.subject}
+          </span>
+          <span
+            className={`flex-none font-mono text-[9px] font-semibold ${live ? 'text-white/85' : 'text-muted'}`}
+          >
+            {startTimeInTz(event.startIso, timezone)}
+          </span>
+        </span>
+      ) : (
+        <>
+          <span
+            className={`block truncate font-mono text-[9px] font-semibold ${live ? 'text-white/85' : 'text-muted'}`}
+          >
+            {liveDot}
+            {timeRangeInTz(event.startIso, event.endIso, timezone)}
+          </span>
+          <span className="block truncate text-[11px] font-semibold leading-tight">
+            {event.subject}
+          </span>
+        </>
+      )}
     </button>
   );
+}
+
+/** "1:00 PM" in the manager's zone — the compact block's whole time story. */
+function startTimeInTz(iso: string, tz: string): string {
+  return iso
+    ? new Date(iso).toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' })
+    : '?';
 }
