@@ -4,9 +4,24 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#69
-all MERGED** (#69 dashboard declutter PR 1 merged by owner same day).
-**PR #70 OPEN — awaiting owner merge**: `feat/brief-truth-and-motion` =
+**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#70
+all MERGED**. **PR #71 OPEN — awaiting owner merge**:
+`feat/mobile-rail-and-color-polish` = the design-audit leftovers + the phone
+pass the owner asked for: (a) **MobileRailSheet** — below xl tapping a radar
+card slides up a bottom sheet hosting the SAME AiAssistantRail (phones could
+not act on items at all: no side rail, no hover); dvh + safe-area-inset,
+Esc/backdrop close, auto-closes on action/composer; (b) color tokens —
+`--card-selected` (selected card was identical to hover in light),
+`--violet/--violet-soft` (Soon pill was hardcoded #8b7cf6), light `--amber`
+deepened #d99a26→#a87413 (+ stronger soft fill); (c) micro-text floor 10.5px
+(labels at 9–10px bumped); (d) brief's 3-bar waveform trimmed (animation
+budget — dot + sheen carry "live"); (e) phone CSS: brief buttons =
+equal-width thumb targets, panel paddings p-4→sm:p-5, FAB smaller/tucked
+below sm. Tests **483**; checks clean; guide priorities-and-dashboard.md
+gains "On your phone or tablet". **Verify on a real phone (both themes):**
+tap card → sheet → Mark done works + sheet closes; Draft reply opens
+composer; light mode amber/Soon/selected-card all clearly visible.
+Previously merged same day — **#70**: `feat/brief-truth-and-motion` =
 declutter **PR 2+3 together** (owner asked) + two owner-reported fixes:
 (a) **brief that can't lie** — NEW pure `lib/dashboard/brief-guard.ts`
 (fingerprint {open,overdue} stored in daily_briefs.sections.state at write
