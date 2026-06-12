@@ -61,6 +61,7 @@ function toWorkItem(
   draft?: DraftView,
   sender?: SenderInfo,
   memoryUsed: ManagerMemory[] = [],
+  timezone?: string,
 ): WorkItem {
   const category = (w.category ?? 'fyi') as WorkItemCategory;
   const score = w.priority_score ?? 0;
@@ -69,7 +70,8 @@ function toWorkItem(
   const person =
     senderDisplay(sender?.name, sender?.email) ?? personFrom(w.urgency_reason);
   const personEmail = sender?.email ?? undefined;
-  const due = dueOf(w.due_at, category);
+  // Due labels in the MANAGER's timezone — the server may run in UTC.
+  const due = dueOf(w.due_at, category, timezone);
   const summary = cleanPreview(w.summary) || w.urgency_reason?.trim() || 'Open item from your mailbox.';
   // Only Outlook threads can be replied to; manual tasks have nothing to answer.
   const canDraft = w.source === 'outlook' && !!w.source_external_id;
@@ -339,6 +341,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       draftByItem.get(w.id),
       sender,
       memoryUsedFor(memoryRows, sender),
+      timezone,
     );
   });
 

@@ -52,6 +52,18 @@ describe('parseAnalysis', () => {
     expect(parseAnalysis(JSON.stringify({ summary: 'x', deadline: 'soon' })).deadline).toBeNull();
   });
 
+  it('keeps a stated deadline time (v4) and rejects malformed ones', () => {
+    const at = (deadlineTime: unknown, deadline: unknown = '2026-06-12') =>
+      parseAnalysis(JSON.stringify({ summary: 'x', deadline, deadlineTime })).deadlineTime;
+    expect(at('15:00')).toBe('15:00'); // "meet at 3:00 PM"
+    expect(at('09:30')).toBe('09:30');
+    expect(at('25:00')).toBeNull(); // not a real hour
+    expect(at('3pm')).toBeNull(); // must be HH:MM 24h
+    expect(at(null)).toBeNull();
+    // A time without a date is meaningless — dropped.
+    expect(at('15:00', null)).toBeNull();
+  });
+
   it('throws when all text fields are empty', () => {
     expect(() => parseAnalysis(JSON.stringify({ priority: 10 }))).toThrow();
   });

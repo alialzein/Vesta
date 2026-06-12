@@ -26,6 +26,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  */
 function priorityTiebreak(
   deadline: string | null,
+  deadlineTime: string | null,
   thread: {
     latest_inbound_at?: string | null;
     latest_message_at?: string | null;
@@ -35,7 +36,7 @@ function priorityTiebreak(
 ): number {
   let d = 0;
   if (deadline) {
-    const days = (new Date(`${deadline}T09:00:00Z`).getTime() - now) / DAY_MS;
+    const days = (new Date(`${deadline}T${deadlineTime ?? '09:00'}:00Z`).getTime() - now) / DAY_MS;
     if (days <= 1) d += 6;
     else if (days <= 3) d += 3;
     else if (days <= 7) d += 1;
@@ -317,7 +318,11 @@ export async function analyzeMailboxWorkItems(
       // Spread out identical AI scores using deadline / follow-up / recency signals.
       const blendedPriority = Math.max(
         0,
-        Math.min(100, analysis.priority + priorityTiebreak(analysis.deadline, thread, Date.now())),
+        Math.min(
+          100,
+          analysis.priority +
+            priorityTiebreak(analysis.deadline, analysis.deadlineTime, thread, Date.now()),
+        ),
       );
 
       const record: AnalysisInsert = {
@@ -354,10 +359,15 @@ export async function analyzeMailboxWorkItems(
           priority_score: blendedPriority,
           suggested_action: analysis.nextAction,
           urgency_reason: analysis.reason,
-          // Deadline = 9:00 AM in the manager's timezone (was 9:00 UTC, which
-          // made deadlines land mid-day or pre-dawn depending on where you live).
+          // Deadline in the manager's timezone — the thread's stated time when
+          // the model found one ("meet at 3 PM" → 15:00), else 9:00 AM. Pinning
+          // everything to 9 AM made afternoon meetings show Overdue all morning.
           due_at: analysis.deadline
-            ? zonedTimeToUtc(analysis.deadline, '09:00', managerTz).toISOString()
+            ? zonedTimeToUtc(
+                analysis.deadline,
+                analysis.deadlineTime ?? '09:00',
+                managerTz,
+              ).toISOString()
             : null,
           last_analyzed_at: nowIso,
           analysis_version: 1,
