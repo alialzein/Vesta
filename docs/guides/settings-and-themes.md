@@ -12,6 +12,12 @@ This is the control center for your mailbox connection:
 - **Sync now** — force an immediate refresh (Vesta also syncs automatically; see
   [How email stays in sync](email-sync.md)).
 - **Status** — shows whether you're connected and when the last sync succeeded.
+- **Sending replies** — whether Vesta may send your approved drafts. Shows
+  "Reconnect to enable" if your mailbox was connected before this existed.
+- **Calendar & meetings** — whether Ask Vesta can read your calendar and
+  schedule meetings (see the [Ask Vesta guide](ask-vesta.md)). If it says
+  **Reconnect to enable**, click "Reconnect Outlook" once and approve the
+  calendar permission — that's all.
 
 ## "What Vesta watches" — your filter mode
 

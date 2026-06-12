@@ -1,7 +1,7 @@
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { isGraphConfigured } from '@/lib/graph/oauth';
-import { hasSendScope } from '@/lib/graph/tokens';
+import { hasCalendarScope, hasSendScope } from '@/lib/graph/tokens';
 import { OutlookCard, type OutlookStatus } from '@/components/settings/OutlookCard';
 import { ManagedSenders, type ManagedRule } from '@/components/settings/ManagedSenders';
 import { TimezoneCard } from '@/components/settings/TimezoneCard';
@@ -56,8 +56,13 @@ export default async function SettingsPage({
     ]);
 
   const connected = integration?.status === 'connected';
-  const sendingEnabled =
-    connected && mailbox?.integration_id ? await hasSendScope(mailbox.integration_id) : false;
+  const [sendingEnabled, calendarEnabled] =
+    connected && mailbox?.integration_id
+      ? await Promise.all([
+          hasSendScope(mailbox.integration_id),
+          hasCalendarScope(mailbox.integration_id),
+        ])
+      : [false, false];
 
   const status: OutlookStatus = {
     connected,
@@ -66,6 +71,7 @@ export default async function SettingsPage({
     configured: isGraphConfigured(),
     triageMode: (mailbox?.triage_mode as OutlookStatus['triageMode']) ?? 'focused',
     sendingEnabled,
+    calendarEnabled,
   };
 
   const managedRules: ManagedRule[] = (ruleRows ?? [])

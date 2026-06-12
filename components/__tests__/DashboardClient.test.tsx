@@ -53,6 +53,9 @@ vi.mock('@/app/actions/chat', () => ({
   executeChatAction: vi.fn(async () => ({ ok: true, result: 'done' })),
   cancelChatAction: vi.fn(async () => ({ ok: true })),
 }));
+vi.mock('@/app/actions/people', () => ({
+  suggestAttendees: vi.fn(async () => []),
+}));
 
 // MemoryView + the rail's Memory tab import the Phase 10 memory actions.
 vi.mock('@/app/actions/memories', () => ({

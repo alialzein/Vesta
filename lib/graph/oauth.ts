@@ -5,11 +5,13 @@
  *
  * Scopes: offline_access (refresh token → auto-reconnect), User.Read (identity),
  * Mail.Read (read mail), Mail.Send (send approved draft replies — Phase 9; every
- * send is still explicitly approved by the manager, never automatic).
+ * send is still explicitly approved by the manager, never automatic),
+ * Calendars.ReadWrite (read today's meetings + create events from confirmed chat
+ * orders — Phase C; owner granted it on the Azure app 2026-06-11).
  *
- * Mailboxes connected before Mail.Send was added won't have granted it; the app
+ * Mailboxes connected before a scope was added won't have granted it; the app
  * detects that (granted_scopes on the stored token) and asks the manager to
- * reconnect once to enable sending.
+ * reconnect once to enable the feature.
  */
 
 export const GRAPH_SCOPES = [
@@ -20,10 +22,14 @@ export const GRAPH_SCOPES = [
   'User.Read',
   'Mail.Read',
   'Mail.Send',
+  'Calendars.ReadWrite',
 ] as const;
 
 /** The scope required to send mail on the manager's behalf. */
 export const SEND_SCOPE = 'Mail.Send';
+
+/** The scope required to read the calendar + create meetings (Phase C). */
+export const CALENDAR_SCOPE = 'Calendars.ReadWrite';
 
 export type GraphConfig = {
   clientId: string;
