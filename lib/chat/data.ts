@@ -12,7 +12,8 @@ export type ChatActionKind =
   | 'snooze'
   | 'create_task'
   | 'draft_reply'
-  | 'create_reminder';
+  | 'create_reminder'
+  | 'create_meeting';
 export type ChatActionStatus = 'proposed' | 'done' | 'failed' | 'cancelled';
 
 const ACTION_KINDS: ChatActionKind[] = [
@@ -21,6 +22,7 @@ const ACTION_KINDS: ChatActionKind[] = [
   'create_task',
   'draft_reply',
   'create_reminder',
+  'create_meeting',
 ];
 const ACTION_STATUSES: ChatActionStatus[] = ['proposed', 'done', 'failed', 'cancelled'];
 
@@ -45,6 +47,11 @@ export type StoredChatAction = {
   first_at_local?: string | null;
   repeat_minutes?: number | null;
   send_count?: number | null;
+  /** create_meeting fields (Phase C). */
+  meeting_title?: string | null;
+  start_local?: string | null;
+  duration_minutes?: number | null;
+  attendees?: string[] | null;
   /** Result line after execution (or the failure reason). */
   result?: string | null;
 };
@@ -54,6 +61,8 @@ export type ChatActionView = {
   status: ChatActionStatus;
   label: string;
   result: string | null;
+  /** create_meeting: attendee emails (editable on the card before Confirm). */
+  attendees: string[] | null;
 };
 
 export type ChatMessageView = {
@@ -96,6 +105,10 @@ export function toMessageView(r: MessageRow): ChatMessageView {
       status: a.status as ChatActionStatus,
       label: a.label,
       result: typeof a.result === 'string' ? a.result : null,
+      attendees:
+        a.kind === 'create_meeting' && Array.isArray(a.attendees)
+          ? (a.attendees as unknown[]).filter((x): x is string => typeof x === 'string')
+          : null,
     };
   }
 

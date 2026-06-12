@@ -6,6 +6,7 @@ import type { Json } from '@/lib/database.types';
 import {
   actionLabel,
   buildChatPrompt,
+  emailsInText,
   isDuplicateMemory,
   parseChatReply,
   titleFromMessage,
@@ -13,6 +14,8 @@ import {
   type ChatContext,
   type ChatTurn,
 } from '@/lib/ai/chat';
+import { getValidAccessToken, hasCalendarScope } from '@/lib/graph/tokens';
+import { createMeeting, fetchCalendarView, meetingLinesForChat } from '@/lib/graph/calendar';
 import {
   toMessageView,
   type ChatMessageView,
@@ -96,6 +99,8 @@ export async function sendChatMessage(input: {
     { data: ruleRows },
     { data: workRows },
     { data: historyRows },
+    { data: mailbox },
+    { data: peopleRows },
   ] = await Promise.all([
     supabase.from('profiles').select('full_name, role, timezone').eq('id', user.id).maybeSingle(),
     supabase
@@ -122,10 +127,50 @@ export async function sendChatMessage(input: {
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: false })
       .limit(21),
+    supabase
+      .from('mailboxes')
+      .select('id, integration_id')
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle(),
+    // Known correspondents — the only attendee emails the model may use
+    // (besides ones the manager types). VIPs first, then most recently seen.
+    supabase
+      .from('people')
+      .select('display_name, email')
+      .not('email', 'is', null)
+      .order('is_vip', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .limit(15),
   ]);
 
   const tz = safeTz(profile?.timezone);
   const briefDate = todayInTz(tz);
+
+  // ---- Calendar (Phase C): today's meetings, when the scope is granted -----
+  // Best-effort: any Graph trouble just means the block is absent this turn.
+  let calendarEnabled = false;
+  let meetings: string[] = [];
+  if (mailbox?.integration_id) {
+    try {
+      calendarEnabled = await hasCalendarScope(mailbox.integration_id);
+      if (calendarEnabled) {
+        const token = await getValidAccessToken(mailbox.integration_id);
+        if (token) {
+          const dayStart = zonedTimeToUtc(briefDate, '00:00', tz);
+          const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+          const events = await fetchCalendarView(
+            token,
+            dayStart.toISOString(),
+            dayEnd.toISOString(),
+          );
+          meetings = meetingLinesForChat(events, tz);
+        }
+      }
+    } catch {
+      /* calendar context is optional */
+    }
+  }
 
   // Today's briefing headlines + inbox brief are nice-to-have context.
   const [{ data: briefingRows }, { data: dailyBrief }] = await Promise.all([
@@ -187,6 +232,11 @@ export async function sendChatMessage(input: {
     })),
     briefingHeadlines: (briefingRows ?? []).map((b) => b.title),
     dailyBrief: dailyBrief?.summary ?? null,
+    calendarEnabled,
+    meetings,
+    people: (peopleRows ?? [])
+      .filter((p): p is { display_name: string | null; email: string } => Boolean(p.email))
+      .map((p) => ({ name: p.display_name, email: p.email.toLowerCase() })),
   };
 
   // ---- One AI call ---------------------------------------------------------
@@ -200,7 +250,14 @@ export async function sendChatMessage(input: {
   try {
     const res = await client.complete(prompt);
     const shownItems = visible.slice(0, 15);
-    const parsed = parseChatReply(res.content, shownItems.length);
+    // Attendee anti-invention gate: known people + any email the manager
+    // actually typed in this conversation.
+    const allowedAttendees = [
+      ...context.people.map((p) => p.email),
+      ...emailsInText(text),
+      ...history.filter((t) => t.role === 'user').flatMap((t) => emailsInText(t.content)),
+    ];
+    const parsed = parseChatReply(res.content, shownItems.length, allowedAttendees);
 
     // Resolve a proposed action's item index to the REAL row id + title NOW
     // (the radar may reorder later; the proposal must stay pinned to what the
@@ -226,6 +283,10 @@ export async function sendChatMessage(input: {
         first_at_local: a.kind === 'create_reminder' ? a.firstAtLocal : null,
         repeat_minutes: a.kind === 'create_reminder' ? a.repeatMinutes : null,
         send_count: a.kind === 'create_reminder' ? a.count : null,
+        meeting_title: a.kind === 'create_meeting' ? a.title : null,
+        start_local: a.kind === 'create_meeting' ? a.startLocal : null,
+        duration_minutes: a.kind === 'create_meeting' ? a.durationMinutes : null,
+        attendees: a.kind === 'create_meeting' ? a.attendees : null,
       };
     }
 
@@ -322,8 +383,13 @@ export type ExecuteChatActionResult =
  * Run a CONFIRMED chat-order proposal — the manager tapped Confirm on the
  * action card. Re-validates the stored proposal (own message, still pending)
  * and executes through the same server actions the dashboard buttons use.
+ * `edits.attendees` lets the meeting card's editable attendee list override
+ * the proposal (validated here; the final list is persisted with the action).
  */
-export async function executeChatAction(messageId: string): Promise<ExecuteChatActionResult> {
+export async function executeChatAction(
+  messageId: string,
+  edits?: { attendees?: string[] },
+): Promise<ExecuteChatActionResult> {
   await requireUser();
   const supabase = createClient();
 
@@ -337,6 +403,19 @@ export async function executeChatAction(messageId: string): Promise<ExecuteChatA
   const action = meta.action as StoredChatAction | null;
   if (!action || action.status !== 'proposed') {
     return { ok: false, error: 'This action is no longer pending.' };
+  }
+
+  // Apply card edits before executing (meeting attendees only, re-validated).
+  if (action.kind === 'create_meeting' && edits?.attendees) {
+    const clean: string[] = [];
+    for (const raw of edits.attendees.slice(0, 10)) {
+      const email = String(raw ?? '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        return { ok: false, error: `"${raw}" is not a valid email address.` };
+      }
+      if (!clean.includes(email)) clean.push(email);
+    }
+    action.attendees = clean;
   }
 
   const persist = async (status: StoredChatAction['status'], result: string | null) => {
@@ -422,6 +501,57 @@ export async function executeChatAction(messageId: string): Promise<ExecuteChatA
           ? `${schedule.remaining_sends} emails, every ${schedule.repeat_every_minutes} min, starting`
           : 'one email at';
       result = `Reminder scheduled — ${times} ${action.first_at_local} to ${toEmail}. Manage it in Settings → Scheduled reminders.`;
+      break;
+    }
+    case 'create_meeting': {
+      if (!action.meeting_title || !action.start_local) break;
+      const { data: mb } = await supabase
+        .from('mailboxes')
+        .select('integration_id')
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+      if (!mb?.integration_id) {
+        exec = { ok: false, error: 'No connected Outlook mailbox — connect one in Settings.' };
+        break;
+      }
+      if (!(await hasCalendarScope(mb.integration_id))) {
+        exec = {
+          ok: false,
+          error:
+            'Calendar access is not granted yet — open Settings and reconnect Outlook once, then ask me again.',
+        };
+        break;
+      }
+      const token = await getValidAccessToken(mb.integration_id);
+      if (!token) {
+        exec = { ok: false, error: 'Outlook token unavailable — try reconnecting in Settings.' };
+        break;
+      }
+      const attendees = action.attendees ?? [];
+      const durationMinutes = action.duration_minutes ?? 30;
+      const startIso = localToIso(action.start_local);
+      const endIso = new Date(new Date(startIso).getTime() + durationMinutes * 60_000).toISOString();
+      try {
+        const created = await createMeeting(token, {
+          subject: action.meeting_title,
+          startIso,
+          endIso,
+          attendees: attendees.map((email) => ({ email })),
+          bodyText: 'Scheduled via Vesta — confirmed by the organizer.',
+        });
+        exec = { ok: true };
+        const invitees =
+          attendees.length > 0 ? `, invites sent to ${attendees.join(', ')}` : '';
+        const link = created.onlineProvider ? ' (online-meeting link attached)' : '';
+        result = `Meeting "${action.meeting_title}" is on your calendar — ${action.start_local}, ${durationMinutes} min${invitees}${link}.`;
+      } catch {
+        exec = {
+          ok: false,
+          error:
+            'Outlook refused to create the meeting. If this mailbox was connected a while ago, reconnect it in Settings to grant calendar access.',
+        };
+      }
       break;
     }
   }

@@ -13,7 +13,7 @@
  */
 import { extractJson } from './schema';
 
-export const CHAT_PROMPT_VERSION = 'chat-v4';
+export const CHAT_PROMPT_VERSION = 'chat-v5';
 
 /** Memory types the chat may write — exactly the manager_memories vocabulary. */
 export const CHAT_MEMORY_TYPES = [
@@ -55,6 +55,17 @@ export type ChatActionProposal =
       repeatMinutes: number | null;
       /** Total sends, 1–10 ("hourly, 3 times" → 3). */
       count: number;
+    }
+  | {
+      kind: 'create_meeting';
+      title: string;
+      /** Manager-local start, "YYYY-MM-DD HH:mm". */
+      startLocal: string;
+      /** 15–480 minutes (default 30). */
+      durationMinutes: number;
+      /** Attendee emails — ONLY ones the manager typed or from the known-people
+       *  list shown to the model; never invented. May be empty (solo block). */
+      attendees: string[];
     };
 
 export type ParsedChatReply = {
@@ -93,6 +104,13 @@ export type ChatContext = {
   briefingHeadlines: string[];
   /** Today's daily inbox brief summary, when built. */
   dailyBrief: string | null;
+  /** Calendar access granted on the connected mailbox (Phase C). */
+  calendarEnabled: boolean;
+  /** Today's meetings, compact lines in manager-local time (when enabled). */
+  meetings: string[];
+  /** People the manager corresponds with — the ONLY emails (besides ones the
+   *  manager types) the model may use for meeting attendees. */
+  people: { name: string | null; email: string }[];
 };
 
 const CHAT_JSON_HINT = `{
@@ -105,6 +123,7 @@ const CHAT_JSON_HINT = `{
           | { "kind": "create_task", "title": "...", "dueLocal": "YYYY-MM-DD HH:mm" | null }
           | { "kind": "draft_reply", "itemIndex": 0, "instruction": "what the reply should say" }
           | { "kind": "create_reminder", "itemIndex": 0 | null, "subject": "what it is about", "toEmail": "a@b.com" | null, "firstAtLocal": "YYYY-MM-DD HH:mm", "repeatMinutes": 60 | null, "count": 1 }
+          | { "kind": "create_meeting", "title": "...", "startLocal": "YYYY-MM-DD HH:mm", "durationMinutes": 30, "attendees": ["a@b.com"] }
 }`;
 
 const HISTORY_CAP = 20; // turns sent back to the model
@@ -138,13 +157,19 @@ export function buildChatPrompt(input: {
     '- Plain conversational text: short paragraphs, hyphen bullets when listing. No markdown headers, no asterisks, no emoji.',
     '',
     'How to act (the "action" field) — orders the manager gives you:',
-    `- When ${name} clearly tells you to DO one of these, propose it: mark an item done (mark_done), snooze an item until a time (snooze), create a task on the radar (create_task), draft a reply on an item (draft_reply — the draft will wait for their approval, you never send), or schedule an EMAIL reminder (create_reminder — e.g. "email me about this thread at 3pm, every hour, 3 times": firstAtLocal=the 3pm slot, repeatMinutes=60, count=3; toEmail null means the manager himself; never invent another person's email — use one only when ${name} typed it).`,
+    `- When ${name} clearly tells you to DO one of these, propose it: mark an item done (mark_done), snooze an item until a time (snooze), create a task on the radar (create_task), draft a reply on an item (draft_reply — the draft will wait for their approval, you never send), schedule an EMAIL reminder (create_reminder — e.g. "email me about this thread at 3pm, every hour, 3 times": firstAtLocal=the 3pm slot, repeatMinutes=60, count=3; toEmail null means the manager himself; never invent another person's email — use one only when ${name} typed it), or schedule a meeting (create_meeting — a calendar event with an online-meeting link, e.g. "set up a Teams meeting with Maya tomorrow 3pm for 45 minutes").`,
+    `- create_meeting attendees: use ONLY emails ${name} typed, or emails from the known-people list below when ${name} names that person unambiguously. If a named attendee is not in the list and no email was given, ask for the email in the reply and set action to null. Attendees may be empty (a solo calendar block). Default durationMinutes 30 when unstated.`,
     '- "Remind me to X tomorrow 3pm" alone = create_task (a radar item). Use create_reminder only when they clearly want an EMAIL (they say email/send/inbox or a repeat pattern).',
     '- You only PROPOSE: the manager confirms with a tap before anything happens. Your reply should state what you are proposing in one short sentence.',
     '- Reference items ONLY by their [index] from the open-items list below. If you cannot tell which item they mean, or a time/date is missing, ask in the reply and set action to null.',
     `- Times are the manager's LOCAL time as "YYYY-MM-DD HH:mm" (24h). Resolve words like "tomorrow 3pm" or "Monday morning" (morning=09:00, noon=12:00, afternoon=15:00, evening=18:00) from the local time given below.`,
     '- One action per turn, only when explicitly ordered. Questions, opinions, and "should I…?" are NOT orders — answer them with action null.',
-    '- You cannot send regular email or schedule meetings yet (coming soon). For those, say so honestly and point to the right screen.',
+    '- You cannot send regular (non-reminder) email from chat. Drafts always wait for approval in Draft Replies.',
+    ...(ctx.calendarEnabled
+      ? []
+      : [
+          `- Calendar access is NOT granted on the connected mailbox yet, so never propose create_meeting and you cannot see meetings. If ${name} asks about meetings or wants one scheduled, say they need to reconnect Outlook once (Settings → Reconnect) to grant calendar access.`,
+        ]),
     '',
     'How to learn (the "remember" field) — this is what makes you THEIR Vesta:',
     `- After answering, extract durable facts from what ${name} just said — things a great chief of staff would note down: people and how to treat them (vip), standing preferences and working style (preference, tone), projects and companies (project_context, company_context), delegation habits (delegation_rule), hard limits (do_not_do), and personal context like family, health, dates that matter (personal).`,
@@ -194,6 +219,20 @@ export function buildChatPrompt(input: {
       ? ['Today\'s personal briefing headlines (world news picked for them):', ...ctx.briefingHeadlines.slice(0, 8).map((h) => `- ${cap(h, 120)}`)].join('\n')
       : '';
 
+  const meetingsBlock = ctx.calendarEnabled
+    ? ctx.meetings.length > 0
+      ? ["Today's calendar (manager-local times):", ...ctx.meetings.slice(0, 12).map((m) => `- ${cap(m, 160)}`)].join('\n')
+      : "Today's calendar: no meetings."
+    : '';
+
+  const peopleBlock =
+    ctx.people.length > 0
+      ? [
+          'People the manager corresponds with (the ONLY emails you may use for meeting attendees, besides ones the manager types):',
+          ...ctx.people.slice(0, 15).map((p) => `- ${p.name ? `${cap(p.name, 40)} ` : ''}<${p.email}>`),
+        ].join('\n')
+      : '';
+
   const historyBlock =
     input.history.length > 0
       ? [
@@ -210,6 +249,8 @@ export function buildChatPrompt(input: {
     memoryBlock,
     rulesBlock,
     workBlock,
+    meetingsBlock,
+    peopleBlock,
     ctx.dailyBrief ? `Today's inbox brief: ${cap(ctx.dailyBrief, 500)}` : '',
     briefingBlock,
     historyBlock,
@@ -225,10 +266,18 @@ export function buildChatPrompt(input: {
 /** Local wall-time as the prompt requires it: "YYYY-MM-DD HH:mm". */
 const LOCAL_TIME_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 /** Validate one proposed action. Anything off-contract → null (the reply
  *  still shows; the model was told to ask when unsure, so a dropped action
- *  is always safe). `itemCount` = how many work items the model was shown. */
-function asAction(v: unknown, itemCount: number): ChatActionProposal | null {
+ *  is always safe). `itemCount` = how many work items the model was shown;
+ *  `allowedEmails` = the only attendee emails a meeting may use (known people
+ *  + emails the manager actually typed) — the anti-invention gate. */
+function asAction(
+  v: unknown,
+  itemCount: number,
+  allowedEmails: Set<string> = new Set(),
+): ChatActionProposal | null {
   if (!v || typeof v !== 'object') return null;
   const a = v as Record<string, unknown>;
   const kind = String(a.kind ?? '');
@@ -278,13 +327,47 @@ function asAction(v: unknown, itemCount: number): ChatActionProposal | null {
       count: repeatMinutes ? count : 1,
     };
   }
+  if (kind === 'create_meeting') {
+    const title = cap(String(a.title ?? ''), 150);
+    const startLocal = String(a.startLocal ?? '').trim();
+    if (title.length < 3 || !LOCAL_TIME_RE.test(startLocal)) return null;
+    const rawDur = Number(a.durationMinutes);
+    const durationMinutes = Number.isFinite(rawDur)
+      ? Math.max(15, Math.min(480, Math.round(rawDur)))
+      : 30;
+    const rawAttendees = Array.isArray(a.attendees) ? a.attendees : [];
+    const attendees: string[] = [];
+    for (const x of rawAttendees) {
+      const email = String(x ?? '').trim().toLowerCase();
+      if (!EMAIL_RE.test(email)) return null; // malformed → drop the action
+      // The anti-invention gate: an email that is neither a known person nor
+      // typed by the manager kills the WHOLE proposal (the model must ask).
+      if (!allowedEmails.has(email)) return null;
+      if (!attendees.includes(email)) attendees.push(email);
+      if (attendees.length >= 10) break;
+    }
+    return { kind, title, startLocal, durationMinutes, attendees };
+  }
   return null;
+}
+
+/** Every email address mentioned in a text, lowercased (the manager "typed"
+ *  these — they are allowed as meeting attendees). */
+export function emailsInText(text: string): string[] {
+  return (text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) ?? []).map((e) =>
+    e.toLowerCase(),
+  );
 }
 
 /** Parse + validate the model's chat turn. Bad `remember` entries and
  *  off-contract actions are dropped silently (proposing nothing is always
- *  safe); a missing/empty reply throws. */
-export function parseChatReply(raw: string, itemCount = 0): ParsedChatReply {
+ *  safe); a missing/empty reply throws. `allowedAttendeeEmails` gates
+ *  create_meeting (known people + emails the manager typed). */
+export function parseChatReply(
+  raw: string,
+  itemCount = 0,
+  allowedAttendeeEmails: string[] = [],
+): ParsedChatReply {
   const obj = JSON.parse(extractJson(raw)) as Record<string, unknown>;
   const reply = String(obj.reply ?? '').trim();
   if (!reply) throw new Error('Chat reply was empty');
@@ -304,7 +387,15 @@ export function parseChatReply(raw: string, itemCount = 0): ParsedChatReply {
       remember.push({ type, text });
     }
   }
-  return { reply, remember, action: asAction(obj.action, itemCount) };
+  return {
+    reply,
+    remember,
+    action: asAction(
+      obj.action,
+      itemCount,
+      new Set(allowedAttendeeEmails.map((e) => e.toLowerCase())),
+    ),
+  };
 }
 
 /** The human-readable line a confirmation card shows for a proposal.
@@ -329,6 +420,13 @@ export function actionLabel(action: ChatActionProposal, itemTitle?: string | nul
           ? `, ${action.repeatMinutes === 60 ? 'hourly' : `every ${action.repeatMinutes} min`} × ${action.count}`
           : '';
       return `Email reminder ${to} about "${cap(action.subject, 60)}" starting ${action.firstAtLocal}${series}`;
+    }
+    case 'create_meeting': {
+      const who =
+        action.attendees.length > 0
+          ? ` with ${action.attendees.slice(0, 3).join(', ')}${action.attendees.length > 3 ? ` +${action.attendees.length - 3}` : ''}`
+          : '';
+      return `Schedule meeting "${cap(action.title, 60)}"${who} — ${action.startLocal}, ${action.durationMinutes} min`;
     }
   }
 }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { cancelChatAction, executeChatAction } from '@/app/actions/chat';
+import { suggestAttendees, type AttendeeSuggestion } from '@/app/actions/people';
 import type { ChatActionStatus, ChatActionView, ChatMessageView } from '@/lib/chat/data';
 import { Icon } from '@/components/ui/Icon';
 
@@ -18,11 +19,12 @@ export const CHAT_STARTERS = [
   "Who's waiting on me?",
   "What's in my briefing today?",
   'Remember that I prefer short, direct emails.',
-  // Orders (chat-v3/v4) — each proposes a Confirm card; nothing runs silently.
+  // Orders (chat-v3/v4/v5) — each proposes a Confirm card; nothing runs silently.
   'Remind me to call Ahmad tomorrow at 3pm.',
   'Snooze my top item until Monday 9am.',
   'Email me a reminder about my top item at 5pm.',
   'Draft a reply to my most urgent email.',
+  'What meetings do I have today?',
 ];
 
 export function LearnedChips({ learned }: { learned: string[] }) {
@@ -57,10 +59,13 @@ export function ActionCard({ messageId, action }: { messageId: string; action: C
   const [status, setStatus] = useState<ChatActionStatus>(action.status);
   const [result, setResult] = useState<string | null>(action.result);
   const [busy, setBusy] = useState(false);
+  // Meeting attendees are editable on the card until Confirm (Phase C).
+  const editable = action.kind === 'create_meeting';
+  const [attendees, setAttendees] = useState<string[]>(action.attendees ?? []);
 
   function confirm() {
     setBusy(true);
-    void executeChatAction(messageId)
+    void executeChatAction(messageId, editable ? { attendees } : undefined)
       .then((res) => {
         if (res.ok) {
           setStatus('done');
@@ -84,6 +89,10 @@ export function ActionCard({ messageId, action }: { messageId: string; action: C
         <Icon name="sparkle" className="mt-[2px] h-[13px] w-[13px] flex-none text-accent" />
         {action.label}
       </p>
+
+      {editable && status === 'proposed' && (
+        <AttendeeEditor attendees={attendees} onChange={setAttendees} disabled={busy} />
+      )}
 
       {status === 'proposed' && (
         <div className="mt-2 flex items-center gap-2">
@@ -123,6 +132,114 @@ export function ActionCard({ messageId, action }: { messageId: string; action: C
       {status === 'cancelled' && (
         <p className="m-0 mt-[6px] text-[12px] text-muted">Cancelled — nothing was changed.</p>
       )}
+    </div>
+  );
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Editable attendee list on a meeting confirmation card (Phase C). Type a name
+ * or email — suggestions come from the manager's OWN senders (people table,
+ * VIPs first); a full typed email can always be added with Enter. The final
+ * list is what Confirm sends — re-validated server-side.
+ */
+export function AttendeeEditor({
+  attendees,
+  onChange,
+  disabled,
+}: {
+  attendees: string[];
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+}) {
+  const [input, setInput] = useState('');
+  const [suggestions, setSuggestions] = useState<AttendeeSuggestion[]>([]);
+  const seq = useRef(0); // drop out-of-order suggestion responses
+
+  function add(email: string) {
+    const e = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(e) || attendees.includes(e)) return;
+    onChange([...attendees, e]);
+    setInput('');
+    setSuggestions([]);
+  }
+
+  function remove(email: string) {
+    onChange(attendees.filter((a) => a !== email));
+  }
+
+  function onInput(value: string) {
+    setInput(value);
+    const q = value.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const mySeq = ++seq.current;
+    void suggestAttendees(q).then((res) => {
+      if (seq.current !== mySeq) return;
+      setSuggestions(res.filter((s) => !attendees.includes(s.email)));
+    });
+  }
+
+  return (
+    <div className="mt-2">
+      <p className="m-0 mb-[5px] text-[10.5px] font-semibold uppercase tracking-wide text-muted">
+        Attendees
+      </p>
+      <div className="flex flex-wrap items-center gap-[5px]">
+        {attendees.map((email) => (
+          <span
+            key={email}
+            className="inline-flex items-center gap-[5px] rounded-full border border-line bg-panel px-[9px] py-[4px] text-[11.5px] font-medium text-ink"
+          >
+            {email}
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => remove(email)}
+              aria-label={`Remove ${email}`}
+              className="grid h-[14px] w-[14px] place-items-center rounded-full border-none bg-panel-2 text-muted transition hover:bg-red-soft hover:text-red"
+            >
+              <Icon name="close" className="h-[8px] w-[8px]" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={input}
+          disabled={disabled}
+          onChange={(e) => onInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add(input);
+            }
+          }}
+          placeholder={attendees.length === 0 ? 'Add people (name or email)…' : 'Add more…'}
+          aria-label="Add attendee"
+          className="min-w-[140px] flex-1 border-none bg-transparent py-[4px] text-[12px] text-ink outline-none placeholder:text-muted"
+        />
+      </div>
+      {suggestions.length > 0 && (
+        <div className="mt-[6px] flex flex-col gap-[2px] rounded-[9px] border border-line bg-panel p-[4px]">
+          {suggestions.map((s) => (
+            <button
+              key={s.email}
+              type="button"
+              disabled={disabled}
+              onClick={() => add(s.email)}
+              className="flex items-baseline gap-[7px] rounded-[7px] border-none bg-transparent px-[8px] py-[5px] text-left text-[12px] text-ink transition hover:bg-accent-soft"
+            >
+              {s.name && <b className="font-semibold">{s.name}</b>}
+              <span className="text-muted">{s.email}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="m-0 mt-[5px] text-[10.5px] text-muted">
+        Invites go to exactly this list when you confirm.
+      </p>
     </div>
   );
 }

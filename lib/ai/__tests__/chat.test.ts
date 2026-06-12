@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   actionLabel,
   buildChatPrompt,
+  emailsInText,
   isDuplicateMemory,
   parseChatReply,
   titleFromMessage,
@@ -33,6 +34,9 @@ function makeContext(over: Partial<ChatContext> = {}): ChatContext {
     ],
     briefingHeadlines: ['New AI data regulation announced in the UAE'],
     dailyBrief: 'Busy morning: 3 people waiting, Cedars approval is the big one.',
+    calendarEnabled: true,
+    meetings: ['09:30–10:00 Standup — organizer Maya, 4 attendees, online meeting'],
+    people: [{ name: 'Maya Chen', email: 'maya@cedars.com' }],
     ...over,
   };
 }
@@ -246,6 +250,72 @@ describe('parseChatReply — actions', () => {
     ).action;
     expect(single).toMatchObject({ repeatMinutes: null, count: 1, toEmail: 'zahraa@example.com' });
   });
+
+  it('create_meeting (Phase C): valid proposal with allowed attendees', () => {
+    const action = parseChatReply(
+      wrap({
+        kind: 'create_meeting',
+        title: 'Project sync',
+        startLocal: '2026-06-13 15:00',
+        durationMinutes: 45,
+        attendees: ['Maya@Cedars.com'],
+      }),
+      0,
+      ['maya@cedars.com'],
+    ).action;
+    expect(action).toEqual({
+      kind: 'create_meeting',
+      title: 'Project sync',
+      startLocal: '2026-06-13 15:00',
+      durationMinutes: 45,
+      attendees: ['maya@cedars.com'],
+    });
+  });
+
+  it('create_meeting: an INVENTED attendee email kills the whole proposal', () => {
+    expect(
+      parseChatReply(
+        wrap({
+          kind: 'create_meeting',
+          title: 'Project sync',
+          startLocal: '2026-06-13 15:00',
+          durationMinutes: 30,
+          attendees: ['maya@cedars.com', 'guessed@nowhere.com'],
+        }),
+        0,
+        ['maya@cedars.com'],
+      ).action,
+    ).toBeNull();
+  });
+
+  it('create_meeting: duration clamps 15–480 (default 30); bad start time drops it', () => {
+    const a = parseChatReply(
+      wrap({ kind: 'create_meeting', title: 'Block', startLocal: '2026-06-13 09:00', durationMinutes: 5, attendees: [] }),
+      0,
+    ).action;
+    expect(a).toMatchObject({ durationMinutes: 15, attendees: [] });
+    const noDur = parseChatReply(
+      wrap({ kind: 'create_meeting', title: 'Block', startLocal: '2026-06-13 09:00', attendees: [] }),
+      0,
+    ).action;
+    expect(noDur).toMatchObject({ durationMinutes: 30 });
+    expect(
+      parseChatReply(
+        wrap({ kind: 'create_meeting', title: 'Block', startLocal: 'Friday 3pm', attendees: [] }),
+        0,
+      ).action,
+    ).toBeNull();
+  });
+});
+
+describe('emailsInText', () => {
+  it('finds every typed email, lowercased', () => {
+    expect(emailsInText('invite Maya@Cedars.com and sam@x.io please')).toEqual([
+      'maya@cedars.com',
+      'sam@x.io',
+    ]);
+    expect(emailsInText('no emails here')).toEqual([]);
+  });
 });
 
 describe('actionLabel', () => {
@@ -273,6 +343,40 @@ describe('actionLabel', () => {
         count: 3,
       }),
     ).toBe('Email reminder to you about "Meeting timing" starting 2026-06-12 15:00, hourly × 3');
+    expect(
+      actionLabel({
+        kind: 'create_meeting',
+        title: 'Project sync',
+        startLocal: '2026-06-13 15:00',
+        durationMinutes: 45,
+        attendees: ['maya@cedars.com'],
+      }),
+    ).toBe('Schedule meeting "Project sync" with maya@cedars.com — 2026-06-13 15:00, 45 min');
+  });
+});
+
+describe('buildChatPrompt — calendar (Phase C)', () => {
+  it('shows today\'s meetings + the known-people list when calendar is enabled', () => {
+    const { system, user } = buildChatPrompt({
+      context: makeContext(),
+      history: [],
+      message: 'What meetings do I have today?',
+    });
+    expect(user).toContain("Today's calendar");
+    expect(user).toContain('Standup');
+    expect(user).toContain('<maya@cedars.com>');
+    expect(system).toContain('create_meeting');
+    expect(system).not.toContain('Calendar access is NOT granted');
+  });
+
+  it('tells the model to point at Reconnect when calendar is not granted', () => {
+    const { system, user } = buildChatPrompt({
+      context: makeContext({ calendarEnabled: false, meetings: [] }),
+      history: [],
+      message: 'Schedule a meeting with Maya',
+    });
+    expect(system).toContain('Calendar access is NOT granted');
+    expect(user).not.toContain("Today's calendar");
   });
 });
 
