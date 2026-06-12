@@ -12,7 +12,10 @@ import { AI_CATEGORIES, type AiAnalysis, type AiCategory } from './types';
 //     rules, hard limits, context) + a sender-is-VIP signal (Phase 10).
 // v4: deadline gains an optional TIME (deadlineTime) — a "meet at 3 PM" thread
 //     was due-stamped 9 AM and showed Overdue all morning.
-export const PROMPT_VERSION = 'v4';
+// v5: relative deadline words resolve against the MESSAGE's date (thread lines
+//     now carry dates) — "today or tomorrow?" asked on Jun 9 was returning no
+//     deadline at all instead of an overdue Jun 10.
+export const PROMPT_VERSION = 'v5';
 
 /** The shape we ask the model to return (embedded in the prompt). */
 export const ANALYSIS_JSON_HINT = `{

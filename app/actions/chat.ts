@@ -460,8 +460,10 @@ export async function executeChatAction(
       break;
     case 'create_reminder': {
       if (!action.reminder_subject || !action.first_at_local) break;
-      // Recipient defaults to the manager himself (profile email, falling
-      // back to the connected mailbox address).
+      // Recipient defaults to the manager himself — the CONNECTED MAILBOX
+      // first (the inbox he actually reads), then the login email. The old
+      // order bounced reminders for accounts whose login email (e.g. a dev
+      // address) is not a real mailbox.
       let toEmail = action.to_email;
       if (!toEmail) {
         const [{ data: prof }, { data: mb }] = await Promise.all([
@@ -473,7 +475,7 @@ export async function executeChatAction(
             .limit(1)
             .maybeSingle(),
         ]);
-        toEmail = prof?.email ?? mb?.mailbox_email ?? null;
+        toEmail = mb?.mailbox_email ?? prof?.email ?? null;
       }
       if (!toEmail) {
         exec = { ok: false, error: 'No recipient email found — connect a mailbox first.' };

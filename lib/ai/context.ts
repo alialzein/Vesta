@@ -84,7 +84,7 @@ export function buildPrompt(input: AnalysisInput): { system: string; user: strin
     "You are Vesta, an executive assistant that triages a manager's email.",
     'Analyze ONE email thread and return ONLY a JSON object — no prose, no code fences.',
     'Be concise and concrete; write for the manager. Never invent facts not in the email.',
-    'If no due date is stated or clearly implied, set deadline to null.',
+    'Deadlines: resolve relative words ("today", "tomorrow", "by Friday") against the date of the MESSAGE that says them (see the message times below), NOT against today\'s date. A question that needs an answer by a certain day — e.g. "should we meet today or tomorrow?" — implies a deadline of the LATEST day it mentions, even when that day has already passed (the manager must see it as overdue). If no due date is stated or clearly implied, set deadline to null.',
     [
       'Category — decide by WHO is waiting on whom, judged from the email content:',
       '- "waiting": a person is waiting for the MANAGER\'s reply, decision, or approval. A sender asking for an update or chasing the manager counts as "waiting".',
@@ -101,7 +101,12 @@ export function buildPrompt(input: AnalysisInput): { system: string; user: strin
 
   const contextBlock =
     input.threadContext && input.threadContext.length > 0
-      ? ['Conversation so far (oldest first):', ...input.threadContext.map((m) => `- ${m.from}: ${m.body}`)].join('\n')
+      ? [
+          'Conversation so far (oldest first):',
+          // The date prefix lets relative words ("tomorrow") resolve against the
+          // message that said them — without it every deadline floats to today.
+          ...input.threadContext.map((m) => `- ${m.at ? `[${m.at}] ` : ''}${m.from}: ${m.body}`),
+        ].join('\n')
       : '';
 
   const notesBlock =

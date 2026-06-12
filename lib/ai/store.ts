@@ -278,6 +278,8 @@ export async function analyzeMailboxWorkItems(
       .reverse()
       .map((x) => ({
         from: x.direction === 'outbound' ? 'the manager' : x.sender_name || x.sender_email || 'them',
+        // Message date, so relative words in the body anchor to the right day.
+        at: x.received_at ? x.received_at.slice(0, 10) : null,
         body:
           bodyForAi({
             body_text: x.body_text,
