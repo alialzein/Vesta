@@ -2,8 +2,14 @@
 
 import type { MorningBrief as MorningBriefData } from '@/lib/types';
 import { Icon, type IconName } from '@/components/ui/Icon';
+import { TypeIn } from './TypeIn';
 
 export type BriefAction = 'focus' | 'drafts';
+
+/** Live queue counts, computed by the dashboard from the CURRENT items at
+ *  render time (declutter PR 2): numbers never come from cached AI text, so
+ *  they stay correct through optimistic actions and mid-day changes. */
+export type BriefStats = { open: number; overdue: number; waiting: number };
 
 // Delegate intentionally lives only in Today's Radar rows and the AI rail, so
 // it is not duplicated here (Phase 0.4). Meeting Prep was removed in the
@@ -28,6 +34,9 @@ export function MorningBrief({
   generating = false,
   focusTitle,
   onStartFocus,
+  stats,
+  onStartFocusHover,
+  startHereRef,
 }: {
   brief: MorningBriefData;
   onAction: (action: BriefAction) => void;
@@ -37,6 +46,12 @@ export function MorningBrief({
   focusTitle?: string;
   /** Jump into the suggested first item (selects it / starts Focus Mode). */
   onStartFocus?: () => void;
+  /** Live counts from the current items — always true, never cached AI text. */
+  stats?: BriefStats;
+  /** Hovering "Start here" replays the glow thread to the focus card. */
+  onStartFocusHover?: () => void;
+  /** Exposes the "Start here" row element (the glow thread's anchor). */
+  startHereRef?: (el: HTMLElement | null) => void;
 }) {
   return (
     <section className="relative isolate z-[1] rounded-[var(--radius)] border border-line-strong bg-panel p-[18px] shadow-glow">
@@ -84,10 +99,31 @@ export function MorningBrief({
             </span>
           </div>
 
+          {/* TypeIn: the words write themselves in the moment the AI brief
+              replaces the deterministic one (first render stays instant). */}
           <h2 className="vesta-headline-sheen m-0 mt-[10px] font-display text-[19px] font-medium leading-tight tracking-tight sm:text-[21px]">
-            {brief.headline}
+            <TypeIn text={brief.headline} />
           </h2>
-          <p className="mt-[5px] text-[13px] leading-snug text-ink-soft">{brief.summaryLine}</p>
+          <p className="mt-[5px] text-[13px] leading-snug text-ink-soft">
+            <TypeIn text={brief.summaryLine} />
+          </p>
+
+          {/* LIVE numbers — computed from the items on screen right now, never
+              taken from the (cached) AI narrative, so they cannot lie. */}
+          {stats && stats.open > 0 && (
+            <p className="mt-[7px] flex flex-wrap items-center gap-x-[12px] gap-y-[2px] font-mono text-[11px] font-semibold">
+              <span className="text-muted">{stats.open} open</span>
+              {stats.overdue > 0 && (
+                <span className="inline-flex items-center gap-[4px] text-red">
+                  <Icon name="clock" className="h-[11px] w-[11px]" />
+                  {stats.overdue} overdue
+                </span>
+              )}
+              {stats.waiting > 0 && (
+                <span className="text-muted">{stats.waiting} waiting on you</span>
+              )}
+            </p>
+          )}
 
           {/* While the once-a-day AI brief is being written (first load of the
               morning) the deterministic brief stays visible — this is only a
@@ -99,11 +135,14 @@ export function MorningBrief({
             </p>
           )}
 
-          {/* The AI's "start here" pick — one click jumps to that item. */}
+          {/* The AI's "start here" pick — one click jumps to that item; hover
+              draws the glow thread pointing at its card on the radar. */}
           {!generating && brief.focusItemId && focusTitle && onStartFocus && (
             <button
               type="button"
+              ref={startHereRef}
               onClick={onStartFocus}
+              onMouseEnter={onStartFocusHover}
               className="group mt-[10px] flex w-full items-start gap-[9px] rounded-[12px] border border-line bg-panel-2 p-[10px] text-left transition hover:border-accent"
             >
               <span className="mt-[1px] grid h-6 w-6 flex-none place-items-center rounded-full bg-accent-soft text-accent">

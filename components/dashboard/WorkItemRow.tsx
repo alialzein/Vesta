@@ -1,9 +1,42 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
 import type { WorkItem, WorkItemSource } from '@/lib/types';
 import { priorityBand } from '@/lib/priority';
 import { avatarHue, initialsOf } from '@/lib/avatar';
 import { Chip } from '@/components/ui/Chip';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
+
+/** Animate the score badge between values when an item's priority CHANGES
+ *  (re-analysis / a refresh re-ranked it) — a short count-up beat that says
+ *  "the AI just re-scored this" (declutter PR 3). First render is instant;
+ *  reduced motion snaps to the new value. */
+function useCountUp(value: number): number {
+  const [display, setDisplay] = useState(value);
+  const prev = useRef(value);
+  useEffect(() => {
+    const from = prev.current;
+    prev.current = value;
+    if (from === value) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setDisplay(value);
+      return;
+    }
+    const t0 = performance.now();
+    const dur = 500;
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setDisplay(Math.round(from + (value - from) * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return display;
+}
 
 // Soft, borderless priority tint — reads as an integrated anchor, not a box.
 const bandClasses: Record<ReturnType<typeof priorityBand>, string> = {
@@ -56,12 +89,15 @@ export function WorkItemRow({
   busy = false,
 }: WorkItemRowProps) {
   const band = priorityBand(item.priorityScore);
+  const displayScore = useCountUp(item.priorityScore);
 
   return (
     // Wrapper (not the row <button>) hosts the hover group + exit transition so
     // the quick-action buttons are siblings of the row button, never nested
     // inside it (nested interactive elements are invalid HTML).
+    // data-work-item-id anchors the FLIP re-sort + the brief's glow thread.
     <div
+      data-work-item-id={item.id}
       className={[
         'group/row relative transition-[transform,opacity] duration-200',
         leaving ? 'pointer-events-none translate-x-[16px] opacity-0' : '',
@@ -94,11 +130,12 @@ export function WorkItemRow({
           />
         )}
 
-        {/* Priority badge — cleaner: smaller footprint, soft fill, thin border. */}
+        {/* Priority badge — cleaner: smaller footprint, soft fill, thin border.
+            The number counts up/down when the AI re-scores the item. */}
         <span
           className={`grid h-[38px] w-[40px] flex-none place-items-center rounded-[11px] font-mono text-[14px] font-bold ${bandClasses[band]}`}
         >
-          {item.priorityScore}
+          {displayScore}
         </span>
 
         {/* Body */}

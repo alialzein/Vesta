@@ -37,6 +37,40 @@ describe('MorningBrief', () => {
     expect(screen.queryByRole('button', { name: /Meeting Prep/i })).not.toBeInTheDocument();
   });
 
+  it('shows LIVE queue numbers from props (never from cached AI text), zeros hidden', () => {
+    render(
+      <MorningBrief
+        brief={demoMorningBrief}
+        onAction={() => {}}
+        stats={{ open: 5, overdue: 2, waiting: 1 }}
+      />,
+    );
+    expect(screen.getByText('5 open')).toBeInTheDocument();
+    expect(screen.getByText('2 overdue')).toBeInTheDocument();
+    expect(screen.getByText('1 waiting on you')).toBeInTheDocument();
+  });
+
+  it('hides zero facts ("0 overdue" is noise) and the whole line on an empty queue', () => {
+    const { rerender } = render(
+      <MorningBrief
+        brief={demoMorningBrief}
+        onAction={() => {}}
+        stats={{ open: 3, overdue: 0, waiting: 0 }}
+      />,
+    );
+    expect(screen.getByText('3 open')).toBeInTheDocument();
+    expect(screen.queryByText(/overdue/)).not.toBeInTheDocument();
+
+    rerender(
+      <MorningBrief
+        brief={demoMorningBrief}
+        onAction={() => {}}
+        stats={{ open: 0, overdue: 0, waiting: 0 }}
+      />,
+    );
+    expect(screen.queryByText(/0 open/)).not.toBeInTheDocument();
+  });
+
   it('reports the chosen quick action to the parent', async () => {
     const user = userEvent.setup();
     const onAction = vi.fn();

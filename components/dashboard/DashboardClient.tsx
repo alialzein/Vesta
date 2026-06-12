@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import type {
   MemoryRecord,
   MorningBrief as MorningBriefData,
@@ -41,6 +42,12 @@ import { TimezoneSync } from '@/components/sync/TimezoneSync';
 import { Icon } from '@/components/ui/Icon';
 import type { AccountView } from '@/lib/supabase/account';
 import type { DraftCapabilities } from '@/lib/drafts/capabilities';
+
+// The glow thread pulls in GSAP — loaded lazily so the dashboard's first
+// paint pays nothing for it (same pattern as the landing's Three.js chunk).
+const FocusThread = dynamic(() => import('./FocusThread').then((m) => m.FocusThread), {
+  ssr: false,
+});
 
 /** Safe default when capabilities aren't provided (component tests / demo). */
 const DEFAULT_CAPABILITIES: DraftCapabilities = {
@@ -143,7 +150,15 @@ export function DashboardClient({
   // Deep link from the Drafts page: pre-select the linked item (and optionally
   // open its composer) instead of defaulting to the top of the radar.
   const linkedItem = initialItemId ? workItems.find((i) => i.id === initialItemId) : undefined;
-  const [selected, setSelected] = useState<WorkItem | undefined>(linkedItem ?? workItems[0]);
+  // ONE voice (declutter PR 2): when today's brief has a "start here" pick,
+  // that item starts selected — so the rail's Next Best Action and the brief's
+  // recommendation are the same thing, never two competing "do this first".
+  const briefFocusItem = brief.focusItemId
+    ? workItems.find((i) => i.id === brief.focusItemId)
+    : undefined;
+  const [selected, setSelected] = useState<WorkItem | undefined>(
+    linkedItem ?? briefFocusItem ?? workItems[0],
+  );
   const [view, setView] = useState<NavView>(initialView);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
@@ -164,7 +179,10 @@ export function DashboardClient({
 
   // Phase 11 — the AI daily brief. The server provides today's cached brief
   // when it exists; otherwise we ask for it ONCE on mount (one AI call/day)
-  // while the deterministic brief stays on screen.
+  // while the deterministic brief stays on screen. When the cache exists but
+  // the stale-guard rejected it (brief.stale — e.g. something became overdue
+  // after it was written), we regenerate with force so today's narrative is
+  // rewritten for the real queue.
   const [briefState, setBriefState] = useState<MorningBriefData>(brief);
   useEffect(() => setBriefState(brief), [brief]);
   const [briefGenerating, setBriefGenerating] = useState(false);
@@ -172,7 +190,7 @@ export function DashboardClient({
     if (brief.aiGenerated || workItems.length === 0 || !capabilities.aiEnabled) return;
     let cancelled = false;
     setBriefGenerating(true);
-    void generateDailyBrief()
+    void generateDailyBrief({ force: brief.stale === true })
       .then((res) => {
         if (cancelled || !res.ok) return;
         setBriefState((prev) => ({
@@ -180,6 +198,7 @@ export function DashboardClient({
           headline: res.headline,
           summaryLine: res.body,
           aiGenerated: true,
+          stale: false,
           focusItemId: res.focusItemId,
           focusReason: res.focusReason,
         }));
@@ -198,6 +217,30 @@ export function DashboardClient({
   const focusItem = briefState.focusItemId
     ? items.find((i) => i.id === briefState.focusItemId)
     : undefined;
+
+  // LIVE brief numbers — from the CURRENT optimistic items, never cached AI
+  // text (declutter PR 2), so marking something done updates them instantly.
+  const briefStats = {
+    open: items.length,
+    overdue: items.filter((i) => i.overdue).length,
+    waiting: items.filter((i) => i.categories.includes('waiting')).length,
+  };
+
+  // The glow thread (declutter PR 3): Vesta visibly points from "Start here"
+  // to that card. Replayed on hover; auto-plays once per browser session.
+  const [startHereEl, setStartHereEl] = useState<HTMLElement | null>(null);
+  const [threadKey, setThreadKey] = useState(0);
+  useEffect(() => {
+    if (!startHereEl || !briefState.focusItemId) return;
+    try {
+      if (sessionStorage.getItem('vesta-thread-shown')) return;
+      sessionStorage.setItem('vesta-thread-shown', '1');
+    } catch {
+      /* storage unavailable (private mode) — just skip the auto-play */
+      return;
+    }
+    setThreadKey((k) => k + 1);
+  }, [startHereEl, briefState.focusItemId]);
 
   /** Called when the splash finishes its timed sequence. */
   function handleSplashDone() {
@@ -415,6 +458,9 @@ export function DashboardClient({
                   brief={briefState}
                   generating={briefGenerating}
                   focusTitle={focusItem?.title}
+                  stats={briefStats}
+                  startHereRef={setStartHereEl}
+                  onStartFocusHover={() => setThreadKey((k) => k + 1)}
                   onStartFocus={
                     focusItem
                       ? () => {
@@ -512,6 +558,9 @@ export function DashboardClient({
           </span>
         </button>
       )}
+
+      {/* The glow thread — Vesta points from "Start here" to the focus card. */}
+      <FocusThread playKey={threadKey} fromEl={startHereEl} targetId={focusItem?.id ?? null} />
 
       {/* Mini chat dock (real backend — same conversations as /chat). */}
       <ChatDock open={chatOpen} onClose={() => setChatOpen(false)} />

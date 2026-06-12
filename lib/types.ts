@@ -173,17 +173,21 @@ export type MemoryRecord = {
 };
 
 /** Morning brief hero content. Deterministic by default; overlaid with the
- *  cached AI brief from daily_briefs when one exists for today (Phase 11). */
+ *  cached AI brief from daily_briefs when one exists for today (Phase 11).
+ *  Live counts (open/overdue/waiting) are NEVER stored here — the dashboard
+ *  computes them from the items at render time so they can't go stale. */
 export type MorningBrief = {
   headline: string;
   /** Long-form HTML body (kept for future/expanded views). */
   body: string;
   /** One concise plain-text line shown in the compact brief card. */
   summaryLine: string;
-  /** Highest priority score in the queue — shown as a compact "Top priority" chip. */
-  topUrgencyScore: number;
   /** True when headline/summaryLine came from the AI daily brief (cached for today). */
   aiGenerated?: boolean;
+  /** Today's cached AI brief exists but no longer matches the live queue
+   *  (brief-guard) — the deterministic text is showing and the dashboard
+   *  should regenerate once with force. */
+  stale?: boolean;
   /** The AI's "start here" pick — a work item id, when that item is still open. */
   focusItemId?: string | null;
   /** One sentence: why start there. */

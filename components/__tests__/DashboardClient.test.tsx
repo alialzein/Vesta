@@ -67,6 +67,9 @@ vi.mock('@/app/actions/memories', () => ({
   rejectMemory: vi.fn(async () => ({ ok: true })),
 }));
 
+// The glow thread is GSAP + viewport geometry — inert in jsdom.
+vi.mock('@/components/dashboard/FocusThread', () => ({ FocusThread: () => null }));
+
 function renderDashboard() {
   return render(
     <ThemeProvider>
@@ -270,6 +273,32 @@ describe('DashboardClient shell', () => {
     expect(screen.queryByRole('link', { name: /Delegation/ })).not.toBeInTheDocument();
     // The roadmap pill sits next to the label.
     expect(screen.getByText('Delegation').parentElement?.textContent).toContain('Soon');
+  });
+
+  it('starts selected on the brief\'s "start here" pick — ONE voice, not two recommendations', () => {
+    // The brief recommends the hiring item; the radar's top item is Cedars.
+    // Before PR 2 the rail opened on Cedars while the brief said "start with
+    // hiring" — two competing "do this first" on one screen.
+    render(
+      <ThemeProvider>
+        <ToastProvider>
+          <DashboardClient
+            brief={{
+              headline: 'Hiring needs your decision.',
+              body: 'b',
+              summaryLine: 's',
+              aiGenerated: true,
+              focusItemId: 'wi-hiring',
+              focusReason: 'The candidate deadline is closest.',
+            }}
+          />
+        </ToastProvider>
+      </ThemeProvider>,
+    );
+    // Selected items render in the radar AND the rail.
+    expect(screen.getAllByText('Hiring decision follow-up').length).toBeGreaterThan(1);
+    // The live facts line is computed from the demo items at render time.
+    expect(screen.getByText('5 open')).toBeInTheDocument();
   });
 
   it('pre-selects the deep-linked work item (Drafts page → composer handoff)', () => {

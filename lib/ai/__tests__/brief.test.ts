@@ -28,6 +28,9 @@ describe('buildBriefPrompt', () => {
     expect(system).toContain('Return ONLY a JSON object');
     // The model must never invent content.
     expect(system).toContain('Never invent');
+    // brief-v2: queue-wide claims (counts, "nothing is overdue") are banned —
+    // the app renders live numbers and the queue changes during the day.
+    expect(system).toContain('NEVER state queue-wide facts');
   });
 });
 

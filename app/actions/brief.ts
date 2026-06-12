@@ -4,6 +4,7 @@ import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
 import { getDashboardData } from '@/lib/dashboard/data';
 import { buildBriefPrompt, parseBrief, BRIEF_PROMPT_VERSION, type BriefItem } from '@/lib/ai/brief';
+import { briefFingerprint } from '@/lib/dashboard/brief-guard';
 import { getEffectiveAi } from '@/lib/ai/runtime';
 import { estimateCostUsd } from '@/lib/ai/cost';
 import { recordAiUsage } from '@/lib/ai/usage';
@@ -42,7 +43,7 @@ function toBriefItem(w: WorkItem): BriefItem {
   };
 }
 
-export async function generateDailyBrief(): Promise<BriefResult> {
+export async function generateDailyBrief(opts?: { force?: boolean }): Promise<BriefResult> {
   const user = await requireUser();
   const supabase = createClient();
   // "Today" follows the manager's clock — the brief rolls over at THEIR midnight.
@@ -54,21 +55,25 @@ export async function generateDailyBrief(): Promise<BriefResult> {
   const tz = tzProfile?.timezone ?? 'UTC';
   const briefDate = todayInTz(tz);
 
-  // Already written today (another tab/device won the race)? Serve the cache.
-  const { data: cached } = await supabase
-    .from('daily_briefs')
-    .select('title, summary, sections')
-    .eq('brief_date', briefDate)
-    .maybeSingle();
-  if (cached?.title && cached.summary) {
-    const sections = (cached.sections as { focus_item_id?: string; focus_reason?: string } | null) ?? {};
-    return {
-      ok: true,
-      headline: cached.title,
-      body: cached.summary,
-      focusItemId: sections.focus_item_id ?? null,
-      focusReason: sections.focus_reason ?? null,
-    };
+  // Already written today (another tab/device won the race)? Serve the cache —
+  // unless the caller detected the cache is STALE (the queue changed materially
+  // since it was written; see lib/dashboard/brief-guard.ts) and forces a rewrite.
+  if (!opts?.force) {
+    const { data: cached } = await supabase
+      .from('daily_briefs')
+      .select('title, summary, sections')
+      .eq('brief_date', briefDate)
+      .maybeSingle();
+    if (cached?.title && cached.summary) {
+      const sections = (cached.sections as { focus_item_id?: string; focus_reason?: string } | null) ?? {};
+      return {
+        ok: true,
+        headline: cached.title,
+        body: cached.summary,
+        focusItemId: sections.focus_item_id ?? null,
+        focusReason: sections.focus_reason ?? null,
+      };
+    }
   }
 
   // The same enriched view the radar shows (real senders, due labels, ranking).
@@ -102,6 +107,9 @@ export async function generateDailyBrief(): Promise<BriefResult> {
           focus_reason: brief.focusReason,
           prompt_version: BRIEF_PROMPT_VERSION,
           item_count: workItems.length,
+          // Queue state at writing time — the stale-brief guard compares this
+          // against the live radar before showing the cached narrative.
+          state: briefFingerprint(workItems),
         },
         generated_by_model: cfg.model,
       },
