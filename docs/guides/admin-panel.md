@@ -138,6 +138,25 @@ pipeline reads them on every run (no deploy needed); blank = use env.
   (`node scripts/backfill-ai-usage.mjs` imports pre-ledger history;
   `node scripts/ai-usage-report.mjs` prints the same analysis in the terminal.)
 
+### 👤 Admin Settings (the super admin itself)
+The operator account is **not a user**: it has no mailbox, no radar, no
+memories, and it never appears in Users & Accounts. The middleware keeps it
+inside /admin (any app page bounces back to the console), and its sessions
+**expire after 12 hours** by design. This tab manages the account itself:
+
+- **Operator account** — which email is admin, last sign-in, and how to move
+  admin rights later (`node scripts/grant-admin.mjs new@email` + clearing
+  `is_admin` on the old one in Supabase).
+- **Password** — change it right here.
+- **Two-factor (optional, recommended)** — authenticator-app TOTP: tap
+  *Turn on two-factor*, scan the QR with Google Authenticator/Authy, enter
+  the 6-digit code. Requires TOTP enabled once in **Supabase →
+  Authentication → Multi-Factor**.
+- **Maintenance mode** — one switch that locks the app for normal users
+  (they see a friendly "back soon" screen; mail keeps syncing) while the
+  console stays open. Flips are audit-logged.
+- **Your recent admin actions** — the account's own audit trail at a glance.
+
 ## Safety model
 
 - Every **destructive** action (delete, wipe, purge, suspend) asks for confirmation —

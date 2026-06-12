@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/database.types';
+import { adminSessionExpired } from '@/lib/admin/session';
 
 /**
  * Refreshes the Supabase auth session on every request and enforces route
@@ -89,6 +90,19 @@ export async function updateSession(request: NextRequest) {
   }
 
   const isAdmin = user?.app_metadata?.is_admin === true;
+
+  // Operator sessions expire after 12h (the console controls every account —
+  // a forgotten open tab must not stay powerful for days). Claim-only check.
+  if (user && isAdmin && adminSessionExpired(user.last_sign_in_at)) {
+    await supabase.auth.signOut();
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = '';
+    url.searchParams.set('error', 'admin_session');
+    const redirect = NextResponse.redirect(url);
+    for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+    return redirect;
+  }
 
   // Admins are operators, not app users — keep them inside /admin.
   if (user && isAdmin && !publicPath && !pathname.startsWith('/admin')) {

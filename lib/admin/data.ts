@@ -127,10 +127,14 @@ export async function getHealthOverview(aiSinceIso?: string): Promise<HealthOver
     svc.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
-  const adminCount = (authListRes.data?.users ?? []).filter(
-    (u) => u.app_metadata?.is_admin === true,
-  ).length;
-  const profiles = profilesRes.data ?? [];
+  const adminIds = new Set(
+    (authListRes.data?.users ?? [])
+      .filter((u) => u.app_metadata?.is_admin === true)
+      .map((u) => u.id),
+  );
+  const adminCount = adminIds.size;
+  // Operators are NOT users — the user numbers describe real manager accounts.
+  const profiles = (profilesRes.data ?? []).filter((p) => !adminIds.has(p.id));
   const cursors = cursorsRes.data ?? [];
   const lastSuccess = cursors
     .map((c) => c.last_success_at)
@@ -383,6 +387,9 @@ export async function listUsers(): Promise<AdminUserRow[]> {
   for (const m of msgs ?? []) countByUser.set(m.user_id, (countByUser.get(m.user_id) ?? 0) + 1);
 
   return (profiles ?? [])
+    // The super admin is an operator, not a user — it never appears in this
+    // list (manage it from Admin Settings / Supabase instead).
+    .filter((p) => authById.get(p.id)?.app_metadata?.is_admin !== true)
     .map((p) => {
       const auth = authById.get(p.id);
       return {

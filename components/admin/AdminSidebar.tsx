@@ -29,6 +29,7 @@ const NAV: { heading: string; items: NavItem[] }[] = [
       { label: 'Triage & Rules', href: '/admin/triage', icon: 'settings' },
       { label: 'Drafts & Sending', href: '/admin/drafts', icon: 'drafts' },
       { label: 'Audit & Security', href: '/admin/audit', icon: 'shield' },
+      { label: 'Admin Settings', href: '/admin/settings', icon: 'people' },
     ],
   },
 ];

@@ -29,10 +29,19 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
  * Returns the authenticated user or redirects to /login. Use to guard server
  * components/actions that must have a session. Middleware already protects
  * routes, but this is the defense-in-depth check at the data layer.
+ *
+ * Maintenance mode: when the operator flips the switch, every normal user is
+ * routed to /maintenance from here — the single gate all app pages and
+ * actions pass through (admins keep working; the check is one cached
+ * single-row read per request).
  */
 export async function requireUser(): Promise<User> {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  if (user.app_metadata?.is_admin !== true) {
+    const { isMaintenanceOn } = await import('@/lib/admin/maintenance');
+    if (await isMaintenanceOn()) redirect('/maintenance');
+  }
   return user;
 }
 

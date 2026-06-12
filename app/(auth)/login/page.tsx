@@ -14,6 +14,8 @@ const ERROR_NOTICES: Record<string, string> = {
   suspended:
     'This account has been suspended by an administrator. Contact your Vesta operator if you believe this is a mistake.',
   auth_callback_failed: 'Sign-in could not be completed. Please try again.',
+  admin_session:
+    'Operator sessions expire after 12 hours for safety. Please sign in again.',
 };
 
 export default function LoginPage({
