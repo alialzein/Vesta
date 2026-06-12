@@ -4,8 +4,9 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#70
-all MERGED**. **TWO PRs OPEN, STACKED — merge #71 FIRST, then #72.**
+**Last updated:** 2026-06-12 (second session, work laptop). `main` = **#45–#71
+all MERGED** (#71 merged while #72 was being opened — branch deleted).
+**PR #72 OPEN — awaiting owner merge.**
 **PR #72** (`feat/vesta-mobile`, stacked on #71) = **Vesta Mobile** (owner Q&A,
 all recommended options chosen): (a) **bottom tab bar**
 `components/app/MobileTabBar` (lg:hidden, rendered by BOTH shells): Today ·
