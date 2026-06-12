@@ -126,7 +126,7 @@ export function TodaysRadar({
   );
 
   return (
-    <section className="relative z-[1] rounded-[var(--radius)] border border-line bg-panel p-5 shadow-glow">
+    <section className="relative z-[1] rounded-[var(--radius)] border border-line bg-panel p-4 shadow-glow sm:p-5">
       <div className="mb-[16px] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-baseline gap-[10px]">
           <h2 className="m-0 font-display text-[19px] font-medium tracking-tight">

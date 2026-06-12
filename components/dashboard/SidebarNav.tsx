@@ -102,7 +102,7 @@ export function SidebarNav({
                     className={`h-[19px] w-[19px] ${isActive ? 'text-accent' : 'opacity-85'}`}
                   />
                   {collapsed && hasBadge && (
-                    <span className="absolute -right-[7px] -top-[7px] grid h-[15px] min-w-[15px] place-items-center rounded-full bg-accent px-[3px] font-mono text-[9px] font-bold leading-none text-white shadow-[0_2px_5px_rgba(47,125,235,0.5)]">
+                    <span className="absolute -right-[7px] -top-[7px] grid h-[16px] min-w-[16px] place-items-center rounded-full bg-accent px-[3px] font-mono text-[10px] font-bold leading-none text-white shadow-[0_2px_5px_rgba(47,125,235,0.5)]">
                       {item.badge}
                     </span>
                   )}
@@ -110,10 +110,12 @@ export function SidebarNav({
 
                 {!collapsed && <span className="truncate">{item.label}</span>}
 
-                {/* Roadmap rows wear the landing page's violet "Soon" pill —
-                    the same honesty promise, inside the app. */}
+                {/* Roadmap rows wear the violet "Soon" pill — the same honesty
+                    promise as the landing. Violet is now a THEME TOKEN
+                    (--violet/--violet-soft) so both themes speak one roadmap
+                    color (was hardcoded #8b7cf6, invisible-ish in light). */}
                 {!collapsed && item.soon && (
-                  <span className="ml-auto rounded-full border border-[#8b7cf6]/40 px-[8px] py-[2px] font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#8b7cf6]">
+                  <span className="ml-auto rounded-full bg-violet-soft px-[8px] py-[2px] font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-violet">
                     Soon
                   </span>
                 )}
