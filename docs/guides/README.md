@@ -26,6 +26,7 @@ manual. Each guide is self-contained and matches the product as it actually ship
 | [Draft replies](draft-replies.md) | Let Vesta write a reply — or a follow-up nudge — edit it, and approve & send; nothing sends without you |
 | [Memory & Rules](memory-and-rules.md) | Teach Vesta VIPs, tone, delegation, and hard limits — used in every ranking and draft; suggestions wait for your approval |
 | [Ask Vesta](ask-vesta.md) | Your second brain — chat that answers from your inbox, memory, briefing, and calendar, learns you with every conversation, and takes orders (tasks, snoozes, reminder emails, meetings) behind a Confirm tap |
+| [Meetings](meetings.md) | Your real Outlook schedule (today + 7 days) with Join links — and **Prep with Vesta**: a one-page brief from the attendees' email history |
 | [Daily Brief & Focus Mode](daily-brief-and-focus.md) | The AI-written morning brief about your own queue, the "Start here" pick, and the full-screen Clear-My-Day pass |
 | [Briefing](briefing.md) | Your daily intelligence — news picked for your topics, clients, and competitors, with why-it-matters and suggested actions |
 | [Weekly Review](weekly-review.md) | Your week at a glance — what you finished, replies sent, noise dismissed, and who took your attention |

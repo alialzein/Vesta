@@ -23,9 +23,17 @@ export default function LoginPage({
 }) {
   const notice = searchParams.error ? (ERROR_NOTICES[searchParams.error] ?? null) : null;
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden px-4 py-10">
+    // The page is its own scroll container (the app <body> is overflow:hidden).
+    // The old `min-h-screen … overflow-hidden` made anything taller than a
+    // phone screen unreachable — the card could not be scrolled (mobile bug,
+    // 2026-06-12). dvh (not vh) so mobile browser chrome is accounted for; the
+    // inner min-h-full wrapper keeps the card centered when it fits and lets
+    // it scroll from the top when it doesn't.
+    <main className="v-scroll relative h-[100dvh] overflow-y-auto overflow-x-hidden">
       <LoginAtmosphere />
-      <AuthForm redirectedFrom={searchParams.redirectedFrom} notice={notice} />
+      <div className="relative z-[1] flex min-h-full items-center justify-center px-4 py-10">
+        <AuthForm redirectedFrom={searchParams.redirectedFrom} notice={notice} />
+      </div>
     </main>
   );
 }
