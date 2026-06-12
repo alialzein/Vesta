@@ -128,8 +128,11 @@ describe('DashboardClient shell', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    // The sidebar Ask Vesta item stays a real link to the full-screen view.
-    expect(screen.getByRole('link', { name: /Ask Vesta/i })).toHaveAttribute('href', '/chat');
+    // The sidebar Ask Vesta item AND the tab bar's center bubble are real
+    // links to the full-screen view.
+    for (const el of screen.getAllByRole('link', { name: /Ask Vesta/i })) {
+      expect(el).toHaveAttribute('href', '/chat');
+    }
 
     await user.click(screen.getByRole('button', { name: 'Ask Vesta' }));
     // The dock is open with its composer — and the radar is still on screen

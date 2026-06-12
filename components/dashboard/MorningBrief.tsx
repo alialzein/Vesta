@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { MorningBrief as MorningBriefData } from '@/lib/types';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { TypeIn } from './TypeIn';
@@ -53,6 +54,11 @@ export function MorningBrief({
   /** Exposes the "Start here" row element (the glow thread's anchor). */
   startHereRef?: (el: HTMLElement | null) => void;
 }) {
+  // Phone collapse (Vesta Mobile pass, 2026-06-12): on < sm the brief shows
+  // headline + live numbers + Start here as a compact strip; the AI summary
+  // and quick-action buttons reveal on tap. Desktop always shows everything.
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <section className="relative isolate z-[1] rounded-[var(--radius)] border border-line-strong bg-panel p-[14px] shadow-glow sm:p-[18px]">
       {/* Live AI signal accents (Phase 0.5, Section B).
@@ -96,10 +102,16 @@ export function MorningBrief({
 
           {/* TypeIn: the words write themselves in the moment the AI brief
               replaces the deterministic one (first render stays instant). */}
-          <h2 className="vesta-headline-sheen m-0 mt-[10px] font-display text-[19px] font-medium leading-tight tracking-tight sm:text-[21px]">
+          <h2 className="vesta-headline-sheen m-0 mt-[10px] font-display text-[17px] font-medium leading-tight tracking-tight sm:text-[21px]">
             <TypeIn text={brief.headline} />
           </h2>
-          <p className="mt-[5px] text-[13px] leading-snug text-ink-soft">
+          {/* The AI summary is phone-collapsed (tap "Full brief" to reveal). */}
+          <p
+            className={[
+              'mt-[5px] text-[13px] leading-snug text-ink-soft',
+              expanded ? '' : 'hidden sm:block',
+            ].join(' ')}
+          >
             <TypeIn text={brief.summaryLine} />
           </p>
 
@@ -155,11 +167,31 @@ export function MorningBrief({
               </span>
             </button>
           )}
+
+          {/* Phone-only expand toggle — reveals the AI summary + the quick
+              actions (the brief is a compact strip by default on phones). */}
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            aria-expanded={expanded}
+            className="mt-[8px] flex w-full items-center justify-center gap-[5px] rounded-[10px] border border-line bg-panel-2 py-[6px] text-[11.5px] font-semibold text-muted transition active:scale-[0.99] sm:hidden"
+          >
+            {expanded ? 'Less' : 'Full brief & actions'}
+            <Icon
+              name="chevronRight"
+              className={`h-[12px] w-[12px] transition-transform ${expanded ? '-rotate-90' : 'rotate-90'}`}
+            />
+          </button>
         </div>
 
         {/* Quick actions — equal-width thumb targets on phones (taller tap
-            area), compact pills from sm up. */}
-        <div className="flex flex-wrap gap-[8px] lg:flex-none lg:justify-end">
+            area), compact pills from sm up. Phone-collapsed with the brief. */}
+        <div
+          className={[
+            'flex-wrap gap-[8px] lg:flex-none lg:justify-end',
+            expanded ? 'flex' : 'hidden sm:flex',
+          ].join(' ')}
+        >
           {ACTIONS.map((action) => (
             <button
               key={action.id}

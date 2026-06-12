@@ -7,11 +7,29 @@ export const metadata: Metadata = {
   title: 'Vesta — Your work, in order',
   description:
     'Vesta is a manager command center: decisions, follow-ups, and promises in one place.',
+  // Installable app (Vesta Mobile pass): app/manifest.ts is linked
+  // automatically; these cover the iOS "Add to Home Screen" path.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Vesta',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+    icon: '/icons/icon-192.png',
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // cover → env(safe-area-inset-*) works in standalone mode on notched
+  // phones (the tab bar and bottom sheet pad for the home indicator).
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#0a0f17' },
+    { media: '(prefers-color-scheme: light)', color: '#e9f1fb' },
+  ],
 };
 
 /**

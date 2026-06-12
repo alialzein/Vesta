@@ -111,7 +111,10 @@ export function WorkItemRow({
         // under prefers-reduced-motion via the global .animate-rise rule.
         style={{ animationDelay: `${Math.min(index, 12) * 45}ms` }}
         className={[
-          'animate-rise relative grid w-full grid-cols-[40px_1fr] items-start gap-[12px] overflow-hidden rounded-[14px] border p-[10px_12px] text-left transition-[transform,background-color,border-color,box-shadow] duration-200 sm:grid-cols-[40px_1fr_116px] sm:items-center',
+          // Phone (< sm): app-style dense list row — smaller badge, tighter
+          // padding, no summary/chips (they live in the tap-to-open sheet), so
+          // 5-6 items fit one phone screen (Vesta Mobile pass, 2026-06-12).
+          'animate-rise relative grid w-full grid-cols-[34px_1fr] items-start gap-[10px] overflow-hidden rounded-[14px] border p-[8px_10px] text-left transition-[transform,background-color,border-color,box-shadow] duration-200 sm:grid-cols-[40px_1fr_116px] sm:items-center sm:gap-[12px] sm:p-[10px_12px]',
           selected
             ? // Dedicated selected fill — one step deeper than hover's
               // accent-soft, so active vs hovering is unmistakable (they were
@@ -136,7 +139,7 @@ export function WorkItemRow({
         {/* Priority badge — cleaner: smaller footprint, soft fill, thin border.
             The number counts up/down when the AI re-scores the item. */}
         <span
-          className={`grid h-[38px] w-[40px] flex-none place-items-center rounded-[11px] font-mono text-[14px] font-bold ${bandClasses[band]}`}
+          className={`grid h-[30px] w-[34px] flex-none place-items-center rounded-[10px] font-mono text-[12.5px] font-bold sm:h-[38px] sm:w-[40px] sm:rounded-[11px] sm:text-[14px] ${bandClasses[band]}`}
         >
           {displayScore}
         </span>
@@ -187,13 +190,14 @@ export function WorkItemRow({
               </span>
             )}
             {item.person && (
-              <span aria-hidden="true" className="text-line-strong">
+              <span aria-hidden="true" className="hidden text-line-strong sm:inline">
                 ·
               </span>
             )}
             {/* Micro-text floor (2026-06-12 color pass): nothing below 10.5px;
-                the timestamp steps up to 11px — tired-eye readability. */}
-            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">
+                the timestamp steps up to 11px — tired-eye readability. The
+                source label is desktop-only (phones show sender + time). */}
+            <span className="hidden font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted sm:inline">
               {SOURCE_LABEL[item.source]}
             </span>
             {item.lastActivityAt && (
@@ -209,17 +213,19 @@ export function WorkItemRow({
           </h3>
           {/* One scannable line per card (declutter pass, 2026-06-12): the full
               summary + suggested action live in the rail when the row is
-              selected — the radar is for scanning, the rail is for reading. */}
+              selected — the radar is for scanning, the rail is for reading.
+              On phones the summary is hidden entirely (it lives in the tap
+              sheet) — the row is sender + title + due, like a mail app. */}
           <p
             className={[
-              'mt-[2px] text-[12px] leading-snug text-muted',
-              selected ? 'line-clamp-2' : 'line-clamp-1',
+              'mt-[2px] hidden text-[12px] leading-snug text-muted',
+              selected ? 'sm:line-clamp-2' : 'sm:line-clamp-1',
             ].join(' ')}
           >
             {item.summary}
           </p>
 
-          <span className="mt-[7px] flex flex-wrap items-center gap-[6px]">
+          <span className="mt-[7px] hidden flex-wrap items-center gap-[6px] sm:flex">
             {item.chips.map((chip) => (
               <Chip key={chip.label} {...chip} />
             ))}
