@@ -69,25 +69,30 @@ export type DueView = { label: string; detail?: string; overdue: boolean };
 
 /**
  * Due label for a radar row. A past due_at is a real state — red "Overdue"
- * with the original date as the detail — not a neutral "Due Jun 9".
- * `now` is injectable for tests; callers default it to the current time.
+ * with the original date AND time as the detail (a 3 PM deadline is not
+ * overdue at 10 AM, and when it is, the manager should see "was due Jun 12,
+ * 3:00 PM" — not just the date). Labels render in the MANAGER's timezone
+ * (profiles.timezone), not the server's. `now` is injectable for tests.
  */
 export function dueOf(
   due: string | null,
   category: WorkItemCategory,
+  tz?: string,
   now: Date = new Date(),
 ): DueView {
   if (due) {
     const d = new Date(due);
-    const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const timeZone = tz || undefined;
+    const dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone });
+    const timeLabel = d.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone,
+    });
     if (d.getTime() < now.getTime()) {
-      return { label: 'Overdue', detail: `was due ${dateLabel}`, overdue: true };
+      return { label: 'Overdue', detail: `was due ${dateLabel}, ${timeLabel}`, overdue: true };
     }
-    return {
-      label: `Due ${dateLabel}`,
-      detail: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-      overdue: false,
-    };
+    return { label: `Due ${dateLabel}`, detail: timeLabel, overdue: false };
   }
   return {
     label: category === 'waiting' ? 'Waiting on you' : 'In your queue',

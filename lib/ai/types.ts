@@ -25,6 +25,9 @@ export type AiAnalysis = {
   priority: number;
   /** Explicit/implied due date as YYYY-MM-DD, or null. */
   deadline: string | null;
+  /** Due TIME as HH:MM (24h, manager-local) — only when the thread states one
+   *  (e.g. "meet at 3:00 PM"); null = date-only, the store defaults to 9 AM. */
+  deadlineTime: string | null;
   /** One concrete next step for the manager. */
   nextAction: string;
   /** One sentence, user-visible: why this matters. */

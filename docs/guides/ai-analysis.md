@@ -8,7 +8,11 @@ fills the **AI Assistant rail**.
 
 - **Summary** — 1–2 plain sentences: what the thread is about and what's needed.
 - **Priority** — a refined 0–100 score (it improves on the rule-based starting score).
-- **Deadline** — a due date when the email states or clearly implies one.
+- **Deadline** — a due date when the email states or clearly implies one. If the
+  email names a specific time ("meet at 3:00 PM"), the deadline keeps that time —
+  so a 3 PM meeting isn't marked Overdue at 10 in the morning; date-only deadlines
+  default to 9:00 AM your time. Overdue items show the missed moment ("was due
+  Jun 12, 3:00 PM").
 - **Next Best Action** — one concrete step ("Approve the Q3 budget so vendor
   contracts proceed").
 - **Why this matters** — one sentence of *user-visible* reasoning.

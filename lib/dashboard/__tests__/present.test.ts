@@ -45,22 +45,38 @@ describe('personFrom (AI-sentence fallback)', () => {
 describe('dueOf', () => {
   const now = new Date('2026-06-10T12:00:00Z');
 
-  it('flags a past due_at as Overdue with the original date as detail', () => {
-    const due = dueOf('2026-06-09T16:00:00Z', 'waiting', now);
+  it('flags a past due_at as Overdue with the original date AND time as detail', () => {
+    const due = dueOf('2026-06-09T16:00:00Z', 'waiting', 'UTC', now);
     expect(due.overdue).toBe(true);
     expect(due.label).toBe('Overdue');
-    expect(due.detail).toMatch(/was due/);
+    // "was due Jun 9, 04:00 PM" — the time matters: a 3 PM deadline is only
+    // overdue after 3 PM, and the manager must see which moment was missed.
+    expect(due.detail).toMatch(/was due Jun 9, .*4:00/);
+  });
+
+  it('is NOT overdue before the due moment on the same day', () => {
+    // Due today 16:00 UTC, now is 12:00 UTC — still ahead.
+    const due = dueOf('2026-06-10T16:00:00Z', 'waiting', 'UTC', now);
+    expect(due.overdue).toBe(false);
+    expect(due.label).toMatch(/^Due /);
+  });
+
+  it('renders the label in the MANAGER timezone, not the server one', () => {
+    // 23:30 UTC on Jun 12 is already Jun 13, 02:30 in Beirut (+03).
+    const due = dueOf('2026-06-12T23:30:00Z', 'waiting', 'Asia/Beirut', now);
+    expect(due.label).toBe('Due Jun 13');
+    expect(due.detail).toMatch(/2:30/);
   });
 
   it('keeps a future due_at as a neutral "Due …" label', () => {
-    const due = dueOf('2026-06-12T16:00:00Z', 'waiting', now);
+    const due = dueOf('2026-06-12T16:00:00Z', 'waiting', 'UTC', now);
     expect(due.overdue).toBe(false);
     expect(due.label).toMatch(/^Due /);
   });
 
   it('uses the category wording when there is no due date', () => {
-    expect(dueOf(null, 'waiting', now)).toEqual({ label: 'Waiting on you', overdue: false });
-    expect(dueOf(null, 'fyi', now)).toEqual({ label: 'In your queue', overdue: false });
+    expect(dueOf(null, 'waiting', 'UTC', now)).toEqual({ label: 'Waiting on you', overdue: false });
+    expect(dueOf(null, 'fyi', 'UTC', now)).toEqual({ label: 'In your queue', overdue: false });
   });
 });
 
