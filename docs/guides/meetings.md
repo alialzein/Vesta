@@ -19,7 +19,10 @@ you have with them.
 - Each meeting shows the **time in your timezone**, title, organizer,
   attendees, and the location. A meeting happening right now wears a live
   **Now** badge.
-- **Join** — Teams meetings get a one-tap Join button.
+- **Join** — online meetings get a one-tap Join button (Teams on work
+  accounts, Skype on personal Outlook accounts).
+- **Open in Outlook** — every meeting also has a link straight to the event
+  in Outlook on the web, so the invite (and its link) is always one tap away.
 - The next 7 days appear below, grouped by day — only days that actually have
   meetings.
 
@@ -50,4 +53,6 @@ under **prep**).
    three lists in ten seconds.
 3. Tap **Join** when it starts.
 4. Want to schedule something? Ask Vesta in chat — *"Set up a Teams meeting
-   with Maya tomorrow 3pm"* — it proposes, you confirm.
+   with @maya tomorrow 3pm"* (the `@` suggests people from your own mail) —
+   it proposes, you confirm. After Confirm the card shows **Open the meeting
+   link**, and Vesta emails you a reminder **15 minutes before** it starts.

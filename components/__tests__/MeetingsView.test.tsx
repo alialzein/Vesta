@@ -40,6 +40,7 @@ const OK: MeetingsData = {
           isOnline: true,
           joinUrl: 'https://teams.example/join/abc',
           location: null,
+          webLink: 'https://outlook.live.com/calendar/item/ev1',
         },
       ],
     },
@@ -56,7 +57,7 @@ function renderView(data: MeetingsData) {
 }
 
 describe('MeetingsView', () => {
-  it('renders days, the meeting facts, and a Join link for Teams meetings', () => {
+  it('renders days, the meeting facts, and Join + Outlook links', () => {
     renderView(OK);
     expect(screen.getByText('Today — Friday, June 12')).toBeInTheDocument();
     expect(screen.getByText('Q3 kickoff')).toBeInTheDocument();
@@ -64,6 +65,10 @@ describe('MeetingsView', () => {
     expect(screen.getByRole('link', { name: /Join/ })).toHaveAttribute(
       'href',
       'https://teams.example/join/abc',
+    );
+    expect(screen.getByRole('link', { name: /Open in Outlook/ })).toHaveAttribute(
+      'href',
+      'https://outlook.live.com/calendar/item/ev1',
     );
   });
 

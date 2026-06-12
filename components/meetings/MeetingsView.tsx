@@ -174,6 +174,17 @@ function MeetingCard({ event, timezone }: { event: CalendarEventView; timezone: 
             Join
           </a>
         )}
+        {event.webLink && (
+          <a
+            href={event.webLink}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-[6px] rounded-[11px] border border-line bg-panel px-[13px] py-[8px] text-[12.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+          >
+            <Icon name="mail" className="h-[14px] w-[14px]" />
+            Open in Outlook
+          </a>
+        )}
         <button
           type="button"
           onClick={() => void runPrep()}

@@ -41,6 +41,19 @@ describe('toEventView', () => {
     expect(v.startIso).toBe('');
     expect(v.attendees).toEqual([]);
     expect(v.joinUrl).toBeNull();
+    expect(v.webLink).toBeNull();
+  });
+
+  it('falls back to the legacy onlineMeetingUrl (personal accounts) and keeps webLink', () => {
+    const v = toEventView(
+      ev({
+        onlineMeeting: null,
+        onlineMeetingUrl: 'https://join.skype.com/abc',
+        webLink: 'https://outlook.live.com/calendar/item/123',
+      }),
+    );
+    expect(v.joinUrl).toBe('https://join.skype.com/abc');
+    expect(v.webLink).toBe('https://outlook.live.com/calendar/item/123');
   });
 });
 

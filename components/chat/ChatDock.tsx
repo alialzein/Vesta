@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { sendChatMessage } from '@/app/actions/chat';
 import type { ChatMessageView } from '@/lib/chat/data';
-import { CHAT_STARTERS, MessageBubble, ThinkingIndicator } from './parts';
+import {
+  MentionMenu,
+  MessageBubble,
+  StarterBoard,
+  ThinkingIndicator,
+  useAttendeeMention,
+} from './parts';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 
@@ -31,6 +37,14 @@ export function ChatDock({ open, onClose }: { open: boolean; onClose: () => void
     const el = bodyRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, sending, open]);
+
+  // @-mention people autocomplete + the action starters that prefill the box.
+  const composerRef = useRef<HTMLInputElement>(null);
+  const mention = useAttendeeMention(input, setInput);
+  function prefill(text: string) {
+    setInput(text);
+    composerRef.current?.focus();
+  }
 
   // Close on Escape (but never block clicks behind the panel).
   useEffect(() => {
@@ -118,18 +132,7 @@ export function ChatDock({ open, onClose }: { open: boolean; onClose: () => void
               Quick questions or orders while you work — Vesta knows your radar, memory, and
               briefing, and asks you to confirm before any action runs.
             </p>
-            <div className="flex flex-wrap justify-center gap-[6px]">
-              {CHAT_STARTERS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => send(s)}
-                  className="rounded-full border border-line bg-panel-2 px-[10px] py-[6px] text-[11.5px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            <StarterBoard onSend={send} onPrefill={prefill} />
           </div>
         ) : (
           <>
@@ -142,8 +145,10 @@ export function ChatDock({ open, onClose }: { open: boolean; onClose: () => void
       </div>
 
       {/* Composer */}
-      <div className="flex items-center gap-[8px] border-t border-line bg-panel-2 px-3 py-[10px]">
+      <div className="relative flex items-center gap-[8px] border-t border-line bg-panel-2 px-3 py-[10px]">
+        <MentionMenu suggestions={mention.suggestions} onPick={mention.accept} />
         <input
+          ref={composerRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {

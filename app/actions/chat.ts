@@ -376,7 +376,7 @@ export async function deleteChatConversation(
 }
 
 export type ExecuteChatActionResult =
-  | { ok: true; result: string }
+  | { ok: true; result: string; link?: string | null }
   | { ok: false; error: string };
 
 /**
@@ -433,6 +433,7 @@ export async function executeChatAction(
 
   let exec: { ok: boolean; error?: string } = { ok: false, error: 'Unknown action.' };
   let result = '';
+  let resultLink: string | null = null;
   switch (action.kind) {
     case 'mark_done':
       if (!action.item_id) break;
@@ -543,10 +544,49 @@ export async function executeChatAction(
           bodyText: 'Scheduled via Vesta — confirmed by the organizer.',
         });
         exec = { ok: true };
+        // The card shows a real link: the join URL when one exists, else the
+        // event in Outlook on the web. Stored on the action so it survives.
+        resultLink = created.joinUrl ?? created.webLink;
+        action.link = resultLink;
+
+        // Best-effort: email the manager 15 minutes before kickoff via the
+        // reminders engine (Outlook's own popup still applies on top). Only
+        // when the start is comfortably in the future, and never fatal.
+        const reminderAt = new Date(startIso).getTime() - 15 * 60_000;
+        let reminderNote = '';
+        if (reminderAt > Date.now() + 5 * 60_000) {
+          const { data: mb2 } = await supabase
+            .from('mailboxes')
+            .select('mailbox_email')
+            .eq('status', 'active')
+            .limit(1)
+            .maybeSingle();
+          if (mb2?.mailbox_email) {
+            const { error: remErr } = await supabase.from('reminders').insert({
+              user_id: msg.user_id,
+              send_to_email: mb2.mailbox_email,
+              title: `Starting in 15 min: ${action.meeting_title}`,
+              body: [
+                `Your meeting "${action.meeting_title}" starts at ${action.start_local} (${durationMinutes} min).`,
+                attendees.length > 0 ? `With: ${attendees.join(', ')}.` : null,
+                created.joinUrl ? `Join: ${created.joinUrl}` : null,
+              ]
+                .filter(Boolean)
+                .join(' '),
+              remind_at: new Date(reminderAt).toISOString(),
+              timezone: action.tz,
+              delivery_channels: ['email'],
+              ...clampSchedule(null, 1),
+              created_from: 'chat',
+              metadata: { item_title: action.meeting_title, meeting: true } as Json,
+            });
+            if (!remErr) reminderNote = " I'll email you a reminder 15 minutes before.";
+          }
+        }
+
         const invitees =
           attendees.length > 0 ? `, invites sent to ${attendees.join(', ')}` : '';
-        const link = created.onlineProvider ? ' (online-meeting link attached)' : '';
-        result = `Meeting "${action.meeting_title}" is on your calendar — ${action.start_local}, ${durationMinutes} min${invitees}${link}.`;
+        result = `Meeting "${action.meeting_title}" is on your calendar — ${action.start_local}, ${durationMinutes} min${invitees}.${reminderNote}`;
       } catch {
         exec = {
           ok: false,
@@ -564,7 +604,7 @@ export async function executeChatAction(
     return { ok: false, error };
   }
   await persist('done', result);
-  return { ok: true, result };
+  return { ok: true, result, link: resultLink };
 }
 
 /** Dismiss a pending chat-order proposal without running it. */

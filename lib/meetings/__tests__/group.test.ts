@@ -14,6 +14,7 @@ function event(id: string, startIso: string, endIso: string): CalendarEventView 
     isOnline: false,
     joinUrl: null,
     location: null,
+    webLink: null,
   };
 }
 

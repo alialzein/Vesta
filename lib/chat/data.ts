@@ -54,6 +54,9 @@ export type StoredChatAction = {
   attendees?: string[] | null;
   /** Result line after execution (or the failure reason). */
   result?: string | null;
+  /** create_meeting: join/Outlook URL of the created event — the card shows
+   *  it as a real link so the manager never hunts for it. */
+  link?: string | null;
 };
 
 export type ChatActionView = {
@@ -63,6 +66,8 @@ export type ChatActionView = {
   result: string | null;
   /** create_meeting: attendee emails (editable on the card before Confirm). */
   attendees: string[] | null;
+  /** create_meeting (done): join/Outlook link of the created event. */
+  link: string | null;
 };
 
 export type ChatMessageView = {
@@ -109,6 +114,7 @@ export function toMessageView(r: MessageRow): ChatMessageView {
         a.kind === 'create_meeting' && Array.isArray(a.attendees)
           ? (a.attendees as unknown[]).filter((x): x is string => typeof x === 'string')
           : null,
+      link: typeof a.link === 'string' && /^https:\/\//.test(a.link) ? a.link : null,
     };
   }
 
