@@ -27,14 +27,26 @@ any ⓘ dot or KPI card for a plain-language explanation of the term.
 
 ## The tabs
 
+> **The console is LIVE.** Every tab re-fetches its numbers every 30 seconds —
+> the green **● Live** pill in the top bar shows the last refresh time; click
+> it to pause/resume. The layout uses the full screen width.
+
 ### 🩺 Overview
 The system pulse at a glance:
+- **Needs attention** — the first thing on the page: a strip listing exactly
+  what's wrong right now (erroring/stale syncs, webhook errors, overdue or
+  failed reminders, suspended accounts), each line linking to the tab that
+  fixes it. When nothing is wrong it says **All clear**.
 - **Users**, active **mailboxes**, and last sync time.
 - **AI spend & usage** for a selectable date range — **Today / 7 days / This month
   (default) / 30 days** pills at the top right; every card is labeled with the range.
 - **Sync & queue health** — stale mailboxes, sync errors, webhook backlog/errors
   (live numbers, not range-filtered).
-- **Recent errors** — the latest sync / webhook / AI failures, newest first.
+- **Assistant queues** — what Vesta owes people right now: reminder emails
+  scheduled / overdue (a cron-health signal) / failed, and drafts awaiting
+  manager approval.
+- **Recent errors** — the latest sync / webhook / AI failures (including
+  failed chat/draft/brief calls), newest first.
 
 If everything is green, the pipeline is healthy. Stale mailboxes or a growing webhook
 queue point at the cron or the webhook URL.
@@ -112,9 +124,19 @@ pipeline reads them on every run (no deploy needed); blank = use env.
   the draft composer tells them why.
 - **Re-analyze all** — after a prompt or model change, queue every open item to be
   re-analyzed on the next sync (this costs tokens).
-- **Spend by feature / by user** and a **recent calls** ledger. Rows recorded before
-  prices were set still show dollars — costs are estimated from their tokens × the
-  current prices. (`node scripts/backfill-ai-usage.mjs` imports pre-ledger history.)
+- **Daily activity** — a 14-day token bar chart (hover a bar for calls, tokens,
+  cost; a red dot marks days with failed calls).
+- **What's consuming** — the answer to "where do tokens go": usage broken down
+  by call **kind**, not just feature (the `brief` feature alone hides a ~300-token
+  rank call and a ~17,000-token briefing search). Shows calls, tokens in/out,
+  **average and max per call** (max ≥10k glows amber — your optimization target),
+  cost, and errors.
+- **Heaviest calls** — the biggest single calls this month, with who triggered them.
+- **Spend by feature / by user** and a **recent calls** ledger (now with the call
+  kind and the user). Rows recorded before prices were set still show dollars —
+  costs are estimated from their tokens × the current prices.
+  (`node scripts/backfill-ai-usage.mjs` imports pre-ledger history;
+  `node scripts/ai-usage-report.mjs` prints the same analysis in the terminal.)
 
 ## Safety model
 

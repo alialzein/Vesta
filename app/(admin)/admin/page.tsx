@@ -43,6 +43,40 @@ export default async function AdminOverviewPage({
   const queueTone = h.webhooks.pending > 50 ? 'warn' : 'default';
   const rangeLabel = RANGES[range].label.toLowerCase();
 
+  // Everything that deserves the operator's eyes RIGHT NOW, in one strip.
+  const attention: { text: string; href: string; severity: 'bad' | 'warn' }[] = [
+    h.sync.errored > 0 && {
+      text: `${h.sync.errored} mailbox sync${h.sync.errored === 1 ? '' : 's'} erroring`,
+      href: '/admin/mailboxes',
+      severity: 'bad' as const,
+    },
+    h.sync.stale > 0 && {
+      text: `${h.sync.stale} mailbox${h.sync.stale === 1 ? '' : 'es'} stale (>30m without a sync)`,
+      href: '/admin/mailboxes',
+      severity: 'warn' as const,
+    },
+    h.webhooks.errored > 0 && {
+      text: `${h.webhooks.errored} webhook error${h.webhooks.errored === 1 ? '' : 's'}`,
+      href: '/admin/mailboxes',
+      severity: 'bad' as const,
+    },
+    h.reminders.overdue > 0 && {
+      text: `${h.reminders.overdue} reminder${h.reminders.overdue === 1 ? '' : 's'} overdue to fire (cron behind?)`,
+      href: '/admin/audit',
+      severity: 'bad' as const,
+    },
+    h.reminders.failed > 0 && {
+      text: `${h.reminders.failed} reminder${h.reminders.failed === 1 ? '' : 's'} failed`,
+      href: '/admin/audit',
+      severity: 'warn' as const,
+    },
+    h.users.suspended > 0 && {
+      text: `${h.users.suspended} account${h.users.suspended === 1 ? '' : 's'} suspended`,
+      href: '/admin/users',
+      severity: 'warn' as const,
+    },
+  ].filter((x): x is { text: string; href: string; severity: 'bad' | 'warn' } => Boolean(x));
+
   return (
     <div>
       <header className="mb-6 flex flex-wrap items-end gap-3">
@@ -78,6 +112,36 @@ export default async function AdminOverviewPage({
         </nav>
       </header>
 
+      {attention.length > 0 ? (
+        <div className="mb-5 rounded-[12px] border border-amber/50 bg-amber-soft/40 p-3">
+          <p className="m-0 mb-2 font-mono text-[10.5px] font-bold uppercase tracking-[0.08em] text-amber">
+            Needs attention
+          </p>
+          <ul className="m-0 flex list-none flex-col gap-[6px] p-0">
+            {attention.map((a) => (
+              <li key={a.text}>
+                <Link
+                  href={a.href}
+                  prefetch
+                  className="group inline-flex items-center gap-2 text-[13px] font-medium text-ink transition hover:text-accent"
+                >
+                  <span
+                    className={`h-[7px] w-[7px] flex-none rounded-full ${a.severity === 'bad' ? 'bg-red' : 'bg-amber'}`}
+                  />
+                  {a.text}
+                  <span className="text-muted transition group-hover:text-accent">→</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="mb-5 flex items-center gap-2 rounded-[12px] border border-green/30 bg-panel px-3 py-[10px] text-[13px] text-ink-soft">
+          <span className="h-[7px] w-[7px] rounded-full bg-green" />
+          All clear — syncs fresh, queues empty, nothing failing.
+        </div>
+      )}
+
       <div className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="Users"
@@ -110,6 +174,35 @@ export default async function AdminOverviewPage({
           <KpiCard label="Sync errors" value={fmtInt(h.sync.errored)} tone={h.sync.errored > 0 ? 'bad' : 'good'} />
           <KpiCard label="Webhook queue" value={fmtInt(h.webhooks.pending)} hint="pending events" tone={queueTone} />
           <KpiCard label="Webhook errors" value={fmtInt(h.webhooks.errored)} tone={h.webhooks.errored > 0 ? 'bad' : 'good'} />
+        </div>
+      </Section>
+
+      <Section
+        title="Assistant queues"
+        hint="What Vesta owes people right now — reminder emails waiting to fire and drafts awaiting manager approval."
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <KpiCard
+            label="Reminders scheduled"
+            value={fmtInt(h.reminders.scheduled)}
+            hint="emails queued to send"
+          />
+          <KpiCard
+            label="Reminders overdue"
+            value={fmtInt(h.reminders.overdue)}
+            hint="past due >10m — cron health"
+            tone={h.reminders.overdue > 0 ? 'bad' : 'good'}
+          />
+          <KpiCard
+            label="Reminders failed"
+            value={fmtInt(h.reminders.failed)}
+            tone={h.reminders.failed > 0 ? 'warn' : 'good'}
+          />
+          <KpiCard
+            label="Drafts awaiting approval"
+            value={fmtInt(h.drafts.pending)}
+            hint="nothing sends without the manager"
+          />
         </div>
       </Section>
 

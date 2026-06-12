@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useTheme } from '@/lib/theme';
 import { Icon, VestaMark } from '@/components/ui/Icon';
+import { LiveRefresh } from '@/components/admin/LiveRefresh';
 import { signOut } from '@/app/(auth)/actions';
 
 export function AdminTopbar({
@@ -51,6 +52,7 @@ export function AdminTopbar({
       </span>
 
       <div className="ml-auto flex items-center gap-2">
+        <LiveRefresh />
         {adminEmail && (
           <span className="hidden text-[12px] text-muted sm:inline" title="Signed in as">
             {adminEmail}

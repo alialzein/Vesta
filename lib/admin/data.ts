@@ -1,6 +1,16 @@
 import 'server-only';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getConfiguredAiRates } from '@/lib/admin/settings';
+import {
+  dailySeries,
+  heaviestCalls,
+  rollupByKind,
+  rowKind,
+  type DayPoint,
+  type HeavyCall,
+  type KindRollup,
+  type UsageRow,
+} from '@/lib/admin/ai-usage';
 
 /**
  * Cost of one ledger row for display: the stored estimate when present, else
@@ -38,6 +48,9 @@ export type HealthOverview = {
   webhooks: { pending: number; errored: number };
   /** AI usage within the requested date range (Overview's range filter). */
   ai: { cost: number; calls: number; tokens: number };
+  /** Assistant queues — what Vesta owes people (live, not range-filtered). */
+  reminders: { scheduled: number; overdue: number; failed: number };
+  drafts: { pending: number };
   errors: ErrorFeedItem[];
 };
 
@@ -77,6 +90,9 @@ export async function getHealthOverview(aiSinceIso?: string): Promise<HealthOver
     webhookErrRes,
     usageRes,
     aiErrRes,
+    usageErrRes,
+    remindersRes,
+    draftsPendingRes,
     authListRes,
   ] = await Promise.all([
     svc.from('profiles').select('id, role, suspended'),
@@ -96,6 +112,18 @@ export async function getHealthOverview(aiSinceIso?: string): Promise<HealthOver
       .not('error', 'is', null)
       .order('created_at', { ascending: false })
       .limit(5),
+    // Failed chat/draft/brief calls live in ai_usage, not ai_analyses.
+    svc
+      .from('ai_usage')
+      .select('error, created_at, user_id, feature')
+      .not('error', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5),
+    svc.from('reminders').select('status, remind_at'),
+    svc
+      .from('draft_replies')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['draft', 'edited', 'approved']),
     svc.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
@@ -139,7 +167,18 @@ export async function getHealthOverview(aiSinceIso?: string): Promise<HealthOver
       at: a.created_at,
       who: a.user_id,
     })),
-  ].slice(0, 12);
+    ...(usageErrRes.data ?? []).map((u) => ({
+      source: `ai · ${u.feature}`,
+      message: u.error as string,
+      at: u.created_at,
+      who: u.user_id,
+    })),
+  ]
+    .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
+    .slice(0, 12);
+
+  const reminderRows = remindersRes.data ?? [];
+  const nowIso = new Date(Date.now() - 10 * 60_000).toISOString(); // 10 min grace for the cron
 
   return {
     users: {
@@ -161,6 +200,12 @@ export async function getHealthOverview(aiSinceIso?: string): Promise<HealthOver
       errored: webhookErrRes.data?.length ?? 0,
     },
     ai: { cost: aiCost, calls: usage.length, tokens: aiTokens },
+    reminders: {
+      scheduled: reminderRows.filter((r) => r.status === 'scheduled').length,
+      overdue: reminderRows.filter((r) => r.status === 'scheduled' && r.remind_at < nowIso).length,
+      failed: reminderRows.filter((r) => r.status === 'failed').length,
+    },
+    drafts: { pending: draftsPendingRes.count ?? 0 },
     errors,
   };
 }
@@ -549,10 +594,17 @@ export type AiUsageSummary = {
   tokensMonth: number;
   callsMonth: number;
   byFeature: { feature: string; calls: number; tokens: number; cost: number }[];
+  /** The real "what is consuming" view: feature/kind rollups, hungriest first. */
+  byKind: KindRollup[];
+  /** Last 14 UTC days, oldest → newest, gaps zero-filled. */
+  days: DayPoint[];
+  /** The heaviest single calls this month. */
+  heaviest: (Omit<HeavyCall, 'who'> & { who: string | null })[];
   byUser: { userId: string; email: string | null; calls: number; tokens: number; cost: number }[];
   recent: {
     at: string;
     feature: string;
+    kind: string;
     model: string | null;
     tokens: number;
     cost: number | null;
@@ -566,27 +618,36 @@ export async function getAiUsageSummary(): Promise<AiUsageSummary> {
   const svc = createServiceClient();
   const monthIso = startOfMonthIso();
   const todayIso = startOfTodayIso();
+  const fortnightIso = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const sinceIso = monthIso < fortnightIso ? monthIso : fortnightIso;
 
   const [{ data: usage }, { data: profiles }, { data: items }, { data: recent }] = await Promise.all(
     [
       svc
         .from('ai_usage')
-        .select('user_id, feature, model, token_input, token_output, cost_estimate_usd, created_at')
-        .gte('created_at', monthIso),
+        .select(
+          'user_id, feature, model, token_input, token_output, cost_estimate_usd, created_at, error, metadata',
+        )
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false })
+        .limit(5000),
       svc.from('profiles').select('id, email'),
       svc.from('work_items').select('last_analyzed_at').eq('status', 'open'),
       svc
         .from('ai_usage')
-        .select('created_at, feature, model, token_input, token_output, cost_estimate_usd, error, user_id')
+        .select(
+          'created_at, feature, model, token_input, token_output, cost_estimate_usd, error, user_id, metadata',
+        )
         .order('created_at', { ascending: false })
-        .limit(15),
+        .limit(20),
     ],
   );
 
   const rates = await getConfiguredAiRates();
   const emailById = new Map((profiles ?? []).map((p) => [p.id, p.email]));
-  const rows = usage ?? [];
-  const tokens = (r: { token_input: number; token_output: number }) =>
+  const all = (usage ?? []) as UsageRow[];
+  const rows = all.filter((r) => r.created_at >= monthIso);
+  const tokens = (r: { token_input: number | null; token_output: number | null }) =>
     Number(r.token_input ?? 0) + Number(r.token_output ?? 0);
 
   const featureMap = new Map<string, { calls: number; tokens: number; cost: number }>();
@@ -619,17 +680,24 @@ export async function getAiUsageSummary(): Promise<AiUsageSummary> {
     byFeature: [...featureMap.entries()]
       .map(([feature, v]) => ({ feature, ...v }))
       .sort((a, b) => b.cost - a.cost),
+    byKind: rollupByKind(rows, rates),
+    days: dailySeries(all, 14, rates),
+    heaviest: heaviestCalls(rows, rates, 8).map((h) => ({
+      ...h,
+      who: h.who ? emailById.get(h.who) ?? h.who : null,
+    })),
     byUser: [...userMap.entries()]
       .map(([userId, v]) => ({ userId, email: emailById.get(userId) ?? null, ...v }))
       .sort((a, b) => b.cost - a.cost),
-    recent: (recent ?? []).map((r) => ({
+    recent: ((recent ?? []) as UsageRow[]).map((r) => ({
       at: r.created_at,
       feature: r.feature,
+      kind: rowKind(r),
       model: r.model,
       tokens: tokens(r),
       cost: r.cost_estimate_usd === null && !rates ? null : rowCostUsd(r, rates),
       error: r.error,
-      who: r.user_id,
+      who: r.user_id ? emailById.get(r.user_id) ?? r.user_id : null,
     })),
     analysis: {
       total: openItems.length,
