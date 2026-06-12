@@ -10,25 +10,32 @@ Your **Today** dashboard leads with **Today's Radar** — a focused list of the 
 waiting on you, highest priority first. Above it sits the **Morning Brief** — an
 AI-written daily summary of your queue with a "Start here" pick and the
 **Clear My Day** Focus Mode button (see
-[Daily Brief & Focus Mode](daily-brief-and-focus.md)) — plus a compact strip
-of metrics (**Overdue**, waiting on you, high priority, open items, follow-ups, top
-score). **Click a metric tile to filter the Radar** to that slice — e.g. click
-**Overdue** to see only what's already past its deadline.
+[Daily Brief & Focus Mode](daily-brief-and-focus.md)).
 
-You can filter the Radar by type using the chips at the top (All, Overdue, Tasks,
-Waiting on them, Decisions, Blockers, Follow-ups, Promises, Can delegate, Drafts).
+**The filter chips above the Radar carry the counts.** Each chip shows its live
+number — **All 5**, **Overdue 1**, **Waiting on you 2** — so one row answers both
+*"how many?"* and *"show me"*: click a chip to filter the Radar to that slice
+(e.g. **Overdue** shows only what's already past its deadline). **Chips only
+appear when they have items** — an empty slice shows no chip, so the row stays
+as short as your day actually is. The slices: All, Overdue, Waiting on you,
+Tasks, Waiting on them, Decisions, Follow-ups, Promises, Can delegate, Drafts.
+
+> There's no separate metrics strip anymore — its numbers moved into the chips,
+> so the same fact never appears in two places.
 
 ### The left sidebar — every button does something
 
 The sidebar (and the top bar) now stay with you on **every** page — Inbox,
-Waiting on Me, Draft Replies, Hidden, Weekly Review, and Settings all open
+Waiting on you, Draft Replies, Hidden, Weekly Review, and Settings all open
 inside the same frame, full width, with the current page highlighted in the nav.
 You never "leave" the app to a bare page.
 
 - **Today** — the full Radar (clicking it also clears any filter). Need just the
   follow-ups? Use the **Follow-ups chip** on the Radar itself.
 - **Inbox** / **Hidden** — your synced mail and the noise Vesta filtered out.
-- **Waiting on Me** — the full ranked Priorities list (below).
+- **Waiting on you** — the full ranked Priorities list (below). (One name
+  everywhere now — this used to say "Waiting on Me" here and "Blockers" on the
+  Radar chip; all three were the same slice.)
 - **Draft Replies** — every saved reply waiting for your review, with a badge for
   how many (see [Draft replies](draft-replies.md)).
 - **Memory & Rules** and **Weekly Review** — the Intelligence tools
@@ -44,13 +51,16 @@ You never "leave" the app to a bare page.
 - **Who it's from** — the real sender of the latest message (their name, or a
   readable version of their email address), with a small colored **initials
   avatar** so the same person is recognizable at a glance. The AI rail shows the
-  full email address under **From**. **Click the sender** to filter the Radar to
-  *everything from that person* — a "From: …" chip appears next to the title;
+  full email address next to the name. **Click the sender** to filter the Radar
+  to *everything from that person* — a "From: …" chip appears next to the title;
   click its ✕ to clear.
 - **Overdue in red** — if an item's deadline has passed, the card says **Overdue**
   in red (with the original date), instead of a quiet "Due Jun 9" you could miss.
-- Title, a one-line summary of the newest message, category chips, the priority
-  score, and the suggested action (highlighted on the card you've selected).
+- Title, a **one-line** summary of the newest message (it expands when you select
+  the card), one category chip, and the colored priority score. That's it on
+  purpose: the card is for scanning. The AI's **suggested action** and full
+  reasoning live in the rail that opens when you select the card — the same
+  sentence is never printed on both.
 
 ### Quick actions on a card (hover)
 
@@ -61,9 +71,9 @@ triage is one click, without opening the rail. The rail still has the full set
 path. The same safety net applies: done/dismissed threads come back if the sender
 replies again.
 
-## Priorities ("Waiting on Me")
+## Priorities ("Waiting on you")
 
-The **Priorities** view (sidebar: *Waiting on Me*) is the full, ranked list of every
+The **Priorities** view (sidebar: *Waiting on you*) is the full, ranked list of every
 conversation waiting on your reply. Each item shows its category, a priority band, and
 a plain-language **reason** it's there (e.g. *"Maya is waiting on your reply"*).
 
@@ -162,9 +172,10 @@ Each item gets a **priority score (0–100)** from a transparent set of signals:
 - **VIP** — mail from people you marked VIP ranks higher.
 
 Items are then grouped into categories like **Waiting on you**, **Follow-up**, and
-**FYI**. Scores 85+ are the red band and are tagged **High priority** — the same
-threshold everywhere (the score badge color, the card chip, the High Priority
-metric, and the rail's band label), so the words never contradict the colors.
+**FYI**. Scores 85+ are the red band — **the color of the score badge is the
+priority language**: red means high, amber medium, green low (hover the badge in
+the rail for the exact wording). The badge is the one place the score appears
+per card, so the number never contradicts itself across the screen.
 
 > **AI then refines it.** After a sync, Vesta's AI reads each waiting thread and
 > rewrites the summary, refines the priority, detects a deadline, and produces the

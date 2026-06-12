@@ -20,7 +20,7 @@ const categoryLabel: Record<string, string> = {
 };
 
 /**
- * Priorities ("Waiting on Me") — real work_items derived by the follow-up engine,
+ * Priorities ("Waiting on you") — real work_items derived by the follow-up engine,
  * the full ranked list of every conversation waiting on the manager's reply.
  * Renders inside the AppShell (sidebar + topbar provide nav and the page title).
  */

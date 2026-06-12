@@ -81,15 +81,11 @@ describe('dueOf', () => {
 });
 
 describe('chipsFor', () => {
-  it('tags High priority only for the red band (85+), matching the badge color', () => {
-    expect(chipsFor('waiting', 85).some((c) => c.label === 'High priority')).toBe(true);
-    // 80–84 is the amber band — the old 80+ chip contradicted the amber badge.
-    expect(chipsFor('waiting', 80).some((c) => c.label === 'High priority')).toBe(false);
-  });
-
-  it('keeps the category chip first', () => {
-    expect(chipsFor('waiting', 90)[0]).toEqual({ label: 'Waiting on you', tone: 'red' });
-    expect(chipsFor('task', 10)[0]).toEqual({ label: 'Task', tone: 'blue' });
+  it('returns exactly one category chip — no "High priority" companion (the badge color says it)', () => {
+    expect(chipsFor('waiting')).toEqual([{ label: 'Waiting on you', tone: 'red' }]);
+    expect(chipsFor('task')).toEqual([{ label: 'Task', tone: 'blue' }]);
+    expect(chipsFor('waiting_on_them')).toEqual([{ label: 'Waiting on them', tone: 'amber' }]);
+    expect(chipsFor('decision')).toHaveLength(1);
   });
 });
 

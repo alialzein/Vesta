@@ -178,23 +178,24 @@ describe('DashboardClient shell', () => {
     expect(screen.getAllByText('Hiring decision follow-up').length).toBeGreaterThan(1);
   });
 
-  it('does not show a Delegate quick action in the Morning Brief', () => {
+  it('keeps the Morning Brief quick actions to what is real (no Delegate, no Meeting Prep)', () => {
     renderDashboard();
     const brief = screen.getByText(/Live morning brief/i).closest('section')!;
     expect(within(brief).queryByRole('button', { name: 'Delegate' })).not.toBeInTheDocument();
+    // Meeting Prep opened a demo drawer — removed until real prep ships (Phase C calendar).
+    expect(within(brief).queryByRole('button', { name: /Meeting Prep/ })).not.toBeInTheDocument();
     // The compact quick actions that remain.
     expect(within(brief).getByRole('button', { name: 'Clear My Day' })).toBeInTheDocument();
     expect(within(brief).getByRole('button', { name: 'Draft Replies' })).toBeInTheDocument();
-    expect(within(brief).getByRole('button', { name: 'Meeting Prep' })).toBeInTheDocument();
   });
 
-  it('filters the radar to delegatable work via the radar "Can delegate" tab', async () => {
+  it('filters the radar to delegatable work via the radar "Can delegate" chip (with its count)', async () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(screen.getByRole('tab', { name: 'Can delegate' }));
+    await user.click(screen.getByRole('tab', { name: /Can delegate/ }));
 
-    const delegateTab = screen.getByRole('tab', { name: 'Can delegate' });
+    const delegateTab = screen.getByRole('tab', { name: /Can delegate/ });
     expect(delegateTab).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('IT laptop purchase request')).toBeInTheDocument();
     expect(screen.queryByText('Board meeting preparation')).not.toBeInTheDocument();
@@ -215,30 +216,26 @@ describe('DashboardClient shell', () => {
     expect(screen.queryByRole('dialog', { name: /Focus Mode/ })).not.toBeInTheDocument();
   });
 
-  it('shows an honest "coming soon" message when a rail action button is used', async () => {
-    const user = userEvent.setup();
+  it('offers no Delegate button anywhere on the Today view (dead buttons removed)', () => {
     renderDashboard();
-
-    // Use the first visible "Delegate" action button in the rail (a later phase).
-    await user.click(screen.getAllByRole('button', { name: /^Delegate$/i })[0]);
-    expect(screen.getByText(/delegation arrives in Phase 8/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Delegate$/i })).not.toBeInTheDocument();
   });
 
   it('has no sidebar Follow-ups button (that slice lives in the radar filter chips)', () => {
     renderDashboard();
     expect(screen.queryByRole('button', { name: /Follow-ups/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Follow-ups' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Follow-ups/ })).toBeInTheDocument();
   });
 
   it('clicking Today in the sidebar resets the radar filter to All', async () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(screen.getByRole('tab', { name: 'Follow-ups' }));
+    await user.click(screen.getByRole('tab', { name: /Follow-ups/ }));
     expect(screen.queryByText('IT laptop purchase request')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^Today/ }));
-    expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /^All/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('IT laptop purchase request')).toBeInTheDocument();
   });
 

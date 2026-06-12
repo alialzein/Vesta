@@ -2,7 +2,6 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import type {
   DraftView,
-  KpiMetric,
   ManagerMemory,
   MemoryRecord,
   MemoryType,
@@ -22,15 +21,14 @@ import {
   personFrom,
   senderDisplay,
 } from '@/lib/dashboard/present';
-import { priorityBand } from '@/lib/priority';
 import { todayInTz } from '@/lib/time/zone';
 
 /**
  * Real dashboard data (Phase 6-derived). Maps the manager's `work_items` (the
  * follow-up engine's "waiting on you" set, already triaged + addressing-gated)
- * into the Today dashboard shapes — Today's Radar rows, the metric strip, and a
- * heuristic Morning Brief. No AI yet: the rail's draft/memory/next-action fields
- * are filled with honest heuristics/placeholders until Phase 7.
+ * into the Today dashboard shapes — Today's Radar rows and a heuristic Morning
+ * Brief (slice counts render inside the radar's filter chips). The rail's
+ * draft/memory/next-action fields are filled by the Phase 7+ AI pipeline.
  */
 
 type WorkItemRow = {
@@ -90,9 +88,8 @@ function toWorkItem(
     person,
     personEmail,
     summary,
-    suggestedAction: w.suggested_action ?? undefined,
     priorityScore: score,
-    chips: chipsFor(category, score),
+    chips: chipsFor(category),
     dueLabel: due.label,
     dueDetail: due.detail,
     overdue: due.overdue,
@@ -112,7 +109,7 @@ function toWorkItem(
       (canDraft
         ? 'Generate an AI reply for this thread, then review and approve before it sends.'
         : 'This is a task, not an email thread — there is nothing to reply to.'),
-    riskChips: chipsFor(category, score),
+    riskChips: chipsFor(category),
     memoryUsed,
     activity: [
       { label: 'Priority', value: `${score}/100` },
@@ -132,24 +129,9 @@ function toWorkItem(
   };
 }
 
-function buildKpis(items: WorkItem[]): KpiMetric[] {
-  const count = (c: WorkItemCategory) => items.filter((i) => i.categories.includes(c)).length;
-  // "High priority" = the red band (85+) — same vocabulary as the score badge,
-  // the row chip, and the rail's band label.
-  const high = items.filter((i) => priorityBand(i.priorityScore) === 'red').length;
-  const overdue = items.filter((i) => i.overdue).length;
-  const top = items.reduce((m, i) => Math.max(m, i.priorityScore), 0);
-  // First four render as the primary strip tiles (MetricsStrip): Overdue answers
-  // "what am I already late on?" — the manager's first morning question.
-  return [
-    { id: 'kpi-overdue', value: overdue, label: 'Overdue', helper: 'Past their deadline', tone: 'red', filter: 'overdue' },
-    { id: 'kpi-waiting', value: count('waiting'), label: 'Waiting on You', helper: 'Awaiting your reply', tone: 'amber', filter: 'waiting' },
-    { id: 'kpi-high', value: high, label: 'High Priority', helper: 'Score 85+', tone: 'red', filter: 'critical' },
-    { id: 'kpi-open', value: items.length, label: 'Open Items', helper: 'In your queue', tone: 'blue', filter: 'all' },
-    { id: 'kpi-followup', value: count('followup'), label: 'Follow-ups', helper: 'Repeated nudges', tone: 'amber', filter: 'followup' },
-    { id: 'kpi-top', value: top, label: 'Top Priority', helper: 'Highest score', tone: 'red', filter: 'critical' },
-  ];
-}
+// The KPI strip is gone (2026-06-12 declutter pass): its counts now live
+// inside the radar's filter chips, computed in TodaysRadar from the same
+// items — one source, one surface, no second row of numbers.
 
 function buildBrief(items: WorkItem[]): MorningBrief {
   if (items.length === 0) {
@@ -181,7 +163,6 @@ function buildBrief(items: WorkItem[]): MorningBrief {
 
 export type DashboardData = {
   workItems: WorkItem[];
-  kpis: KpiMetric[];
   brief: MorningBrief;
   /** The manager's Memory & Rules rows (active + paused + pending suggestions). */
   memories: MemoryRecord[];
@@ -366,7 +347,6 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   return {
     workItems,
-    kpis: buildKpis(workItems),
     brief,
     memories: memoryRows.map(toMemoryRecord),
     timezone,

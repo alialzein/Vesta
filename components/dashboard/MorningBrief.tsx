@@ -3,21 +3,24 @@
 import type { MorningBrief as MorningBriefData } from '@/lib/types';
 import { Icon, type IconName } from '@/components/ui/Icon';
 
-export type BriefAction = 'focus' | 'drafts' | 'meeting';
+export type BriefAction = 'focus' | 'drafts';
 
 // Delegate intentionally lives only in Today's Radar rows and the AI rail, so
-// it is not duplicated here (Phase 0.4).
+// it is not duplicated here (Phase 0.4). Meeting Prep was removed in the
+// 2026-06-12 declutter pass: it opened a demo drawer — a dead button in the
+// hero card. It returns when real meeting prep ships on the Phase C calendar.
 const ACTIONS: { id: BriefAction; label: string; icon: IconName; primary?: boolean }[] = [
   { id: 'focus', label: 'Clear My Day', icon: 'sparkle', primary: true },
   { id: 'drafts', label: 'Draft Replies', icon: 'drafts' },
-  { id: 'meeting', label: 'Meeting Prep', icon: 'calendar' },
 ];
 
 /**
  * Compact Morning Brief (Phase 0.3). A short hero card: badge + headline + one
- * summary line + a compact "Top risk" chip + four quick actions. The large
- * urgency ring was intentionally removed — the priority score now lives only on
- * the Radar row and the AI rail to avoid repeating the same number everywhere.
+ * summary line + quick actions. Declutter pass (2026-06-12): no "Top priority"
+ * score chip — the score lives on the radar card (and could disagree with the
+ * AI's "start here" pick, which is not always the top score). The brief is the
+ * single LIVE surface on the dashboard, so its headline carries a slow aurora
+ * sheen — the one place that visibly breathes.
  */
 export function MorningBrief({
   brief,
@@ -79,15 +82,9 @@ export function MorningBrief({
                 <span className="animate-vesta-pulse h-[5px] w-[2px] rounded-full bg-accent [animation-delay:-1.5s]" />
               </span>
             </span>
-            {/* "Top priority" — same word the radar badge, row chips, and rail
-                band label use (was "Top risk", a one-off term). */}
-            <span className="inline-flex items-center gap-[5px] rounded-full bg-red-soft px-[9px] py-[3px] font-mono text-[11px] font-semibold text-red">
-              <Icon name="trend" className="h-[12px] w-[12px]" />
-              Top priority: {brief.topUrgencyScore}
-            </span>
           </div>
 
-          <h2 className="m-0 mt-[10px] font-display text-[19px] font-medium leading-tight tracking-tight sm:text-[21px]">
+          <h2 className="vesta-headline-sheen m-0 mt-[10px] font-display text-[19px] font-medium leading-tight tracking-tight sm:text-[21px]">
             {brief.headline}
           </h2>
           <p className="mt-[5px] text-[13px] leading-snug text-ink-soft">{brief.summaryLine}</p>

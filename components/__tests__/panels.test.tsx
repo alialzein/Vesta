@@ -2,12 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
-import { MetricsStrip } from '@/components/dashboard/MetricsStrip';
 import { MorningBrief } from '@/components/dashboard/MorningBrief';
 import { AiCommandCenter } from '@/components/dashboard/AiCommandCenter';
 import { AiAssistantRail } from '@/components/dashboard/AiAssistantRail';
 import { ToastProvider } from '@/components/ui/Toast';
-import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
+import { demoCommandCards, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 
 // The rail's Memory tab imports the Phase 10 memory actions (server-only).
 vi.mock('@/app/actions/memories', () => ({
@@ -24,22 +23,18 @@ function renderWithToast(ui: ReactElement) {
   return render(<ToastProvider>{ui}</ToastProvider>);
 }
 
-describe('MetricsStrip', () => {
-  it('renders every metric label', () => {
-    render(<MetricsStrip metrics={demoKpis} />);
-    for (const kpi of demoKpis) {
-      expect(screen.getByText(kpi.label)).toBeInTheDocument();
-    }
-  });
-});
-
 describe('MorningBrief', () => {
-  it('renders the headline and a compact top-priority chip (no large ring)', () => {
+  it('renders the headline + summary with no score chip (the score lives on the radar card)', () => {
     render(<MorningBrief brief={demoMorningBrief} onAction={() => {}} />);
     expect(screen.getByText(demoMorningBrief.headline)).toBeInTheDocument();
-    expect(
-      screen.getByText(`Top priority: ${demoMorningBrief.topUrgencyScore}`),
-    ).toBeInTheDocument();
+    expect(screen.getByText(demoMorningBrief.summaryLine)).toBeInTheDocument();
+    // Declutter pass: the "Top priority: N" chip duplicated the card badge.
+    expect(screen.queryByText(/Top priority:/i)).not.toBeInTheDocument();
+  });
+
+  it('offers no Meeting Prep button (removed until real meeting prep ships)', () => {
+    render(<MorningBrief brief={demoMorningBrief} onAction={() => {}} />);
+    expect(screen.queryByRole('button', { name: /Meeting Prep/i })).not.toBeInTheDocument();
   });
 
   it('reports the chosen quick action to the parent', async () => {
@@ -76,9 +71,10 @@ describe('AiAssistantRail', () => {
       <AiAssistantRail item={item} activeTab="action" onTabChange={onTabChange} />,
     );
 
-    // Header context: title + person are visible.
+    // Header context: title + the sender meta line (name · email) are visible.
     expect(screen.getByText(item.title)).toBeInTheDocument();
-    expect(screen.getByText(item.person!)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(item.person!))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(item.personEmail!))).toBeInTheDocument();
     expect(screen.getByText(item.nextBestAction)).toBeInTheDocument();
 
     // Switching to the Draft tab is reported to the parent.
@@ -105,13 +101,20 @@ describe('AiAssistantRail', () => {
     expect(onOpenDraft).toHaveBeenCalled();
   });
 
-  it('shows an honest "coming soon" message when the Delegate action is clicked', async () => {
-    const user = userEvent.setup();
+  it('offers no Delegate button (dead buttons removed; the sidebar Soon row carries the roadmap)', () => {
     const item = demoWorkItems[0];
     renderWithToast(<AiAssistantRail item={item} activeTab="action" onTabChange={() => {}} />);
+    expect(screen.queryByRole('button', { name: /^Delegate$/i })).not.toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole('button', { name: /^Delegate$/i }));
-    expect(screen.getByText(/delegation arrives in Phase 8/i)).toBeInTheDocument();
+  it('shows no second LIVE badge and no context grid repeating the card', () => {
+    const item = demoWorkItems[0];
+    renderWithToast(<AiAssistantRail item={item} activeTab="action" onTabChange={() => {}} />);
+    // The brief is the dashboard's one live surface.
+    expect(screen.queryByText(/^Live$/i)).not.toBeInTheDocument();
+    // The old Source/Category cells repeated what the clicked card already says.
+    expect(screen.queryByText(/^Source$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Category$/i)).not.toBeInTheDocument();
   });
 
   it('lists the memory/rules used on the Memory tab', () => {
