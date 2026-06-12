@@ -157,6 +157,27 @@ inside /admin (any app page bounces back to the console), and its sessions
   console stays open. Flips are audit-logged.
 - **Your recent admin actions** — the account's own audit trail at a glance.
 
+### 🤖 Ops automation (runs by itself)
+A scheduled job (`/api/cron/ops`, every ~15 minutes) acts as your standing
+orders — and emails you (via Resend) only when something needs you:
+
+- **Cost-cap alarm** — when a user's AI spend today reaches their cap
+  (per-user cap, else the global one — **no cap set = nothing ever fires**),
+  you get an email; the pause itself already happens automatically.
+- **Self-healing pipeline** — stale mailboxes get an extra sync attempt;
+  webhook subscriptions near expiry are renewed. You're emailed **only when
+  self-healing fails**.
+- **Morning digest** — the Needs-attention list, mailed once a day
+  (05:00 UTC ≈ 8am Beirut by default, `DIGEST_HOUR_UTC` to change) and only
+  on days when something is actually wrong. Healthy days = no email.
+
+Every automated action and email lands in the **audit log**
+(`system_alert` / `system_digest`) and is deduped per day, so one problem
+never floods your inbox. Alert recipient = the admin account email
+(`ALERT_EMAIL` env overrides). Requires `RESEND_API_KEY`; until you verify
+a domain at Resend, mail delivers only to the address that owns the Resend
+account.
+
 ## Safety model
 
 - Every **destructive** action (delete, wipe, purge, suspend) asks for confirmation —
