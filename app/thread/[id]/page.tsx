@@ -1,11 +1,9 @@
 import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/supabase/auth';
 import { createClient } from '@/lib/supabase/server';
-import { Icon } from '@/components/ui/Icon';
-import { LocalTime } from '@/components/ui/LocalTime';
-import { MessageBody } from '@/components/thread/MessageBody';
-import { BackButton } from '@/components/thread/BackButton';
 import { decodeThreadId } from '@/lib/thread';
+import { splitQuotedHtml, splitQuotedText } from '@/lib/email/quotes';
+import { ThreadView, type AiRead, type ThreadMessageVM } from '@/components/thread/ThreadView';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,11 +33,12 @@ function names(list: Recipient[] | null): string {
 }
 
 /**
- * Full-screen thread view (Phase 6.6). Shows the entire Outlook conversation —
- * every message, oldest → newest, with sender/recipients, the manager's local
- * time, and the full email body (sandboxed). Reached from the Inbox and from
- * dashboard work items, so the manager can read exactly what happened (e.g. before
- * approving an AI reply later). RLS-scoped; only the user's own mail is returned.
+ * Full-screen thread view — the "reading room". The server gathers the whole
+ * Outlook conversation (RLS-scoped), splits the quoted history every reply
+ * re-pastes (lib/email/quotes), and pulls Vesta's existing analysis of this
+ * thread (the radar work item) for the pinned "Vesta's read" header. The
+ * client (ThreadView) renders the timeline: newest message open, the rest
+ * collapsed, quoted history behind a toggle.
  */
 export default async function ThreadPage({ params }: { params: { id: string } }) {
   await requireUser();
@@ -52,87 +51,67 @@ export default async function ThreadPage({ params }: { params: { id: string } })
     notFound();
   }
 
-  const { data } = await supabase
-    .from('email_messages')
-    .select(COLS)
-    .eq('graph_conversation_id', conversationId)
-    .is('deleted_at', null);
+  const [{ data }, { data: item }] = await Promise.all([
+    supabase
+      .from('email_messages')
+      .select(COLS)
+      .eq('graph_conversation_id', conversationId)
+      .is('deleted_at', null),
+    // Vesta's read: the radar item AI built for this conversation (if any).
+    supabase
+      .from('work_items')
+      .select('id, summary, urgency_reason, category, due_at, status')
+      .eq('source', 'outlook')
+      .eq('source_external_id', conversationId)
+      .maybeSingle(),
+  ]);
 
-  // Sort chronologically by each message's effective time. Outbound (sent) messages
-  // have no received_at, so we coalesce received_at -> sent_at and sort in JS
-  // (a DB nulls-first order would push your own replies to the top).
+  // Sort chronologically by each message's effective time. Outbound (sent)
+  // messages have no received_at, so we coalesce received_at -> sent_at and
+  // sort in JS (a DB nulls-first order would push your own replies to the top).
   const eff = (m: ThreadMessage) => new Date(m.received_at ?? m.sent_at ?? 0).getTime();
-  const messages = ([...((data ?? []) as ThreadMessage[])]).sort((a, b) => eff(a) - eff(b));
-  if (messages.length === 0) notFound();
+  const rows = ([...((data ?? []) as ThreadMessage[])]).sort((a, b) => eff(a) - eff(b));
+  if (rows.length === 0) notFound();
 
   const subject =
-    messages.find((m) => m.subject?.trim())?.subject?.replace(/^(re|fw|fwd):\s*/i, '') ||
+    rows.find((m) => m.subject?.trim())?.subject?.replace(/^(re|fw|fwd):\s*/i, '') ||
     '(no subject)';
-  const lastWebLink = [...messages].reverse().find((m) => m.web_link)?.web_link ?? null;
+  const outlookLink = [...rows].reverse().find((m) => m.web_link)?.web_link ?? null;
+
+  const messages: ThreadMessageVM[] = rows.map((m) => {
+    const outbound = m.direction === 'outbound';
+    const html = m.body_html ? splitQuotedHtml(m.body_html) : null;
+    const rawText = m.body_text || m.body_preview || '';
+    const text = !m.body_html && rawText ? splitQuotedText(rawText) : null;
+    return {
+      id: m.id,
+      senderName: m.sender_name || m.sender_email || 'Unknown sender',
+      senderEmail: m.sender_email?.toLowerCase() ?? null,
+      toLine: names(m.to_recipients),
+      ccLine: names(m.cc_recipients),
+      whenIso: outbound ? (m.sent_at ?? m.received_at) : (m.received_at ?? m.sent_at),
+      outbound,
+      bodyHtml: html ? html.main : null,
+      bodyText: text ? text.main : html ? null : rawText,
+      quotedHtml: html?.quoted ?? null,
+      quotedText: text?.quoted ?? null,
+      preview: (m.body_preview ?? rawText).replace(/\s+/g, ' ').trim().slice(0, 120),
+    };
+  });
+
+  const aiRead: AiRead | null =
+    item && item.summary
+      ? {
+          workItemId: item.id,
+          summary: item.summary,
+          reason: item.urgency_reason,
+          category: item.category,
+          due: item.due_at ? item.due_at.slice(0, 10) : null,
+          open: item.status === 'open',
+        }
+      : null;
 
   return (
-    // dvh + a generous safe-area bottom pad so the last message is fully
-    // readable on phones (mobile pass, 2026-06-12).
-    <main className="v-scroll mx-auto h-[100dvh] w-full max-w-[860px] overflow-y-auto px-4 pb-[max(48px,env(safe-area-inset-bottom))] pt-6 sm:px-5 sm:pt-8">
-      <div className="mb-6 flex items-center gap-3">
-        <BackButton />
-        <div className="min-w-0 flex-1">
-          <h1 className="m-0 truncate font-display text-[24px] font-semibold tracking-tight">
-            {subject}
-          </h1>
-          <p className="mt-1 text-[13px] text-muted">
-            {messages.length} {messages.length === 1 ? 'message' : 'messages'} in this conversation
-          </p>
-        </div>
-        {lastWebLink && (
-          <a
-            href={lastWebLink}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex flex-none items-center gap-2 rounded-[11px] border border-line bg-panel px-3 py-[9px] text-[13px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-          >
-            <Icon name="mail" className="h-[15px] w-[15px]" />
-            Open in Outlook
-          </a>
-        )}
-      </div>
-
-      <ul className="flex flex-col gap-4">
-        {messages.map((m) => {
-          const outbound = m.direction === 'outbound';
-          const when = outbound ? (m.sent_at ?? m.received_at) : (m.received_at ?? m.sent_at);
-          return (
-            <li
-              key={m.id}
-              className={[
-                'rounded-[14px] border bg-panel p-4 shadow-soft',
-                outbound ? 'border-accent/40' : 'border-line',
-              ].join(' ')}
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <div className="min-w-0">
-                  <span className="text-[13.5px] font-semibold text-ink">
-                    {m.sender_name || m.sender_email || 'Unknown sender'}
-                  </span>
-                  {outbound && (
-                    <span className="ml-2 rounded-full bg-accent-soft px-2 py-[1px] text-[11px] font-semibold text-accent">
-                      You
-                    </span>
-                  )}
-                </div>
-                <LocalTime iso={when} className="flex-none font-mono text-[11px] text-muted" />
-              </div>
-              <div className="mt-[2px] text-[12px] text-muted">
-                {names(m.to_recipients) && <span>To: {names(m.to_recipients)}</span>}
-                {names(m.cc_recipients) && <span className="ml-2">Cc: {names(m.cc_recipients)}</span>}
-              </div>
-              <div className="mt-3">
-                <MessageBody html={m.body_html} text={m.body_text || m.body_preview} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </main>
+    <ThreadView subject={subject} messages={messages} aiRead={aiRead} outlookLink={outlookLink} />
   );
 }

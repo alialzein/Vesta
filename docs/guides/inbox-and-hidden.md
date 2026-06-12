@@ -21,15 +21,26 @@ shows every message, oldest to newest, with the complete email body.
 > correspondence, whether or not it's waiting on your reply. The dashboard shows only
 > the items that need *you* — see [Your dashboard & Priorities](priorities-and-dashboard.md).
 
-### Opening a full email / thread
+### Opening a full email / thread — the reading room
 
 Clicking a thread (from the Inbox, the dashboard's "Open full thread", or a
-Priorities row) opens a **full-screen conversation view**: each message with its
-sender, recipients, local time, and the **complete email body** rendered exactly as
-it was sent (formatting, signatures, images). Your own replies are marked **You**.
-This is where you read the whole history — useful when you want to confirm what was
-said before acting (and later, before approving an AI-drafted reply). There's an
-**Open in Outlook** button if you want the native client.
+Priorities row) opens the **reading room** — the conversation as Vesta sees it:
+
+- **Vesta's read, pinned on top.** If Vesta has analyzed this thread for your
+  radar, you'll see its one-line summary, *why it matters*, the category and
+  due date — and a **"Draft a reply with Vesta"** button. The draft lands in
+  Draft Replies for your approval; nothing sends without you.
+- **A clean timeline, not a wall of text.** Each message sits on a timeline
+  with the sender's colored initials. The **newest message is open**; older
+  ones are collapsed to one preview line — tap any of them to read in full.
+  Your own replies are marked **You**.
+- **No more repeated history.** Replies normally re-paste the whole earlier
+  conversation under "From: … Sent: …" — Vesta tucks that away behind a
+  **"Show quoted history"** toggle, so each card shows only what that person
+  actually wrote. The full body (formatting, signatures, images) is rendered
+  exactly as sent.
+
+There's an **Open in Outlook** button if you want the native client.
 
 > Full bodies are saved going forward. Emails synced before this feature show their
 > body once your mailbox re-syncs them.
