@@ -152,6 +152,48 @@ describe('buildWorkItemDrafts', () => {
     expect(d.row.priority_score ?? 0).toBeGreaterThan(0);
     expect(d.row.urgency_reason).toMatch(/waiting on your reply/i);
   });
+
+  it('sets metadata on EVERY draft so a mixed batch insert cannot null it', () => {
+    // In a multi-row PostgREST insert the column set is the union of all rows'
+    // keys; rows missing a key get explicit NULL (not the column default). One
+    // "waiting on you" row without metadata next to a "waiting on them" row
+    // with it violated work_items.metadata NOT NULL and failed the whole
+    // batch — silently emptying the radar after an Outlook reconnect.
+    const drafts = buildWorkItemDrafts(
+      [
+        // Waiting on the manager (inbound only).
+        {
+          msg: msg({
+            id: 'a',
+            conversationId: 'C1',
+            subject: 'Need approval',
+            from: { emailAddress: { name: 'Maya', address: 'maya@cedars.com' } },
+            receivedDateTime: '2026-06-05T10:00:00Z',
+          }),
+          direction: 'inbound',
+        },
+        // Waiting on them (manager replied last, asking for something).
+        {
+          msg: msg({
+            id: 'b',
+            conversationId: 'C2',
+            subject: 'Re: Budget',
+            bodyPreview: 'Can you send me the final numbers?',
+            toRecipients: [{ emailAddress: { name: 'Sam', address: 'sam@cedars.com' } }],
+            sentDateTime: '2026-06-06T10:00:00Z',
+          }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+    );
+
+    expect(drafts).toHaveLength(2);
+    for (const d of drafts) {
+      expect(d.row.metadata).toBeDefined();
+      expect(d.row.metadata).not.toBeNull();
+    }
+  });
 });
 
 describe('buildWorkItemDrafts — waiting on them (Phase 8)', () => {
