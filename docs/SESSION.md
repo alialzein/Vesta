@@ -4,19 +4,28 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 (second session, work laptop). `main` =
-**#45–#73 ALL MERGED, no PRs open, all branches deleted.**
-**⚠️ Owner to-do (blocks two live features):** RECONNECT Outlook once
-(Settings → Email connection → Reconnect) to grant the calendar scope —
-until then BOTH the new /meetings page and chat meeting orders show
-"Reconnect to enable". Then verify on a real phone (both themes): /meetings
-times in your tz + Join + "Prep with Vesta" (admits when no email history);
-login page scrolls; inbox faster + last row visible above the tab bar; item
-sheet closes by dragging the handle down; thread last message readable.
-**Next session: pick the next feature track — AI Decision Desk (Phase 12,
-discuss scope) / Teams radar (Phase 13) / notifications bell (reminders
-engine already powers it).**
-Merged this session (latest):
+**Last updated:** 2026-06-12 (third session, work laptop). `main` =
+**#45–#74 ALL MERGED, no PRs open, all branches deleted.** (Owner DID the
+Outlook reconnect — calendar scope live; chat meeting orders + /meetings
+verified working in production.)
+**In flight this session — owner's 5-point batch (2026-06-12):**
+PR #74 (merged) = points 1–3. **NEXT: PR 2 = modern calendar on /meetings
+(week time-grid + month view + agenda toggle). THEN PR 3 = thread reading
+room (AI redesign of /thread/[id]: collapse quoted history, summary header,
+theme-aware cards).** Owner goal to honor everywhere: "the user must feel
+AI everywhere — a space of AI".
+**#74** (`feat/chat-meeting-link-and-starters`): (a) meeting LINK now
+visible — chat confirm card gets "Open the meeting link" (stored on the
+action: `link` on StoredChatAction/ChatActionView), /meetings Join reads
+Graph's legacy `onlineMeetingUrl` (personal accounts hide the Skype link
+there) + always-on "Open in Outlook" (webLink added to CalendarEventView);
+(b) confirming a chat meeting auto-schedules a reminder EMAIL 15 min before
+start via the reminders engine (best-effort, cancellable in Settings);
+(c) starters reorganized: 4 ask (send) + 3 act (PREFILL composer) + tap
+"What can Vesta do?" capability panel; (d) **@-mention people autocomplete**
+in both composers (lib/chat/mention.ts pure + useAttendeeMention/MentionMenu
+in chat/parts) — suggestions from the manager's own senders. Tests 508.
+Merged earlier this session (latest):
 `feat/meetings-and-mobile-fixes` = **MEETINGS v1 + real AI Meeting Prep +
 mobile bug sweep**. (a) `/meetings` (sidebar Workspace → Meetings; phone
 Menu): Outlook calendarView today+7d via Phase C plumbing (`lib/meetings/
