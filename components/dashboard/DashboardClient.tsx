@@ -26,6 +26,7 @@ import { MorningBrief } from './MorningBrief';
 // longer rendered on the main Today dashboard (Phase 0.3). Kept + flag-gated.
 import { AiCommandCenter } from './AiCommandCenter';
 import { TodaysRadar, type RadarFilter } from './TodaysRadar';
+import { MobileRailSheet } from './MobileRailSheet';
 import { QuickAddTask } from './QuickAddTask';
 import { HowItWorks } from './HowItWorks';
 import { AiAssistantRail } from './AiAssistantRail';
@@ -242,6 +243,11 @@ export function DashboardClient({
     setThreadKey((k) => k + 1);
   }, [startHereEl, briefState.focusItemId]);
 
+  // Mobile/tablet (< xl): the side rail doesn't exist there, so tapping a
+  // card opens the SAME rail inside a bottom sheet (touch UX pass). The sheet
+  // markup is xl:hidden, so this state is inert on desktop.
+  const [mobileRailOpen, setMobileRailOpen] = useState(false);
+
   /** Called when the splash finishes its timed sequence. */
   function handleSplashDone() {
     setShowSplash(false);
@@ -292,6 +298,7 @@ export function DashboardClient({
   function handleResolve(kind: 'done' | 'dismiss') {
     if (!selected) return;
     const id = selected.id;
+    setMobileRailOpen(false); // the sheet's job is done once an action fires
     void applyItemAction(
       id,
       () => resolveWorkItem(id, kind),
@@ -303,6 +310,7 @@ export function DashboardClient({
   function handleSnooze(untilIso: string) {
     if (!selected) return;
     const id = selected.id;
+    setMobileRailOpen(false);
     void applyItemAction(id, () => snoozeWorkItem(id, untilIso), 'Snoozed.');
   }
 
@@ -333,6 +341,7 @@ export function DashboardClient({
       showToast('Pick an email thread to draft a reply.');
       return;
     }
+    setMobileRailOpen(false); // the composer takes over the screen on mobile
     setComposerOpen(true);
   }
 
@@ -490,7 +499,13 @@ export function DashboardClient({
                 <TodaysRadar
                   items={items}
                   selectedId={selected?.id ?? null}
-                  onSelect={setSelected}
+                  onSelect={(item) => {
+                    setSelected(item);
+                    // Touch path: below xl there is no side rail, so the tap
+                    // opens the bottom-sheet rail (the sheet is xl:hidden, so
+                    // desktop clicks just select as before).
+                    setMobileRailOpen(true);
+                  }}
                   filter={radarFilter}
                   onFilterChange={setRadarFilter}
                   leavingIds={leavingIds}
@@ -543,7 +558,8 @@ export function DashboardClient({
           title="Ask Vesta"
           aria-label="Ask Vesta"
           className={[
-            'group fixed bottom-6 right-6 z-50 flex h-14 items-center gap-3 rounded-full border border-line-strong bg-[radial-gradient(circle_at_30%_20%,var(--accent),var(--accent-2))] text-white shadow-[0_14px_34px_rgba(47,125,235,.45)] transition hover:scale-[1.03]',
+            // Compact + tucked-in on phones so it covers less of the list.
+            'group fixed bottom-4 right-4 z-50 flex h-12 items-center gap-3 rounded-full border border-line-strong bg-[radial-gradient(circle_at_30%_20%,var(--accent),var(--accent-2))] text-white shadow-[0_14px_34px_rgba(47,125,235,.45)] transition hover:scale-[1.03] sm:bottom-6 sm:right-6 sm:h-14',
             railExpanded ? 'pl-4 pr-5 xl:w-14 xl:justify-center xl:px-0' : 'pl-4 pr-5',
           ].join(' ')}
         >
@@ -561,6 +577,22 @@ export function DashboardClient({
 
       {/* The glow thread — Vesta points from "Start here" to the focus card. */}
       <FocusThread playKey={threadKey} fromEl={startHereEl} targetId={focusItem?.id ?? null} />
+
+      {/* Mobile/tablet bottom sheet hosting the SAME AI rail (xl:hidden) —
+          tapping a card on touch finally has somewhere to act. */}
+      {onToday && selected && (
+        <MobileRailSheet open={mobileRailOpen} onClose={() => setMobileRailOpen(false)}>
+          <AiAssistantRail
+            item={selected}
+            activeTab={railTab}
+            onTabChange={setRailTab}
+            onResolve={handleResolve}
+            onSnooze={handleSnooze}
+            onOpenDraft={openComposer}
+            busy={actionBusy}
+          />
+        </MobileRailSheet>
+      )}
 
       {/* Mini chat dock (real backend — same conversations as /chat). */}
       <ChatDock open={chatOpen} onClose={() => setChatOpen(false)} />

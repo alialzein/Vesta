@@ -71,6 +71,14 @@ triage is one click, without opening the rail. The rail still has the full set
 path. The same safety net applies: done/dismissed threads come back if the sender
 replies again.
 
+### On your phone or tablet — tap a card
+
+On smaller screens there's no side rail and no hover, so **tapping a card slides
+up an action sheet from the bottom** with everything the desktop rail has: the
+AI's *Why this matters*, **Mark done / Dismiss / Snooze**, **Draft reply**, and
+the Memory and Activity tabs. Swipe-bar, ✕, or tapping outside closes it.
+Acting on the item closes it automatically. Nothing is desktop-only anymore.
+
 ## Priorities ("Waiting on you")
 
 The **Priorities** view (sidebar: *Waiting on you*) is the full, ranked list of every

@@ -54,7 +54,7 @@ export function MorningBrief({
   startHereRef?: (el: HTMLElement | null) => void;
 }) {
   return (
-    <section className="relative isolate z-[1] rounded-[var(--radius)] border border-line-strong bg-panel p-[18px] shadow-glow">
+    <section className="relative isolate z-[1] rounded-[var(--radius)] border border-line-strong bg-panel p-[14px] shadow-glow sm:p-[18px]">
       {/* Live AI signal accents (Phase 0.5, Section B).
           IMPORTANT: the decorative layers live in their OWN clipped, content-free
           wrapper — NOT via `overflow-hidden` on the card itself. Putting
@@ -88,14 +88,9 @@ export function MorningBrief({
                 <span className="animate-vesta-pulse relative h-[6px] w-[6px] rounded-full bg-green shadow-[0_0_0_2px_var(--green-soft)]" />
               </span>
               Live morning brief
-              {/* Tiny signal waveform (opacity comes from the pulse keyframe, so
-                  the bars use the solid accent token — no /opacity modifier,
-                  which Tailwind cannot apply to the hex CSS var). */}
-              <span className="ml-[1px] flex items-end gap-[2px]" aria-hidden="true">
-                <span className="animate-vesta-pulse h-[6px] w-[2px] rounded-full bg-accent [animation-delay:-0.2s]" />
-                <span className="animate-vesta-pulse h-[9px] w-[2px] rounded-full bg-accent [animation-delay:-0.9s]" />
-                <span className="animate-vesta-pulse h-[5px] w-[2px] rounded-full bg-accent [animation-delay:-1.5s]" />
-              </span>
+              {/* (The 3-bar waveform was trimmed in the 2026-06-12 animation
+                  budget pass — the pulsing dot + headline sheen carry "live"
+                  without three more pulsing elements in one card.) */}
             </span>
           </div>
 
@@ -162,18 +157,20 @@ export function MorningBrief({
           )}
         </div>
 
-        {/* Quick actions */}
+        {/* Quick actions — equal-width thumb targets on phones (taller tap
+            area), compact pills from sm up. */}
         <div className="flex flex-wrap gap-[8px] lg:flex-none lg:justify-end">
           {ACTIONS.map((action) => (
             <button
               key={action.id}
               type="button"
               onClick={() => onAction(action.id)}
-              className={
+              className={[
+                'inline-flex flex-1 items-center justify-center gap-[6px] rounded-[11px] px-[13px] py-[10px] text-[12.5px] font-semibold transition sm:flex-none sm:py-[8px]',
                 action.primary
-                  ? 'inline-flex items-center gap-[6px] rounded-[11px] bg-gradient-to-br from-accent to-accent-2 px-[13px] py-[8px] text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(47,125,235,0.3)] transition hover:brightness-110'
-                  : 'inline-flex items-center gap-[6px] rounded-[11px] border border-line-strong bg-panel-solid px-[13px] py-[8px] text-[12.5px] font-semibold text-ink transition hover:-translate-y-[2px] hover:border-accent hover:text-accent'
-              }
+                  ? 'bg-gradient-to-br from-accent to-accent-2 text-white shadow-[0_8px_20px_rgba(47,125,235,0.3)] hover:brightness-110'
+                  : 'border border-line-strong bg-panel-solid text-ink hover:-translate-y-[2px] hover:border-accent hover:text-accent',
+              ].join(' ')}
             >
               <Icon name={action.icon} className="h-[14px] w-[14px]" />
               {action.label}

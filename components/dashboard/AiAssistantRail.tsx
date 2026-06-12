@@ -99,7 +99,7 @@ export function AiAssistantRail({
           signal), no context grid repeating the card (source/category/score
           are already on the row the manager just clicked) — only what the card
           does NOT show: the sender's real address and the last-email time. */}
-      <div className="border-b border-line p-5">
+      <div className="border-b border-line p-4 sm:p-5">
         <div className="flex items-center gap-[9px]">
           <span className="grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-accent-soft text-accent">
             <Icon name="sparkle" className="h-[16px] w-[16px]" />
@@ -194,8 +194,9 @@ export function AiAssistantRail({
         })}
       </div>
 
-      {/* Tab panels */}
-      <div role="tabpanel" className="p-5">
+      {/* Tab panels — tighter on phones (the rail also lives in the mobile
+          bottom sheet, where every pixel of height counts). */}
+      <div role="tabpanel" className="p-4 sm:p-5">
         {activeTab === 'action' && (
           <ActionTab
             item={item}
@@ -497,7 +498,7 @@ function MemoryTab({ item }: { item: WorkItem }) {
               className="flex items-start gap-[10px] rounded-xl border border-line bg-panel-solid px-3 py-[11px]"
             >
               <span
-                className={`mt-px flex-none rounded-md px-[7px] py-[3px] font-mono text-[9.5px] font-semibold uppercase tracking-wide ${MEMORY_TONE[m.type]}`}
+                className={`mt-px flex-none rounded-md px-[7px] py-[3px] font-mono text-[10.5px] font-semibold uppercase tracking-wide ${MEMORY_TONE[m.type]}`}
               >
                 {MEMORY_LABEL[m.type]}
               </span>

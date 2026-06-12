@@ -113,7 +113,10 @@ export function WorkItemRow({
         className={[
           'animate-rise relative grid w-full grid-cols-[40px_1fr] items-start gap-[12px] overflow-hidden rounded-[14px] border p-[10px_12px] text-left transition-[transform,background-color,border-color,box-shadow] duration-200 sm:grid-cols-[40px_1fr_116px] sm:items-center',
           selected
-            ? 'border-line-strong bg-accent-soft shadow-[0_10px_26px_rgba(47,125,235,0.14)]'
+            ? // Dedicated selected fill — one step deeper than hover's
+              // accent-soft, so active vs hovering is unmistakable (they were
+              // the same color in light mode; 2026-06-12 color pass).
+              'border-line-strong bg-card-selected shadow-[0_10px_26px_rgba(47,125,235,0.14)]'
             : // Quiet-but-visible card (2026-06-10 radar diagnostic): a permanent
               // border + a fill stronger than the panel in BOTH themes, so an
               // unselected ticket still reads as a ticket. Hover/selected stay
@@ -143,7 +146,7 @@ export function WorkItemRow({
           {/* Sender identity + source + last-email time — quiet, low-contrast. */}
           <span className="flex flex-wrap items-center gap-x-[7px] gap-y-1 text-[11px] text-muted">
             {item.unread && (
-              <span className="inline-flex items-center gap-[4px] font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-accent">
+              <span className="inline-flex items-center gap-[4px] font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-accent">
                 <span
                   className="h-[7px] w-[7px] flex-none rounded-full bg-accent"
                   aria-hidden="true"
@@ -188,13 +191,15 @@ export function WorkItemRow({
                 ·
               </span>
             )}
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+            {/* Micro-text floor (2026-06-12 color pass): nothing below 10.5px;
+                the timestamp steps up to 11px — tired-eye readability. */}
+            <span className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted">
               {SOURCE_LABEL[item.source]}
             </span>
             {item.lastActivityAt && (
               <LocalTime
                 iso={item.lastActivityAt}
-                className="ml-auto flex-none font-mono text-[10.5px] text-muted"
+                className="ml-auto flex-none font-mono text-[11px] text-muted"
               />
             )}
           </span>

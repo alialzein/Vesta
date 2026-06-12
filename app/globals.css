@@ -75,6 +75,13 @@ html[data-theme='dark'] {
      still reads as a card on --panel (2026-06-10 radar diagnostic: 0.05 over
      #131c2b was ~2% luminance difference, i.e. invisible). */
   --card: rgba(120, 170, 230, 0.09);
+  /* Selected radar card — one step deeper than the hover accent-soft so the
+     active card is unmistakable (2026-06-12 color pass). */
+  --card-selected: rgba(91, 168, 245, 0.16);
+  /* Roadmap violet — the ONE color for "Soon"/future things (sidebar pill,
+     roadmap copy). Tokenized so both themes speak it consistently. */
+  --violet: #a78bfa;
+  --violet-soft: rgba(167, 139, 250, 0.16);
   /* Right AI rail surface — subtle glassy gradient in dark mode. */
   --rail-bg: linear-gradient(180deg, rgba(91, 168, 245, 0.07), rgba(20, 28, 40, 0.6));
   --rail-border: var(--line);
@@ -118,6 +125,11 @@ html[data-theme='light'] {
   --panel-soft: #f3f7fd;
   /* Radar ticket surface — visibly bluer than the white panel (see dark note). */
   --card: #edf4fc;
+  /* Selected radar card — clearly deeper than hover's accent-soft on white. */
+  --card-selected: #dcebfc;
+  /* Roadmap violet (see dark note). */
+  --violet: #7457d9;
+  --violet-soft: rgba(116, 87, 217, 0.12);
   /* Readable text contrast. Muted darkened slightly (Phase 0.5 final QA) so
      small muted labels/chips clear WCAG AA (~4.8:1 on white, was ~4.0:1). */
   --ink: #1c2f4a;
@@ -131,8 +143,10 @@ html[data-theme='light'] {
   --accent-soft: rgba(47, 125, 235, 0.1);
   --red: #ef5b5b;
   --red-soft: rgba(239, 91, 91, 0.1);
-  --amber: #d99a26;
-  --amber-soft: rgba(243, 184, 74, 0.16);
+  /* Amber deepened (2026-06-12 color pass): #d99a26 on white was ~2.6:1 —
+     too pale for chip text; the soft fill also gets a step more presence. */
+  --amber: #a87413;
+  --amber-soft: rgba(243, 184, 74, 0.22);
   --green: #1ca888;
   --green-soft: rgba(56, 221, 182, 0.14);
   /* Left sidebar: gray-white, intentionally NOT the white of content cards —

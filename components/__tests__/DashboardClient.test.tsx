@@ -181,6 +181,24 @@ describe('DashboardClient shell', () => {
     expect(screen.getAllByText('Hiring decision follow-up').length).toBeGreaterThan(1);
   });
 
+  it('tapping a card opens the mobile action sheet hosting the rail (touch path)', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+
+    // Closed (and aria-hidden) until a card is tapped.
+    expect(screen.queryByRole('dialog', { name: 'Item actions' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('Hiring decision follow-up').closest('button')!);
+    const sheet = screen.getByRole('dialog', { name: 'Item actions' });
+    // The SAME rail content — actions included — lives inside the sheet, so
+    // phones/tablets (no side rail, no hover) can finally act on items.
+    expect(within(sheet).getByRole('button', { name: /Mark done/i })).toBeInTheDocument();
+    expect(within(sheet).getByText('Hiring decision follow-up')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Close item actions' }));
+    expect(screen.queryByRole('dialog', { name: 'Item actions' })).not.toBeInTheDocument();
+  });
+
   it('keeps the Morning Brief quick actions to what is real (no Delegate, no Meeting Prep)', () => {
     renderDashboard();
     const brief = screen.getByText(/Live morning brief/i).closest('section')!;
