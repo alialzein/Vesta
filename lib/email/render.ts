@@ -11,8 +11,11 @@
  */
 
 /** Real layout/branding — keep the faithful iframe. (Text colors are fine:
- *  the native render restyles text anyway; backgrounds/images are not.) */
-const RICH_RE = /<\s*(table|img|svg|video|picture|object|embed)\b|background(-color)?\s*:/i;
+ *  the native render restyles text anyway; backgrounds are not.) Images and a
+ *  table or two do NOT make an email rich — that's just a signature block —
+ *  but heavy table nesting is a designed layout (newsletters, receipts). */
+const RICH_RE = /<\s*(svg|video|picture|object|embed)\b|background(-color)?\s*:/i;
+const MAX_SIMPLE_TABLES = 3;
 
 const ENTITIES: Record<string, string> = {
   '&nbsp;': ' ',
@@ -56,8 +59,12 @@ function flattenAnchors(html: string): string {
 export function simpleEmailText(html: string): string | null {
   const body = html.replace(/<head[\s\S]*?<\/head>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
   if (RICH_RE.test(body)) return null;
+  if ((body.match(/<table/gi) ?? []).length > MAX_SIMPLE_TABLES) return null;
   const text = decodeEntities(
     flattenAnchors(body)
+      // Signature logos / social icons / tracking pixels add nothing in a
+      // text rendering — drop them (an image-ONLY mail ends up empty → iframe).
+      .replace(/<img[^>]*>/gi, '')
       .replace(/<(br|\/p|\/div|\/li|\/tr|\/h[1-6]|\/blockquote)[^>]*>/gi, '\n')
       .replace(/<li[^>]*>/gi, '• ')
       .replace(/<[^>]+>/g, ''),
