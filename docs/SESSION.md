@@ -4,47 +4,40 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 (`main` = #45–#64 all MERGED, incl. the
-radar-wipe fix #63 — disconnect/reconnect now self-heals — and the chat
-quick-actions/landing/cron-doc round #64. Reminders migration IS applied.
-**Cron reality check (owner ran `select * from cron.job`):** `vesta-sync`
-(*/1) and `vesta-renew-subscriptions` (0 6 daily) EXIST; **`vesta-reminders`
-and `vesta-purge` are MISSING — reminders queue but don't send until the
-owner runs the two `cron.schedule` statements in
-`docs/reference/cron-setup.md`** (doc table updated to production reality).
-**PR branch `fix/due-time-precision` — deadlines keep their stated time
-(PROMPT v4):** owner spotted "meeting friday … 3:00 PM" showing Overdue at
-10 AM. Model may now return `deadlineTime` (HH:MM, only when stated, never
-guessed); due_at = stated time else 9 AM manager-tz; dueOf() renders in the
-MANAGER timezone and overdue shows the missed moment ("was due Jun 12,
-3:00 PM"). ⚠️ Post-merge: `node scripts/reanalyze-work-items.mjs`.
-**PR branch `feat/phase-c-calendar-meetings` (stacked on due-time) —
-PHASE C BUILT (chat-v5):** Calendars.ReadWrite in GRAPH_SCOPES +
-hasCalendarScope; lib/graph/calendar.ts (calendarView read; createMeeting
-with teamsForBusiness → skypeForConsumer → plain fallback for personal
-accounts); chat context gains today's meetings + known-people list;
-create_meeting order with the anti-invention attendee gate (only
-known-people emails or typed ones, else the model must ask); confirm card
-has an EDITABLE attendee list with autocomplete from own senders
-(suggestAttendees, VIPs→recency); Settings card shows "Calendar & meetings"
-status; starter chip "What meetings do I have today?". Guides
-(ask-vesta Meetings section, settings), landing Ask Vesta card, plan doc
-all updated.
-**⚠️ Owner actions: (1) merge `fix/due-time-precision` then
-`feat/phase-c-calendar-meetings` (stacked); (2) run the 2 missing pg_cron
-jobs from docs/reference/cron-setup.md; (3) RECONNECT Outlook once
-(Settings) to grant the calendar scope; (4) re-run the reanalyze script.**
-**Owner verify (both themes, after deploy + reconnect):** Settings shows
-Calendar & meetings: Enabled; chat "What meetings do I have today?" answers
-from the real calendar; "Set up a meeting with <a known sender> tomorrow
-3pm" → card with editable attendees → Confirm → event appears in Outlook
-calendar + invite sent; a 3 PM-deadline email is NOT overdue in the
-morning and an overdue one shows "was due <date>, <time>".
-**Next: pick next track — AI Decision Desk (Phase 12, discuss scope) /
-Teams radar (Phase 13) / notifications bell. Decision recorded: deleting a
-chat does NOT delete learned memories. Pre-launch checklist standing
-(rotate keys/passwords, re-enable email confirmation, remove dev user,
-Mail.Send + Calendars.ReadWrite on prod Azure app).**
+**Last updated:** 2026-06-12 end of day (`main` = **#45–#68 all MERGED**).
+Today: radar-wipe fix (#63), chat quick-actions + cron doc (#64), due-time
+PROMPT v4 (#65), **PHASE C calendar & meetings, chat-v5** (#66, landed on
+main via rescue PR **#67** — #66 was a stacked PR merged into its base
+branch by mistake; lesson: DELETE branches after merging so stacked PRs
+retarget), and #68 (chat-v6 + PROMPT v5): reminders can go to OTHER people
+(known-people gate, never invented emails), "email me" reminders default
+to the CONNECTED MAILBOX (the dev@vesta.app bounce), and relative deadline
+words ("today or tomorrow?") now anchor to the MESSAGE's date — thread
+context lines carry [YYYY-MM-DD] prefixes.
+**All four pg_cron jobs are LIVE** (owner created vesta-reminders +
+vesta-purge; vesta-sync */1 and vesta-renew-subscriptions daily existed).
+Reminders end-to-end VERIFIED by owner (email arrived; bounce fixed in #68).
+**Re-analysis under v5 triggered 2026-06-12** (script run twice — second
+run after the Vercel deploy window so v5, not v4, stamps the items).
+**⚠️ Owner still to do: (1) RECONNECT Outlook once (Settings → Email
+connection → Reconnect) to grant the calendar scope — until then Settings
+shows "Calendar & meetings: Reconnect to enable" and chat declines meeting
+orders; (2) walk the Phase C test list below.**
+**Owner verify (both themes):** Settings → Calendar & meetings: Enabled
+(after reconnect); chat "What meetings do I have today?" answers from the
+real calendar; "Set up a meeting with <a known sender> tomorrow 3pm" →
+card with EDITABLE attendees (suggestions after 2 letters) → Confirm →
+event in Outlook calendar + invite sent; "Send a reminder to Zahraa
+tomorrow 11am" → card shows her real address; "email me a reminder at
+<time>" arrives at alielzyn@hotmail.com (not dev@vesta.app); "Techinal
+Meeting" item shows **Overdue — was due Jun 10** after v5 re-analysis;
+a 3 PM-deadline email is NOT overdue in the morning, and overdue shows
+"was due <date>, <time>".
+**Next session: pick next track — AI Decision Desk (Phase 12, discuss
+scope) / Teams radar (Phase 13) / notifications bell. Decision recorded:
+deleting a chat does NOT delete learned memories. Pre-launch checklist
+standing (rotate keys/passwords, re-enable email confirmation, remove dev
+user, Mail.Send + Calendars.ReadWrite on prod Azure app).**
 
 ## 📰 Personal Intelligence Brief v1 (built 2026-06-11, `feat/personal-briefing`)
 
