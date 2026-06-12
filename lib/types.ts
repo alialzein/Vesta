@@ -63,8 +63,6 @@ export type WorkItem = {
   personEmail?: string;
   /** Short, user-facing line shown under the title. */
   summary: string;
-  /** Short suggested next action shown on the radar row, when available. */
-  suggestedAction?: string;
   /** 0–100, mirrors work_items.priority_score. */
   priorityScore: number;
   chips: Chip[];
@@ -107,21 +105,6 @@ export type CommandCard = {
 
 /** Icon keys allowed for command cards (subset of the icon set). */
 export type CommandIcon = 'sparkle' | 'calendar' | 'delegate' | 'inbox';
-
-/** Top KPI metric card. Each card filters Today's Radar when clicked. */
-export type KpiMetric = {
-  id: string;
-  value: number;
-  /** Optional unit shown after the value, e.g. "h" for Time to Clear. */
-  unit?: string;
-  label: string;
-  /** Small line under the number, e.g. "2 overdue". */
-  helper: string;
-  /** Drives the icon container accent color. */
-  tone: 'red' | 'amber' | 'blue' | 'green';
-  /** Radar filter this card applies when clicked ('overdue' = past due_at). */
-  filter: WorkItemCategory | 'overdue' | 'all';
-};
 
 /** A recipient on a draft reply (mirrors the stored jsonb shape). */
 export type DraftRecipient = { name?: string | null; email?: string | null };

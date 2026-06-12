@@ -21,7 +21,10 @@ function buildNav(counts: NavCounts): NavGroup[] {
       items: [
         { label: 'Today', icon: 'home', view: 'today', badge: badge(counts.today) },
         { label: 'Inbox', icon: 'mail', href: '/inbox' },
-        { label: 'Waiting on Me', icon: 'clock', href: '/priorities', badge: badge(counts.waiting) },
+        // One vocabulary: this slice is "Waiting on you" everywhere (sidebar,
+        // radar chip, rail) — it used to be "Waiting on Me" here and "Blockers"
+        // in the radar, three names for the same thing.
+        { label: 'Waiting on you', icon: 'clock', href: '/priorities', badge: badge(counts.waiting) },
         { label: 'Draft Replies', icon: 'drafts', href: '/drafts', badge: badge(counts.drafts) },
         { label: 'Hidden', icon: 'eyeOff', href: '/hidden' },
       ],

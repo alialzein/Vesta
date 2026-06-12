@@ -11,48 +11,13 @@ import { Icon, type IconName } from '@/components/ui/Icon';
 import { LocalTime } from '@/components/ui/LocalTime';
 import { useToast } from '@/components/ui/Toast';
 
-/** Honest "coming soon" feedback for actions that aren't built yet — tells the
- *  manager what the button will do and which phase it arrives in. */
-const SOON = {
-  delegate: 'One-click delegation arrives in Phase 8.',
-  snooze: 'Snooze & reminders arrive in Phase 8.',
-};
-
 const SOURCE_LABEL: Record<WorkItemSource, string> = {
   outlook: 'Outlook',
   teams: 'Teams',
-  manual: 'Manual',
+  manual: 'Manual task',
   ai_commitment: 'AI commitment',
   calendar: 'Calendar',
 };
-
-const CATEGORY_LABEL: Record<string, string> = {
-  critical: 'Critical',
-  waiting: 'Blocker',
-  followup: 'Follow-up',
-  delegate: 'Can delegate',
-  decision: 'Decision',
-  promise: 'Promise',
-  drafts: 'Draft ready',
-  task: 'Task',
-  waiting_on_them: 'Waiting on them',
-  fyi: 'FYI',
-};
-
-/** Pick the most meaningful category to show as the item's primary label. */
-function primaryCategory(item: WorkItem): string {
-  const order = [
-    'decision',
-    'waiting',
-    'waiting_on_them',
-    'promise',
-    'followup',
-    'delegate',
-    'critical',
-  ];
-  const found = order.find((c) => item.categories.includes(c as WorkItem['categories'][number]));
-  return CATEGORY_LABEL[found ?? item.categories[0]] ?? 'Work item';
-}
 
 /**
  * Contextual AI Assistant Rail.
@@ -129,24 +94,17 @@ export function AiAssistantRail({
 
   return (
     <div className="flex flex-col rounded-[var(--radius)] border border-[color:var(--rail-border)] bg-[image:var(--rail-bg)] shadow-glow">
-      {/* Header — selected item title + live badge + collapse toggle */}
+      {/* Header — selected item title + collapse toggle. Declutter pass
+          (2026-06-12): no second LIVE badge (the brief carries the one live
+          signal), no context grid repeating the card (source/category/score
+          are already on the row the manager just clicked) — only what the card
+          does NOT show: the sender's real address and the last-email time. */}
       <div className="border-b border-line p-5">
         <div className="flex items-center gap-[9px]">
           <span className="grid h-7 w-7 flex-none place-items-center rounded-[9px] bg-accent-soft text-accent">
             <Icon name="sparkle" className="h-[16px] w-[16px]" />
           </span>
           <span className="font-display text-[15px] font-medium tracking-tight">AI Assistant</span>
-          {/* LIVE status with a breathing pulse + ripple (Phase 0.5, Section E). */}
-          <span className="ml-auto inline-flex items-center gap-[6px] rounded-full bg-accent-soft px-[9px] py-[3px] font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-accent">
-            <span className="relative grid h-[6px] w-[6px] place-items-center">
-              <span
-                className="animate-vesta-ripple absolute h-[6px] w-[6px] rounded-full bg-green"
-                aria-hidden="true"
-              />
-              <span className="animate-vesta-pulse relative h-[6px] w-[6px] rounded-full bg-green shadow-[0_0_0_2px_var(--green-soft)]" />
-            </span>
-            Live
-          </span>
           {/* Collapse toggle lives in the panel itself (small + simple). */}
           {onCollapse && (
             <button
@@ -154,16 +112,14 @@ export function AiAssistantRail({
               onClick={onCollapse}
               aria-label="Collapse AI assistant rail"
               title="Collapse"
-              className="grid h-7 w-7 flex-none place-items-center rounded-[8px] border border-line bg-panel-solid text-muted transition hover:border-accent hover:text-accent"
+              className="ml-auto grid h-7 w-7 flex-none place-items-center rounded-[8px] border border-line bg-panel-solid text-muted transition hover:border-accent hover:text-accent"
             >
               <Icon name="panelRight" className="h-[15px] w-[15px]" />
             </button>
           )}
         </div>
 
-        <p className="mt-[12px] text-[14px] font-semibold leading-snug text-ink">{item.title}</p>
-
-        <div className="mt-[10px] flex items-center gap-[10px]">
+        <div className="mt-[12px] flex items-start gap-[10px]">
           <span
             className={[
               'grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] font-mono text-[14px] font-bold',
@@ -173,40 +129,32 @@ export function AiAssistantRail({
                   ? 'bg-amber-soft text-amber'
                   : 'bg-green-soft text-green',
             ].join(' ')}
+            title={`${bandLabel[band]} — ${item.priorityScore}/100`}
           >
             {item.priorityScore}
           </span>
-          <div className="leading-tight">
-            <span className="block text-[12.5px] font-semibold text-ink-soft">
-              {bandLabel[band]}
-            </span>
-            <span className="block font-mono text-[10.5px] text-muted">
-              {item.priorityScore}/100 priority
-            </span>
+          <div className="min-w-0">
+            <p className="m-0 text-[14px] font-semibold leading-snug text-ink">{item.title}</p>
+            <p className="m-0 mt-[3px] truncate font-mono text-[11px] text-muted">
+              {item.person ? (
+                <>
+                  {item.person}
+                  {item.personEmail && item.personEmail !== item.person
+                    ? ` · ${item.personEmail}`
+                    : ''}
+                </>
+              ) : (
+                SOURCE_LABEL[item.source]
+              )}
+              {item.lastActivityAt && (
+                <>
+                  {' · '}
+                  <LocalTime iso={item.lastActivityAt} />
+                </>
+              )}
+            </p>
           </div>
         </div>
-
-        {/* Context grid — makes the selected item unambiguous. */}
-        <dl className="mt-[14px] grid grid-cols-2 gap-x-3 gap-y-[10px]">
-          <ContextCell label="Source" value={SOURCE_LABEL[item.source]} icon="inbox" />
-          {item.person && (
-            <ContextCell label="From" value={item.person} sub={item.personEmail} icon="people" />
-          )}
-          {item.lastActivityAt ? (
-            <div className="min-w-0">
-              <dt className="flex items-center gap-[5px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
-                <Icon name="clock" className="h-[12px] w-[12px]" />
-                Last email
-              </dt>
-              <dd className="m-0 mt-[3px] truncate text-[12.5px] font-semibold text-ink-soft">
-                <LocalTime iso={item.lastActivityAt} />
-              </dd>
-            </div>
-          ) : (
-            <ContextCell label="Due" value={item.dueDetail ?? item.dueLabel} icon="clock" />
-          )}
-          <ContextCell label="Category" value={primaryCategory(item)} icon="list" />
-        </dl>
       </div>
 
       {/* Segmented control */}
@@ -379,9 +327,11 @@ function ActionTab({
         </div>
       )}
 
-      {/* AI actions — Draft reply is live (Phase 9); Delegate is a later phase. */}
-      <div className="flex flex-wrap gap-[9px]">
-        {item.canDraft && (
+      {/* AI actions — Draft reply (Phase 9). No Delegate button until the
+          delegation feature exists (declutter pass: dead buttons are noise;
+          the sidebar's "Delegation · Soon" row carries the roadmap honesty). */}
+      {item.canDraft && (
+        <div className="flex flex-wrap gap-[9px]">
           <RailButton primary icon="edit" onClick={onOpenDraft}>
             {item.draft
               ? 'Review draft'
@@ -389,11 +339,8 @@ function ActionTab({
                 ? 'Draft follow-up'
                 : 'Draft reply'}
           </RailButton>
-        )}
-        <RailButton icon="delegate" onClick={() => showToast(SOON.delegate)}>
-          Delegate
-        </RailButton>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -426,35 +373,6 @@ function snoozeOptions(): { label: string; hint: string; iso: string }[] {
       iso: nextWeek.toISOString(),
     },
   ];
-}
-
-/** A label/value cell in the rail header context grid. */
-function ContextCell({
-  label,
-  value,
-  sub,
-  icon,
-}: {
-  label: string;
-  value: string;
-  /** Optional secondary line, e.g. the sender's real email address. */
-  sub?: string;
-  icon: IconName;
-}) {
-  return (
-    <div className="min-w-0">
-      <dt className="flex items-center gap-[5px] font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-muted">
-        <Icon name={icon} className="h-[12px] w-[12px]" />
-        {label}
-      </dt>
-      <dd className="m-0 mt-[3px] truncate text-[12.5px] font-semibold text-ink-soft">{value}</dd>
-      {sub && sub !== value && (
-        <dd className="m-0 truncate font-mono text-[10.5px] text-muted" title={sub}>
-          {sub}
-        </dd>
-      )}
-    </div>
-  );
 }
 
 function DraftTab({ item, onOpenDraft }: { item: WorkItem; onOpenDraft?: () => void }) {

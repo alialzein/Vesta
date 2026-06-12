@@ -9,13 +9,18 @@ import { EmptyRadarState } from '@/components/ui/StateView';
 
 export type RadarFilter = WorkItemCategory | 'overdue' | 'all';
 
-const FILTERS: { id: RadarFilter; label: string }[] = [
+/** Every slice the radar can show. Chips render ONLY when they have items
+ *  (declutter pass: ten permanent chips for five items read as noise) — the
+ *  counts that used to live in the KPI strip now sit inside the chips, so one
+ *  row answers both "how many?" and "show me". One vocabulary: the `waiting`
+ *  slice is "Waiting on you" here, in the sidebar, and in the rail. */
+const FILTERS: { id: RadarFilter; label: string; tone?: 'red' }[] = [
   { id: 'all', label: 'All' },
-  { id: 'overdue', label: 'Overdue' },
+  { id: 'overdue', label: 'Overdue', tone: 'red' },
+  { id: 'waiting', label: 'Waiting on you' },
   { id: 'task', label: 'Tasks' },
   { id: 'waiting_on_them', label: 'Waiting on them' },
   { id: 'decision', label: 'Decisions' },
-  { id: 'waiting', label: 'Blockers' },
   { id: 'followup', label: 'Follow-ups' },
   { id: 'promise', label: 'Promises' },
   { id: 'delegate', label: 'Can delegate' },
@@ -72,6 +77,18 @@ export function TodaysRadar({
     return sender ? byCategory.filter((i) => senderKeyOf(i) === sender.key) : byCategory;
   }, [items, filter, sender]);
 
+  // Per-slice counts shown inside the chips (the old KPI strip's numbers,
+  // now in the control that filters). Empty slices keep no chip — except the
+  // active one, so a filter driven from outside (sidebar, brief) stays visible
+  // and clearable even when its slice just emptied.
+  const chips = useMemo(
+    () =>
+      FILTERS.map((f) => ({ ...f, count: filterWorkItems(items, f.id).length })).filter(
+        (f) => f.id === 'all' || f.count > 0 || f.id === filter,
+      ),
+    [items, filter],
+  );
+
   return (
     <section className="relative z-[1] rounded-[var(--radius)] border border-line bg-panel p-5 shadow-glow">
       <div className="mb-[16px] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -79,9 +96,6 @@ export function TodaysRadar({
           <h2 className="m-0 font-display text-[19px] font-medium tracking-tight">
             Today&apos;s Radar
           </h2>
-          <span className="rounded-full bg-panel-2 px-[9px] py-[2px] font-mono text-[11px] font-semibold text-muted">
-            {visible.length}
-          </span>
           {sender && (
             <button
               type="button"
@@ -100,7 +114,7 @@ export function TodaysRadar({
           role="tablist"
           aria-label="Filter work items"
         >
-          {FILTERS.map((f) => (
+          {chips.map((f) => (
             <button
               key={f.id}
               type="button"
@@ -108,13 +122,27 @@ export function TodaysRadar({
               onClick={() => setFilter(f.id)}
               aria-selected={filter === f.id}
               className={[
-                'whitespace-nowrap rounded-full border px-[13px] py-[7px] text-[12.5px] font-semibold transition',
+                'inline-flex items-center gap-[6px] whitespace-nowrap rounded-full border px-[13px] py-[7px] text-[12.5px] font-semibold transition',
                 filter === f.id
                   ? 'border-accent bg-accent text-white shadow-[0_6px_16px_rgba(47,125,235,0.3)]'
                   : 'border-line bg-panel-2 text-ink-soft hover:border-line-strong hover:text-ink',
               ].join(' ')}
             >
               {f.label}
+              {/* The count lives in the chip (was the KPI strip). Overdue keeps
+                  its red urgency when unselected. */}
+              <span
+                className={[
+                  'rounded-full px-[6px] py-[1px] font-mono text-[10.5px] font-bold leading-[14px]',
+                  filter === f.id
+                    ? 'bg-white/20 text-white'
+                    : f.tone === 'red'
+                      ? 'bg-red-soft text-red'
+                      : 'bg-panel text-muted',
+                ].join(' ')}
+              >
+                {f.count}
+              </span>
             </button>
           ))}
         </div>

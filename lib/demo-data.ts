@@ -9,13 +9,7 @@
  * Nothing in this file should ever ship real user data or secrets.
  */
 
-import type {
-  CommandCard,
-  KpiMetric,
-  ManagerMemory,
-  MorningBrief,
-  WorkItem,
-} from './types';
+import type { CommandCard, ManagerMemory, MorningBrief, WorkItem } from './types';
 
 export const DEMO_USER = {
   firstName: 'Ali',
@@ -86,58 +80,6 @@ export const demoCommandCards: CommandCard[] = [
   },
 ];
 
-export const demoKpis: KpiMetric[] = [
-  {
-    id: 'kpi-decision-debt',
-    value: 5,
-    label: 'Decision Debt',
-    helper: 'Awaiting your call',
-    tone: 'red',
-    filter: 'decision',
-  },
-  {
-    id: 'kpi-people-blocked',
-    value: 8,
-    label: 'People Blocked',
-    helper: 'Waiting on you',
-    tone: 'amber',
-    filter: 'waiting',
-  },
-  {
-    id: 'kpi-followup-risk',
-    value: 3,
-    label: 'Follow-up Risk',
-    helper: 'Repeated follow-ups',
-    tone: 'amber',
-    filter: 'followup',
-  },
-  {
-    id: 'kpi-promises-risk',
-    value: 2,
-    label: 'Promises at Risk',
-    helper: '1 overdue',
-    tone: 'red',
-    filter: 'promise',
-  },
-  {
-    id: 'kpi-drafts-ready',
-    value: 4,
-    label: 'Drafts Ready',
-    helper: 'For your approval',
-    tone: 'blue',
-    filter: 'drafts',
-  },
-  {
-    id: 'kpi-time-to-clear',
-    value: 1.5,
-    unit: 'h',
-    label: 'Time to Clear',
-    helper: 'Estimated focus time',
-    tone: 'green',
-    filter: 'critical',
-  },
-];
-
 export const demoWorkItems: WorkItem[] = [
   {
     id: 'wi-cedars',
@@ -147,7 +89,6 @@ export const demoWorkItems: WorkItem[] = [
     person: 'Maya Khoury',
     personEmail: 'maya.khoury@cedarsgroup.com',
     summary: 'Maya requested approval before 4 PM. Two follow-ups detected.',
-    suggestedAction: 'Approve draft reply',
     priorityScore: 92,
     chips: [
       { label: 'Must reply', tone: 'red' },
@@ -183,7 +124,6 @@ export const demoWorkItems: WorkItem[] = [
     source: 'teams',
     person: 'Rania Haddad',
     summary: 'Rania is blocked until you approve the supplier payment.',
-    suggestedAction: 'Approve payment',
     priorityScore: 88,
     chips: [
       { label: 'Blocking team', tone: 'red' },
@@ -221,7 +161,6 @@ export const demoWorkItems: WorkItem[] = [
     source: 'outlook',
     person: 'Lina Saad (HR)',
     summary: 'HR followed up after your promised confirmation date passed.',
-    suggestedAction: 'Send decision',
     priorityScore: 81,
     chips: [
       { label: 'Promise detected', tone: 'amber' },
@@ -254,7 +193,6 @@ export const demoWorkItems: WorkItem[] = [
     source: 'outlook',
     person: 'IT team',
     summary: 'Approval needed, but can be delegated for a budget check.',
-    suggestedAction: 'Delegate to Operations',
     priorityScore: 63,
     chips: [
       { label: 'Can delegate', tone: 'blue' },
@@ -288,7 +226,6 @@ export const demoWorkItems: WorkItem[] = [
     source: 'calendar',
     person: 'Board of Directors',
     summary: 'Meeting tomorrow. AI prepared context from related emails.',
-    suggestedAction: 'Review brief',
     priorityScore: 57,
     chips: [
       { label: 'Meeting prep', tone: 'neutral' },
@@ -343,25 +280,6 @@ export const demoMemories: ManagerMemory[] = [
  * ------------------------------------------------------------------ */
 
 /** One-page Meeting Prep brief shown by the "Meeting Prep" command. */
-export const demoMeetingPrep = {
-  title: 'Board meeting',
-  when: 'Tomorrow · 10:00 AM',
-  attendees: 'Board of Directors (6)',
-  agenda: [
-    'Q2 financial summary and supplier spend',
-    'Cedars Group contract status',
-    'Hiring plan sign-off',
-  ],
-  openDecisions: [
-    'Approve revised supplier payment terms',
-    'Confirm the senior hire shortlisted by HR',
-  ],
-  suggestedQuestions: [
-    'What is the downside if the Cedars contract slips a week?',
-    'Do we have budget cover for the new hire this quarter?',
-  ],
-};
-
 /** "Clean Inbox" command — low-priority/FYI items the manager can safely batch. */
 export const demoLowPriority = [
   { id: 'fyi-1', from: 'Office Facilities', subject: 'Parking maintenance next Tuesday' },

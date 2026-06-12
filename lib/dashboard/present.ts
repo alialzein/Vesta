@@ -1,5 +1,4 @@
 import type { Chip, WorkItemCategory } from '@/lib/types';
-import { priorityBand } from '@/lib/priority';
 
 /**
  * Pure presentation helpers for the Today dashboard mapping (extracted from
@@ -100,19 +99,15 @@ export function dueOf(
   };
 }
 
-export function chipsFor(category: WorkItemCategory, score: number): Chip[] {
-  const chips: Chip[] = [];
-  if (category === 'waiting') chips.push({ label: 'Waiting on you', tone: 'red' });
-  else if (category === 'followup') chips.push({ label: 'Follow-up', tone: 'amber' });
-  else if (category === 'fyi') chips.push({ label: 'FYI', tone: 'neutral' });
-  else if (category === 'task') chips.push({ label: 'Task', tone: 'blue' });
-  else if (category === 'waiting_on_them')
-    chips.push({ label: 'Waiting on them', tone: 'amber' });
-  else chips.push({ label: CATEGORY_LABEL[category] ?? category, tone: 'blue' });
-  // One vocabulary everywhere: "High priority" means the red band (85+), the
-  // same threshold the score badge and the rail's band label use.
-  if (priorityBand(score) === 'red') chips.push({ label: 'High priority', tone: 'red' });
-  return chips;
+/** The card's single category chip. No "High priority" companion chip — the
+ *  colored score badge already says that (declutter pass: one fact, one place). */
+export function chipsFor(category: WorkItemCategory): Chip[] {
+  if (category === 'waiting') return [{ label: 'Waiting on you', tone: 'red' }];
+  if (category === 'followup') return [{ label: 'Follow-up', tone: 'amber' }];
+  if (category === 'fyi') return [{ label: 'FYI', tone: 'neutral' }];
+  if (category === 'task') return [{ label: 'Task', tone: 'blue' }];
+  if (category === 'waiting_on_them') return [{ label: 'Waiting on them', tone: 'amber' }];
+  return [{ label: CATEGORY_LABEL[category] ?? category, tone: 'blue' }];
 }
 
 export const CATEGORY_LABEL: Record<string, string> = {

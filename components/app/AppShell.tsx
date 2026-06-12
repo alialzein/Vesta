@@ -8,7 +8,7 @@ import { DashboardAtmosphere } from '@/components/dashboard/DashboardAtmosphere'
 import type { AccountView } from '@/lib/supabase/account';
 
 /**
- * The persistent app frame for every routed page (Inbox, Waiting on Me, Drafts,
+ * The persistent app frame for every routed page (Inbox, Waiting on you, Drafts,
  * Hidden, Weekly Review, Settings) — the same sidebar + topbar as the dashboard,
  * so the whole app feels like one place and pages use the full screen width.
  *
@@ -21,7 +21,7 @@ import type { AccountView } from '@/lib/supabase/account';
 const PAGE_HEADERS: Record<string, { title: string; subtitle: string }> = {
   '/inbox': { title: 'Inbox', subtitle: 'Conversations Vesta synced from your mailbox.' },
   '/priorities': {
-    title: 'Waiting on Me',
+    title: 'Waiting on you',
     subtitle: 'People waiting on your reply, ranked by urgency.',
   },
   '/drafts': {

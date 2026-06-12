@@ -165,28 +165,22 @@ export function WorkItemRow({
           <h3 className="m-0 mt-[3px] text-[14px] font-semibold leading-tight tracking-tight">
             {item.title}
           </h3>
-          <p className="mt-[2px] line-clamp-2 text-[12px] leading-snug text-muted">{item.summary}</p>
+          {/* One scannable line per card (declutter pass, 2026-06-12): the full
+              summary + suggested action live in the rail when the row is
+              selected — the radar is for scanning, the rail is for reading. */}
+          <p
+            className={[
+              'mt-[2px] text-[12px] leading-snug text-muted',
+              selected ? 'line-clamp-2' : 'line-clamp-1',
+            ].join(' ')}
+          >
+            {item.summary}
+          </p>
 
           <span className="mt-[7px] flex flex-wrap items-center gap-[6px]">
             {item.chips.map((chip) => (
               <Chip key={chip.label} {...chip} />
             ))}
-            {item.suggestedAction && (
-              // Suggested-action pill: ghost on unselected rows so it doesn't
-              // repeat a bright accent on every card; lit only on the selected
-              // row (and on hover, as a preview).
-              <span
-                className={[
-                  'inline-flex items-center gap-[4px] rounded-full px-[8px] py-[2px] text-[11px] font-semibold transition-colors duration-200',
-                  selected
-                    ? 'bg-accent-soft text-accent'
-                    : 'border border-line bg-transparent text-muted group-hover/row:border-transparent group-hover/row:bg-accent-soft group-hover/row:text-accent',
-                ].join(' ')}
-              >
-                <Icon name="sparkle" className="h-[11px] w-[11px]" />
-                {item.suggestedAction}
-              </span>
-            )}
           </span>
         </span>
 

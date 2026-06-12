@@ -476,6 +476,35 @@ html[data-theme='light'] .vesta-splash {
   mask-image: radial-gradient(circle at 50% 42%, transparent 44%, #000 90%);
 }
 
+/* Morning-brief headline: a slow aurora sheen drifting through the text.
+   The base color is the theme ink (both themes — the gradient uses tokens);
+   a narrow accent band pans across about every 9s. Calm and low-frequency per
+   the AI-motion principles; the brief is the dashboard's ONE live surface. */
+@keyframes vesta-ink-sheen {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -30% 0;
+  }
+}
+.vesta-headline-sheen {
+  background-image: linear-gradient(
+    100deg,
+    var(--ink) 38%,
+    var(--accent) 48%,
+    var(--accent-2) 52%,
+    var(--ink) 62%
+  );
+  background-size: 250% 100%;
+  background-position: 130% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: vesta-ink-sheen 9s ease-in-out infinite;
+}
+
 /* Premium sheen that sweeps across the Sign in button on hover/while loading. */
 @keyframes vesta-btn-shimmer {
   0% {
@@ -505,6 +534,13 @@ html[data-theme='light'] .vesta-splash {
   .animate-vesta-btn-shimmer,
   .animate-vesta-fade-in {
     animation: none;
+  }
+  /* Reduced motion: the headline is plain ink, no gradient pan. */
+  .vesta-headline-sheen {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--ink);
   }
   /* Reduced-motion still fades the loader out (no movement, just opacity). */
   .animate-vesta-fade-out {

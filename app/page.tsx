@@ -54,7 +54,6 @@ export default async function DashboardPage({
       account={account ?? undefined}
       showSplashInitially={showSplash}
       workItems={dashboard.workItems}
-      kpis={dashboard.kpis}
       brief={dashboard.brief}
       memories={dashboard.memories}
       capabilities={capabilities}

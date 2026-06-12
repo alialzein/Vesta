@@ -152,7 +152,7 @@ export function buildChatPrompt(input: {
     'How to answer (the "reply" field):',
     '- Be warm, sharp, and direct. Short answers for short questions. Never flattering filler.',
     `- Ground every claim in the context below (memories, rules, today's workload, today's briefing). Never invent emails, people, numbers, or news.`,
-    '- If asked about something not in the context, say so plainly and point to where in Vesta it lives (Inbox, Waiting on Me, Draft Replies, Briefing, Memory & Rules).',
+    '- If asked about something not in the context, say so plainly and point to where in Vesta it lives (Inbox, Waiting on you, Draft Replies, Briefing, Memory & Rules).',
     `- All time reasoning uses the manager's local time (given below). Be explicit about dates when deadlines are involved.`,
     '- Plain conversational text: short paragraphs, hyphen bullets when listing. No markdown headers, no asterisks, no emoji.',
     '',

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import type {
-  KpiMetric,
   MemoryRecord,
   MorningBrief as MorningBriefData,
   RailTab,
@@ -16,7 +15,7 @@ import {
 } from '@/app/actions/work-items';
 import { generateDailyBrief } from '@/app/actions/brief';
 import { parseQuickTask } from '@/lib/tasks/parse';
-import { demoCommandCards, demoKpis, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
+import { demoCommandCards, demoMorningBrief, demoWorkItems } from '@/lib/demo-data';
 import { priorityBand } from '@/lib/priority';
 import { useToast } from '@/components/ui/Toast';
 import { Sidebar, type NavView } from './Sidebar';
@@ -25,7 +24,6 @@ import { MorningBrief } from './MorningBrief';
 // AiCommandCenter is reserved for a future expanded-actions page; it is no
 // longer rendered on the main Today dashboard (Phase 0.3). Kept + flag-gated.
 import { AiCommandCenter } from './AiCommandCenter';
-import { MetricsStrip } from './MetricsStrip';
 import { TodaysRadar, type RadarFilter } from './TodaysRadar';
 import { QuickAddTask } from './QuickAddTask';
 import { HowItWorks } from './HowItWorks';
@@ -35,7 +33,6 @@ import { CollapsedRail } from './CollapsedRail';
 import { MemoryView } from './MemoryView';
 import { ChatDock } from '@/components/chat/ChatDock';
 import { FocusMode } from './FocusMode';
-import { MeetingPrepDrawer } from './MeetingPrepDrawer';
 import { CleanInboxDrawer } from './CleanInboxDrawer';
 import { VestaSplashScreen } from './VestaSplashScreen';
 import { DashboardAtmosphere } from './DashboardAtmosphere';
@@ -76,7 +73,6 @@ export function DashboardClient({
   account,
   showSplashInitially = false,
   workItems = demoWorkItems,
-  kpis = demoKpis,
   brief = demoMorningBrief,
   memories = [],
   capabilities = DEFAULT_CAPABILITIES,
@@ -88,10 +84,9 @@ export function DashboardClient({
   /** Server decides (cookie-gated) so the splash plays once per session, not on
    * every navigation back to the dashboard. Defaults off (e.g. component tests). */
   showSplashInitially?: boolean;
-  /** Real work_items + the metrics/brief derived from them; default to demo data
+  /** Real work_items + the brief derived from them; default to demo data
    *  (used by component tests and as a safe fallback). */
   workItems?: WorkItem[];
-  kpis?: KpiMetric[];
   brief?: MorningBriefData;
   /** Phase 10 — the manager's real Memory & Rules rows (workspace + approvals). */
   memories?: MemoryRecord[];
@@ -164,8 +159,7 @@ export function DashboardClient({
 
   // Focus Mode ("Clear My Day") — real, full-screen (Phase 11).
   const [focusOpen, setFocusOpen] = useState(false);
-  // Remaining quick-action preview drawers (demo only).
-  const [meetingOpen, setMeetingOpen] = useState(false);
+  // Remaining quick-action preview drawer (flag-gated demo).
   const [cleanOpen, setCleanOpen] = useState(false);
 
   // Phase 11 — the AI daily brief. The server provides today's cached brief
@@ -345,7 +339,8 @@ export function DashboardClient({
         setFocusOpen(true);
         break;
       case 'cmd-meeting-prep':
-        setMeetingOpen(true);
+        // Honest feedback — real meeting prep ships on the Phase C calendar.
+        showToast('Meeting Prep arrives with the calendar features.');
         break;
       case 'cmd-delegate':
         // Filter Today's Radar to delegatable work and nudge the user there.
@@ -436,16 +431,13 @@ export function DashboardClient({
                         return;
                       }
                       setFocusOpen(true);
-                    } else if (action === 'drafts') openComposer();
-                    else showToast('Meeting Prep arrives after calendar integration (Phase 12).');
+                    } else openComposer();
                   }}
                 />
 
                 {SHOW_LARGE_COMMAND_CENTER && (
                   <AiCommandCenter cards={demoCommandCards} onCardAction={handleCommand} />
                 )}
-
-                <MetricsStrip metrics={kpis} onSelect={(f) => setRadarFilter(f)} />
 
                 <QuickAddTask onAdd={handleAddTask} onAiAdd={handleAiAddTask} busy={actionBusy} />
 
@@ -561,8 +553,7 @@ export function DashboardClient({
         }}
       />
 
-      {/* Quick-action preview drawers (demo only) */}
-      <MeetingPrepDrawer open={meetingOpen} onClose={() => setMeetingOpen(false)} />
+      {/* Quick-action preview drawer (flag-gated demo) */}
       <CleanInboxDrawer open={cleanOpen} onClose={() => setCleanOpen(false)} />
     </>
   );
