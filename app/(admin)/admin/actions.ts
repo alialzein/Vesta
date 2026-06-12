@@ -470,3 +470,32 @@ export async function adminDeleteDraft(draftId: string): Promise<ActionResult> {
   revalidateAdmin();
   return ok('Draft deleted.');
 }
+
+// ---------------------------------------------------------------------------
+// Admin Settings (super-admin identity)
+// ---------------------------------------------------------------------------
+
+/** Flip maintenance mode: ON locks the app for normal users (they see the
+ *  /maintenance screen via requireUser); the console keeps running. */
+export async function adminSetMaintenance(on: boolean): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  try {
+    const settings = await getAppSettings();
+    const flags = { ...((settings.feature_flags ?? {}) as Record<string, unknown>), maintenance: on };
+    await saveAppSettings({ feature_flags: flags } as AppSettingsPatch, admin.id);
+    await logAdminAction({
+      actorId: admin.id,
+      action: on ? 'maintenance_on' : 'maintenance_off',
+      after: { maintenance: on },
+    });
+    revalidateAdmin();
+    revalidatePath('/admin/settings');
+    return ok(
+      on
+        ? 'Maintenance mode is ON - users now see the "back soon" screen.'
+        : 'Maintenance mode is OFF - the app is open to users again.',
+    );
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : 'Could not change maintenance mode.');
+  }
+}
