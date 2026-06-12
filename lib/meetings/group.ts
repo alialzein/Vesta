@@ -20,7 +20,15 @@ export function dayKeyInTz(iso: string, tz: string): string {
   return new Date(iso).toLocaleDateString('en-CA', { timeZone: tz });
 }
 
-function addDays(dateKey: string, days: number): string {
+/** Which calendar day an event belongs to. All-day events (holidays, OOO)
+ *  come from Graph as bare dates at UTC midnight — converting THOSE through
+ *  the manager timezone would slide them to the previous day east of UTC, so
+ *  they keep their raw date. */
+export function eventDayKey(e: Pick<CalendarEventView, 'startIso' | 'isAllDay'>, tz: string): string {
+  return e.isAllDay ? e.startIso.slice(0, 10) : dayKeyInTz(e.startIso, tz);
+}
+
+export function addDays(dateKey: string, days: number): string {
   const d = new Date(`${dateKey}T12:00:00Z`); // noon avoids DST edge shifts
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
@@ -53,7 +61,7 @@ export function groupMeetingsByDay(
   byDay.set(todayKey, []);
   for (const e of events) {
     if (!e.startIso) continue;
-    const key = dayKeyInTz(e.startIso, tz);
+    const key = eventDayKey(e, tz);
     const list = byDay.get(key);
     if (list) list.push(e);
     else byDay.set(key, [e]);

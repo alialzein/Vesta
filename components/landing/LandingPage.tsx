@@ -126,6 +126,11 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
     body: 'Daily intelligence from YOUR topics — clients, competitors, regulations — each item with why it matters and a suggested move.',
   },
   {
+    icon: 'calendar',
+    title: 'Meetings & calendar',
+    body: 'Your real Outlook schedule — week grid with a live now-line, month view, or agenda — with one-tap Join and Prep with Vesta: a one-page brief drawn from the attendees’ own email history.',
+  },
+  {
     icon: 'chat',
     title: 'Ask Vesta',
     body: 'A second brain that takes orders. It answers from your inbox, memory, briefing, and calendar, learns you with every conversation — and can mark items done, snooze, add tasks, draft replies, schedule reminder emails, even set up meetings. Every action waits for your Confirm.',

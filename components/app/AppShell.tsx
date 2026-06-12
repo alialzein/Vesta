@@ -23,7 +23,7 @@ const PAGE_HEADERS: Record<string, { title: string; subtitle: string }> = {
   '/inbox': { title: 'Inbox', subtitle: 'Conversations Vesta synced from your mailbox.' },
   '/meetings': {
     title: 'Meetings',
-    subtitle: "Your Outlook schedule for today and the week ahead — with Vesta's prep.",
+    subtitle: "Your Outlook calendar — week, month, or agenda — with Vesta's prep.",
   },
   '/priorities': {
     title: 'Waiting on you',
