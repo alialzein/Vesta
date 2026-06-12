@@ -4,20 +4,26 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 (third session, work laptop). `main` =
-**#45–#83 MERGED** (note: #81 was merged into #80's branch by mistake —
-stacked-PR lesson #2: NEVER stack again; #82 = its clean cherry-pick).
-**OPEN PR: #84** (`feat/ops-automation`) — the confirmed auto-actions:
-lib/system-mail (Resend; RESEND_API_KEY is IN Vercel; recipients = admin
-email, ALERT_EMAIL overrides; until a domain is verified Resend only
-delivers to the Resend account owner's address), /api/cron/ops (~15min):
-cost-cap alarm (pure detectCapBreaches; pause already in getEffectiveAi),
-self-healing (stale-sync retry ×2/run + renewAllSubscriptions; email only
-on failure), morning digest at DIGEST_HOUR_UTC (default 05 UTC ≈ 8am
-Beirut) using the SAME lib/admin/attention builder as the Overview strip;
-all deduped/audited via audit_logs system_alert/system_digest.
-**⚠️ Owner after merging #84: add scheduler entry /api/cron/ops every
-15 min (same CRON_SECRET bearer as /api/cron/sync).**
+**Last updated:** 2026-06-12 END OF DAY (third session, work laptop).
+`main` = **#45–#84 ALL MERGED, no PRs open, all branches deleted, tree
+clean.** (Note: #81 was merged into #80's branch by mistake — stacked-PR
+lesson #2: NEVER stack again; #82 = its clean cherry-pick.)
+**#84** (`feat/ops-automation`, MERGED): lib/system-mail (Resend;
+RESEND_API_KEY in Vercel; recipients = admin email, ALERT_EMAIL overrides;
+until a domain is verified Resend only delivers to the Resend account
+owner's address), /api/cron/ops: cost-cap alarm (pure detectCapBreaches;
+pause already in getEffectiveAi), self-healing (stale-sync retry ×2/run +
+renewAllSubscriptions; email only on failure), morning digest at
+DIGEST_HOUR_UTC (default 05 UTC ≈ 8am Beirut) sharing lib/admin/attention
+with the Overview strip; deduped/audited via audit_logs
+system_alert/system_digest. **Owner CREATED the vesta-ops pg_cron job
+(every 15 min) — all FIVE cron jobs live** (docs/reference/cron-setup.md).
+**NEXT SESSION — pick one:** (1) briefing-search token diet (the 19k-token
+whale, biggest AI cost line), (2) AI Decision Desk (Phase 12, discuss
+scope), (3) Teams radar (Phase 13), (4) notifications bell. Also verify in
+prod when convenient: /admin/settings 2FA enroll (TOTP enabled in
+Supabase), maintenance switch round-trip, a forced cost-cap alert email,
+and the first morning digest arriving ~8am Beirut on an unhealthy day.
 Merged this session: #74 (chat meeting link/reminder/starters/@-mention),
 #75 (meetings calendar), #76 (compact week blocks), #77 (reading room),
 #78 (native email render + quote splitter), #79 (admin mission control),
