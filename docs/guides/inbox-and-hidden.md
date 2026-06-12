@@ -42,6 +42,18 @@ Priorities row) opens the **reading room** — the conversation as Vesta sees it
 
 There's an **Open in Outlook** button if you want the native client.
 
+**Attachments & images.** Pictures pasted into an email show right inside it
+(fetched live from your mailbox). Real file attachments appear as **chips
+under the message** — tap one to download it. Nothing is copied into Vesta;
+your mailbox stays the only place files live. Very large files open in
+Outlook instead.
+
+**Forward.** Every opened message has a **Forward** button: pick recipients
+(the same people suggestions as everywhere else — or type any address), add
+an optional note on top, and send. Outlook builds the forward, so the
+original formatting **and its attachments** travel with it. Forwards are
+recorded in the audit log like any send.
+
 **Reply right here — manual or with Vesta.** Under the last message there's a
 reply box:
 
