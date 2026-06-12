@@ -13,8 +13,29 @@ vi.mock('@/app/actions/drafts', () => ({
   ensureBlankDraft: (...args: unknown[]) => ensureBlankDraft(...(args as [string])),
   sendDraft: (...args: unknown[]) => sendDraft(...(args as [string, unknown])),
 }));
+const getMessageAttachments = vi.fn(async (_id: string) => ({
+  ok: true as const,
+  attachments: [] as unknown[],
+}));
+const downloadAttachment = vi.fn();
+const getInlineBody = vi.fn(async (_id: string) => ({ ok: true as const, html: '' }));
+const forwardThreadMessage = vi.fn();
 vi.mock('@/app/actions/thread', () => ({
   ensureThreadWorkItem: (...args: unknown[]) => ensureThreadWorkItem(...(args as [string])),
+  getMessageAttachments: (...args: unknown[]) => getMessageAttachments(...(args as [string])),
+  downloadAttachment: (...args: unknown[]) => downloadAttachment(...(args as [string, string])),
+  getInlineBody: (...args: unknown[]) => getInlineBody(...(args as [string])),
+  forwardThreadMessage: (...args: unknown[]) =>
+    forwardThreadMessage(...(args as [string, unknown])),
+}));
+// AttendeeEditor (the Forward panel's recipient list) lives in chat/parts —
+// stub that module's server-action imports.
+vi.mock('@/app/actions/people', () => ({
+  suggestAttendees: vi.fn(async () => []),
+}));
+vi.mock('@/app/actions/chat', () => ({
+  executeChatAction: vi.fn(async () => ({ ok: true, result: 'done' })),
+  cancelChatAction: vi.fn(async () => ({ ok: true })),
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ back: vi.fn(), push: vi.fn(), prefetch: vi.fn() }),
@@ -34,6 +55,8 @@ function msg(over: Partial<ThreadMessageVM>): ThreadMessageVM {
     quotedHtml: null,
     quotedText: null,
     preview: 'preview: asks to be off Monday',
+    hasAttachments: false,
+    needsInlineImages: false,
     ...over,
   };
 }
@@ -60,12 +83,15 @@ const AI_READ = {
   open: true,
 };
 
-function renderThread(aiRead: typeof AI_READ | null = AI_READ) {
+function renderThread(
+  aiRead: typeof AI_READ | null = AI_READ,
+  messages: ThreadMessageVM[] = MESSAGES,
+) {
   return render(
     <ToastProvider>
       <ThreadView
         subject="Urgent request to approve holidays"
-        messages={MESSAGES}
+        messages={messages}
         aiRead={aiRead}
         outlookLink="https://outlook.live.com/mail/x"
         conversationId="conv-1"
@@ -81,6 +107,11 @@ describe('ThreadView', () => {
     sendDraft.mockReset();
     ensureThreadWorkItem.mockReset();
     ensureThreadWorkItem.mockResolvedValue({ ok: true, workItemId: 'wi-thread' });
+    getMessageAttachments.mockReset();
+    getMessageAttachments.mockResolvedValue({ ok: true, attachments: [] });
+    forwardThreadMessage.mockReset();
+    getInlineBody.mockReset();
+    getInlineBody.mockResolvedValue({ ok: true, html: '' });
   });
 
   it('renders the header, Vesta read, and collapses all but the newest message', () => {
@@ -194,5 +225,37 @@ describe('ThreadView', () => {
     await user.type(screen.getByLabelText('Reply text'), 'ok');
     await user.click(screen.getByRole('button', { name: /Send reply/ }));
     expect(await screen.findByText(/saved to your Outlook Drafts/)).toBeInTheDocument();
+  });
+
+  it('an expanded message with attachments lists them, fetched on demand', async () => {
+    getMessageAttachments.mockResolvedValue({
+      ok: true,
+      attachments: [
+        { id: 'a1', name: 'budget.xlsx', contentType: 'application/x', size: 24576, isInline: false, contentId: null, isFile: true },
+      ],
+    });
+    renderThread(null, [msg({ id: 'm9', hasAttachments: true })]);
+
+    expect(await screen.findByRole('button', { name: /budget\.xlsx 24 KB/ })).toBeInTheDocument();
+    expect(getMessageAttachments).toHaveBeenCalledWith('m9');
+  });
+
+  it('forwards a message to picked recipients with a note', async () => {
+    forwardThreadMessage.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+    renderThread(null, [msg({ id: 'm9' })]);
+
+    await user.click(screen.getByRole('button', { name: 'Forward' }));
+    await user.type(screen.getByLabelText('Add attendee'), 'zahraa@gmail.com{Enter}');
+    await user.type(screen.getByLabelText('Forward note'), 'FYI');
+    // Two "Forward" buttons exist now (toggle + submit) — submit is the last.
+    const buttons = screen.getAllByRole('button', { name: 'Forward' });
+    await user.click(buttons[buttons.length - 1]);
+
+    expect(forwardThreadMessage).toHaveBeenCalledWith('m9', {
+      to: ['zahraa@gmail.com'],
+      note: 'FYI',
+    });
+    expect(await screen.findByText(/Forwarded — the original message/)).toBeInTheDocument();
   });
 });

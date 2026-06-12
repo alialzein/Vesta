@@ -23,10 +23,11 @@ type ThreadMessage = {
   body_text: string | null;
   body_preview: string | null;
   web_link: string | null;
+  has_attachments: boolean;
 };
 
 const COLS =
-  'id, subject, sender_name, sender_email, to_recipients, cc_recipients, received_at, sent_at, direction, body_html, body_text, body_preview, web_link';
+  'id, subject, sender_name, sender_email, to_recipients, cc_recipients, received_at, sent_at, direction, body_html, body_text, body_preview, web_link, has_attachments';
 
 function names(list: Recipient[] | null): string {
   return (list ?? []).map((r) => r.name || r.email).filter(Boolean).join(', ');
@@ -96,6 +97,9 @@ export default async function ThreadPage({ params }: { params: { id: string } })
       quotedHtml: html?.quoted ?? null,
       quotedText: text?.quoted ?? null,
       preview: (m.body_preview ?? rawText).replace(/\s+/g, ' ').trim().slice(0, 120),
+      hasAttachments: m.has_attachments,
+      // cid: images live in the ORIGINAL html (the split may have moved them).
+      needsInlineImages: Boolean(m.body_html?.includes('cid:')),
     };
   });
 
