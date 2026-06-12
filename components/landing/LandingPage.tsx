@@ -128,7 +128,7 @@ const FEATURES: { icon: IconName; title: string; body: string }[] = [
   {
     icon: 'chat',
     title: 'Ask Vesta',
-    body: 'A second brain you talk to. It answers from your inbox, memory, and briefing — and learns you with every conversation, saving what matters to Memory & Rules.',
+    body: 'A second brain that takes orders. It answers from your inbox, memory, and briefing, learns you with every conversation — and can mark items done, snooze, add tasks, draft replies, or schedule reminder emails. Every action waits for your Confirm.',
   },
 ];
 

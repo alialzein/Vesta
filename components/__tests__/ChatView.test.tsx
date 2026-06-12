@@ -57,6 +57,9 @@ describe('ChatView', () => {
     renderChat(makeData());
     expect(screen.getByText(/Talk to Vesta like you talk to yourself/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'What should I focus on right now?' })).toBeInTheDocument();
+    // Order starters (chat-v3/v4 quick actions) sit next to the questions.
+    expect(screen.getByRole('button', { name: 'Remind me to call Ahmad tomorrow at 3pm.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Email me a reminder about my top item at 5pm.' })).toBeInTheDocument();
   });
 
   it('sends a message optimistically and renders the reply with its learned chip', async () => {

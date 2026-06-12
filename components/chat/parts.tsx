@@ -18,6 +18,11 @@ export const CHAT_STARTERS = [
   "Who's waiting on me?",
   "What's in my briefing today?",
   'Remember that I prefer short, direct emails.',
+  // Orders (chat-v3/v4) — each proposes a Confirm card; nothing runs silently.
+  'Remind me to call Ahmad tomorrow at 3pm.',
+  'Snooze my top item until Monday 9am.',
+  'Email me a reminder about my top item at 5pm.',
+  'Draft a reply to my most urgent email.',
 ];
 
 export function LearnedChips({ learned }: { learned: string[] }) {

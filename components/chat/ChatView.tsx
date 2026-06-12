@@ -172,8 +172,8 @@ export function ChatView({ data }: { data: ChatData }) {
               </h2>
               <p className="m-0 text-[13px] leading-relaxed text-muted">
                 Vesta answers from your inbox, your memories, and today&rsquo;s briefing — and
-                quietly learns you with every conversation. Tell it about people, preferences,
-                projects; it keeps what matters.
+                quietly learns you with every conversation. It also takes orders (mark done,
+                snooze, tasks, drafts, reminder emails) — always behind your Confirm.
               </p>
               <div className="mt-1 flex flex-wrap justify-center gap-[7px]">
                 {CHAT_STARTERS.map((s) => (
