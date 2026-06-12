@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar, type NavCounts, type NavView } from '@/components/dashboard/Sidebar';
 import { Topbar } from '@/components/dashboard/Topbar';
+import { MobileTabBar } from '@/components/app/MobileTabBar';
 import { DashboardAtmosphere } from '@/components/dashboard/DashboardAtmosphere';
 import type { AccountView } from '@/lib/supabase/account';
 
@@ -99,7 +100,7 @@ export function AppShell({
           counts={counts}
         />
 
-        <main className="v-scroll relative z-[1] flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pr-1">
+        <main className="v-scroll relative z-[1] flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pb-[72px] pr-1 lg:pb-0">
           <Topbar
             onOpenSidebar={() => setMobileOpen(true)}
             account={account}
@@ -109,6 +110,10 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Phone bottom tab bar (lg:hidden) — same app-style navigation as the
+          dashboard; Menu opens the drawer with the full destination list. */}
+      <MobileTabBar activePath={pathname ?? ''} onMenu={() => setMobileOpen(true)} />
     </>
   );
 }

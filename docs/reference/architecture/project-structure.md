@@ -60,8 +60,8 @@ HTML mockup while staying idiomatic.
 │   │   │                         #   add form, category tabs, list, help panel
 │   │   ├── ManagerMemoryPanel.tsx# Compact add/forget memory card (retained, reused)
 │   │   ├── VestaSplashScreen.tsx # Full-screen opaque branded init splash (0.5 rev)
-│   │   ├── DashboardAtmosphere.tsx# Subtle blue/cyan radial blooms (no grid) (0.5)
-│   │   └── HowItWorks.tsx        # 5-step explainer strip
+│   │   ├── MobileRailSheet.tsx   # Phone bottom sheet hosting the AI rail (tap a card)
+│   │   └── DashboardAtmosphere.tsx# Subtle blue/cyan radial blooms (no grid) (0.5)
 │   ├── ui/                       # Shared primitives
 │   │   ├── Chip.tsx
 │   │   ├── Drawer.tsx            # Shared right-side slide-in drawer

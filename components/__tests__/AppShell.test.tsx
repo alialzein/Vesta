@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AppShell } from '@/components/app/AppShell';
 import { ThemeProvider } from '@/lib/theme';
@@ -37,14 +37,33 @@ describe('AppShell', () => {
     expect(screen.getByRole('heading', { name: 'Inbox' })).toBeInTheDocument();
     expect(screen.queryByText(/Good morning/i)).not.toBeInTheDocument();
     expect(screen.getByText('page content')).toBeInTheDocument();
-    // The full nav is present with its real badges.
+    // The full nav is present with its real badges. Ask Vesta / Briefing now
+    // exist TWICE (sidebar + the phone tab bar) — every instance must point
+    // at the right route.
     expect(screen.getByRole('link', { name: /Draft Replies/ })).toHaveAttribute('href', '/drafts');
-    expect(screen.getByRole('link', { name: /Ask Vesta/ })).toHaveAttribute('href', '/chat');
-    expect(screen.getByRole('link', { name: /Briefing/ })).toHaveAttribute('href', '/briefing');
+    for (const el of screen.getAllByRole('link', { name: /Ask Vesta/ })) {
+      expect(el).toHaveAttribute('href', '/chat');
+    }
+    for (const el of screen.getAllByRole('link', { name: /Briefing/ })) {
+      expect(el).toHaveAttribute('href', '/briefing');
+    }
     expect(screen.getByRole('link', { name: /Weekly Review/ })).toHaveAttribute(
       'href',
       '/weekly-review',
     );
+  });
+
+  it('renders the phone tab bar with the five app stations', () => {
+    renderShell();
+    const bar = screen.getByRole('navigation', { name: 'Primary' });
+    expect(within(bar).getByRole('link', { name: /Today/ })).toHaveAttribute('href', '/');
+    expect(within(bar).getByRole('link', { name: /Inbox/ })).toHaveAttribute('href', '/inbox');
+    expect(within(bar).getByRole('link', { name: /Ask Vesta/ })).toHaveAttribute('href', '/chat');
+    expect(within(bar).getByRole('link', { name: /Briefing/ })).toHaveAttribute(
+      'href',
+      '/briefing',
+    );
+    expect(within(bar).getByRole('button', { name: 'Open menu' })).toBeInTheDocument();
   });
 
   it('shows the Ask Vesta page header on /chat', () => {

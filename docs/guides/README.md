@@ -29,6 +29,7 @@ manual. Each guide is self-contained and matches the product as it actually ship
 | [Daily Brief & Focus Mode](daily-brief-and-focus.md) | The AI-written morning brief about your own queue, the "Start here" pick, and the full-screen Clear-My-Day pass |
 | [Briefing](briefing.md) | Your daily intelligence — news picked for your topics, clients, and competitors, with why-it-matters and suggested actions |
 | [Weekly Review](weekly-review.md) | Your week at a glance — what you finished, replies sent, noise dismissed, and who took your attention |
+| [Vesta on your phone](vesta-on-your-phone.md) | Install Vesta on your home screen like an app — bottom tab bar, dense list rows, and the tap-to-act sheet |
 | [Settings & appearance](settings-and-themes.md) | Managing your mailbox connection, filter mode, and light/dark theme |
 | [Admin panel (operator)](admin-panel.md) | ⚙️ **Operator-only** — the `/admin` console: users, mailboxes/sync, email retention, and AI cost control |
 

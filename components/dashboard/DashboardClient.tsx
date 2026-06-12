@@ -27,8 +27,8 @@ import { MorningBrief } from './MorningBrief';
 import { AiCommandCenter } from './AiCommandCenter';
 import { TodaysRadar, type RadarFilter } from './TodaysRadar';
 import { MobileRailSheet } from './MobileRailSheet';
+import { MobileTabBar } from '@/components/app/MobileTabBar';
 import { QuickAddTask } from './QuickAddTask';
-import { HowItWorks } from './HowItWorks';
 import { AiAssistantRail } from './AiAssistantRail';
 import { DraftComposer } from './DraftComposer';
 import { CollapsedRail } from './CollapsedRail';
@@ -457,8 +457,8 @@ export function DashboardClient({
               : 'xl:grid-cols-[minmax(0,1fr)]',
           ].join(' ')}
         >
-          {/* Main column */}
-          <main className="v-scroll flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pr-1">
+          {/* Main column — bottom padding below lg clears the fixed tab bar. */}
+          <main className="v-scroll flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto pb-[72px] pr-1 lg:pb-0">
             <Topbar onOpenSidebar={() => setSidebarMobileOpen(true)} account={account} />
 
             {onToday ? (
@@ -512,8 +512,9 @@ export function DashboardClient({
                   onQuickAction={handleQuickAction}
                   busy={actionBusy}
                 />
-
-                <HowItWorks />
+                {/* (The "How the assistant works" explainer strip was removed
+                    2026-06-12 — owner call: the app explains itself; the guides
+                    carry the long-form story.) */}
               </>
             ) : (
               <MemoryView memories={memories} />
@@ -547,10 +548,11 @@ export function DashboardClient({
         </div>
       </div>
 
-      {/* Floating Ask Vesta button — bottom-right, opens the mini chat dock
-          OVER the dashboard (no backdrop: the radar stays clickable so the
-          manager can act while asking). The sidebar's Ask Vesta link is the
-          full-screen view. Compact (icon-only) while the AI rail is expanded. */}
+      {/* Floating Ask Vesta button — desktop only now (lg+): it opens the mini
+          chat dock OVER the dashboard (no backdrop: the radar stays clickable
+          so the manager can act while asking). On phones the tab bar's raised
+          Vesta bubble navigates to the full chat instead — no corner FAB
+          covering the list. Compact (icon-only) while the AI rail is expanded. */}
       {!chatOpen && (
         <button
           type="button"
@@ -558,8 +560,7 @@ export function DashboardClient({
           title="Ask Vesta"
           aria-label="Ask Vesta"
           className={[
-            // Compact + tucked-in on phones so it covers less of the list.
-            'group fixed bottom-4 right-4 z-50 flex h-12 items-center gap-3 rounded-full border border-line-strong bg-[radial-gradient(circle_at_30%_20%,var(--accent),var(--accent-2))] text-white shadow-[0_14px_34px_rgba(47,125,235,.45)] transition hover:scale-[1.03] sm:bottom-6 sm:right-6 sm:h-14',
+            'group fixed bottom-6 right-6 z-50 hidden h-14 items-center gap-3 rounded-full border border-line-strong bg-[radial-gradient(circle_at_30%_20%,var(--accent),var(--accent-2))] text-white shadow-[0_14px_34px_rgba(47,125,235,.45)] transition hover:scale-[1.03] lg:flex',
             railExpanded ? 'pl-4 pr-5 xl:w-14 xl:justify-center xl:px-0' : 'pl-4 pr-5',
           ].join(' ')}
         >
@@ -593,6 +594,10 @@ export function DashboardClient({
           />
         </MobileRailSheet>
       )}
+
+      {/* Phone bottom tab bar (lg:hidden) — app-style navigation; Menu opens
+          the same drawer the hamburger does. */}
+      <MobileTabBar activePath="/" onMenu={() => setSidebarMobileOpen(true)} />
 
       {/* Mini chat dock (real backend — same conversations as /chat). */}
       <ChatDock open={chatOpen} onClose={() => setChatOpen(false)} />
