@@ -26,6 +26,8 @@ const HTML_MARKERS = [
   'class="yahoo_quoted', // Yahoo
   'class="outlookmessageheader"', // older Outlook
   'border-top:solid #e1e1e1 1.0pt', // classic Outlook desktop separator <div>
+  'border-top:1px solid #d0d0d0', // Vesta's own reply builder (lib/email/reply)
+  '<b>from:</b>', // generic pasted "From:/Sent:" header block
   '-----original message-----',
 ];
 

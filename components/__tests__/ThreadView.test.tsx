@@ -25,7 +25,7 @@ function msg(over: Partial<ThreadMessageVM>): ThreadMessageVM {
     bodyText: 'i need your confirmation to be off on monday.',
     quotedHtml: null,
     quotedText: null,
-    preview: 'i need your confirmation to be off on monday.',
+    preview: 'preview: asks to be off Monday',
     ...over,
   };
 }
@@ -39,7 +39,7 @@ const MESSAGES: ThreadMessageVM[] = [
     outbound: true,
     bodyText: 'Your request to be off next Monday is not approved.',
     quotedText: 'From: Zahraa\nSent: Tue\n\ni need your confirmation…',
-    preview: 'Your request to be off next Monday is not approved.',
+    preview: 'preview: not approved',
   }),
 ];
 
@@ -84,10 +84,10 @@ describe('ThreadView', () => {
 
     // Newest message open (its body shows), older one collapsed to a preview.
     expect(
-      screen.getByText('Your request to be off next Monday is not approved.', { selector: 'pre' }),
+      screen.getByText('Your request to be off next Monday is not approved.', { selector: 'span' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText('i need your confirmation to be off on monday.', { selector: 'pre' }),
+      screen.queryByText('i need your confirmation to be off on monday.', { selector: 'span' }),
     ).not.toBeInTheDocument();
     expect(screen.getByText('You')).toBeInTheDocument(); // outbound badge
   });
@@ -99,7 +99,7 @@ describe('ThreadView', () => {
     // Expand the first (collapsed) message via its header row.
     await user.click(screen.getByRole('button', { name: /Zahraa Daher/ }));
     expect(
-      screen.getByText('i need your confirmation to be off on monday.', { selector: 'pre' }),
+      screen.getByText('i need your confirmation to be off on monday.', { selector: 'span' }),
     ).toBeInTheDocument();
 
     // The reply's quoted history is split off — hidden until asked for.
