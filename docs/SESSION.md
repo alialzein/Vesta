@@ -5,15 +5,27 @@
 > Claude updates it at the end of each session and pushes it.
 
 **Last updated:** 2026-06-12 (third session, work laptop). `main` =
-**#45–#74 ALL MERGED, no PRs open, all branches deleted.** (Owner DID the
-Outlook reconnect — calendar scope live; chat meeting orders + /meetings
-verified working in production.)
+**#45–#75 MERGED.** (Owner DID the Outlook reconnect — calendar scope live;
+chat meeting orders + /meetings verified working in production.)
+**OPEN PRs: #76** (`fix/week-grid-compact-blocks` — 30-min week-grid blocks
+clipped the title; blocks <38px now render ONE compact line: title + start
+time) — awaiting owner merge. **IN PROGRESS: PR 3 = thread reading room**
+(`feat/thread-reading-room`, AI redesign of /thread/[id]: collapse quoted
+history, Vesta summary header from the work item, theme-aware cards).
+Owner goal to honor everywhere: "the user must feel AI everywhere — a
+space of AI".
+**#75** (`feat/meetings-calendar`): /meetings is a real calendar — WEEK
+time-grid (manager-tz day columns, overlap side-by-side via
+lib/meetings/calendar layoutDay, glowing today, gradient now-line/minute,
+all-day violet strip; all-day events keep RAW date via eventDayKey),
+MONTH 6×7 grid (pills + day-jump-to-week), AGENDA (v1 list, client-derived);
+remembered toggle (phones default agenda); window = week+month→4wks
+(initialWindow), nav past it fetches via getCalendarRange action; one
+detail overlay (Join/Outlook/Prep) everywhere. Landing got the missing
+"Meetings & calendar" card (both themes shot-verified). Tests 523.
 **In flight this session — owner's 5-point batch (2026-06-12):**
-PR #74 (merged) = points 1–3. **NEXT: PR 2 = modern calendar on /meetings
-(week time-grid + month view + agenda toggle). THEN PR 3 = thread reading
-room (AI redesign of /thread/[id]: collapse quoted history, summary header,
-theme-aware cards).** Owner goal to honor everywhere: "the user must feel
-AI everywhere — a space of AI".
+PR #74 (merged) = points 1–3 · PR #75 (merged) = calendar · PR #76 (open)
+= week-grid text fix · PR 3 (building) = reading room.
 **#74** (`feat/chat-meeting-link-and-starters`): (a) meeting LINK now
 visible — chat confirm card gets "Open the meeting link" (stored on the
 action: `link` on StoredChatAction/ChatActionView), /meetings Join reads
