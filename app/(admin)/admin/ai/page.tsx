@@ -1,6 +1,6 @@
 import { requireAdmin } from '@/lib/admin/auth';
 import { getAppSettings, getConfiguredAiRates } from '@/lib/admin/settings';
-import { getAiUsageSummary } from '@/lib/admin/data';
+import { getAiUsageSummary, type AiUsageSummary } from '@/lib/admin/data';
 import { Section, Table, Th, Td, KpiCard, EmptyState, Badge } from '@/components/admin/ui';
 import { AiSettings } from '@/components/admin/tabs/AiSettings';
 import { ReanalyzeControls } from '@/components/admin/tabs/ReanalyzeControls';
@@ -80,6 +80,92 @@ export default async function AdminAiPage() {
         <AiSettings settings={settings} envProvider={envProvider} envModel={envModel} keyConfigured={keyConfigured} />
       </Section>
 
+      <Section
+        title="Daily activity"
+        hint="Last 14 days — tokens per day; hover a bar for calls and cost."
+      >
+        {usage.days.every((d) => d.calls === 0) ? (
+          <EmptyState>No AI calls in the last 14 days.</EmptyState>
+        ) : (
+          <DailyBars days={usage.days} />
+        )}
+      </Section>
+
+      <Section
+        title="What's consuming"
+        hint="This month, by call KIND — the same feature can hide very different costs (a briefing search is ~30× a briefing rank)."
+      >
+        {usage.byKind.length === 0 ? (
+          <EmptyState>No AI usage recorded yet this month.</EmptyState>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Kind</Th>
+                <Th className="text-right">Calls</Th>
+                <Th className="text-right">Tokens in / out</Th>
+                <Th className="text-right">Avg / call</Th>
+                <Th className="text-right">Max call</Th>
+                <Th className="text-right">Cost</Th>
+                <Th className="text-right">Errors</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {usage.byKind.map((k) => (
+                <tr key={k.kind}>
+                  <Td><Badge tone="accent">{k.kind}</Badge></Td>
+                  <Td className="text-right">{fmtInt(k.calls)}</Td>
+                  <Td className="text-right text-muted">
+                    {fmtInt(k.tokensIn)} / {fmtInt(k.tokensOut)}
+                  </Td>
+                  <Td className="text-right">{fmtInt(k.avgTokens)}</Td>
+                  <Td className="text-right">
+                    <span className={k.maxTokens >= 10_000 ? 'font-semibold text-amber' : ''}>
+                      {fmtInt(k.maxTokens)}
+                    </span>
+                  </Td>
+                  <Td className="text-right">{fmtUsd(k.cost)}</Td>
+                  <Td className="text-right">
+                    {k.errors > 0 ? <span className="font-semibold text-red">{k.errors}</span> : <span className="text-muted">—</span>}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Section>
+
+      <Section title="Heaviest calls" hint="The biggest single calls this month — your optimization targets.">
+        {usage.heaviest.length === 0 ? (
+          <EmptyState>Nothing heavy yet.</EmptyState>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <Th>When</Th>
+                <Th>Kind</Th>
+                <Th>User</Th>
+                <Th className="text-right">Tokens in / out</Th>
+                <Th className="text-right">Cost</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {usage.heaviest.map((h, i) => (
+                <tr key={i}>
+                  <Td className="whitespace-nowrap text-muted">{fmtRel(h.at)}</Td>
+                  <Td><Badge tone="accent">{h.kind}</Badge></Td>
+                  <Td className="text-muted">{h.who ?? '—'}</Td>
+                  <Td className="text-right">
+                    {fmtInt(h.tokensIn)} / {fmtInt(h.tokensOut)}
+                  </Td>
+                  <Td className="text-right">{fmtUsd(h.cost)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Section>
+
       <Section title="Spend by feature" hint="This calendar month.">
         {usage.byFeature.length === 0 ? (
           <EmptyState>No AI usage recorded yet this month.</EmptyState>
@@ -142,7 +228,8 @@ export default async function AdminAiPage() {
             <thead>
               <tr>
                 <Th>When</Th>
-                <Th>Feature</Th>
+                <Th>Kind</Th>
+                <Th>User</Th>
                 <Th>Model</Th>
                 <Th className="text-right">Tokens</Th>
                 <Th className="text-right">Cost</Th>
@@ -153,7 +240,8 @@ export default async function AdminAiPage() {
               {usage.recent.map((r, i) => (
                 <tr key={i}>
                   <Td className="whitespace-nowrap text-muted">{fmtRel(r.at)}</Td>
-                  <Td>{r.feature}</Td>
+                  <Td>{r.kind}</Td>
+                  <Td className="max-w-[180px] truncate text-muted">{r.who ?? '—'}</Td>
                   <Td className="font-mono text-[12px] text-muted">{r.model ?? '—'}</Td>
                   <Td className="text-right">{fmtInt(r.tokens)}</Td>
                   <Td className="text-right">{r.cost === null ? '—' : fmtUsd(r.cost)}</Td>
@@ -166,6 +254,40 @@ export default async function AdminAiPage() {
           </Table>
         )}
       </Section>
+    </div>
+  );
+}
+
+/** 14-day token bars — pure CSS, theme tokens; error days get a red dot. */
+function DailyBars({ days }: { days: AiUsageSummary['days'] }) {
+  const max = Math.max(1, ...days.map((d) => d.tokens));
+  return (
+    <div className="rounded-[12px] border border-line bg-panel p-4">
+      <div className="flex h-[120px] items-end gap-[6px]">
+        {days.map((d) => (
+          <div
+            key={d.date}
+            className="group relative flex h-full flex-1 flex-col items-center justify-end"
+            title={`${d.date} — ${fmtInt(d.calls)} calls, ${fmtInt(d.tokens)} tokens, ${fmtUsd(d.cost)}${d.errors > 0 ? `, ${d.errors} errors` : ''}`}
+          >
+            <div
+              className={[
+                'w-full max-w-[34px] rounded-t-[5px] transition group-hover:brightness-110',
+                d.tokens > 0 ? 'bg-gradient-to-t from-accent to-accent-2' : 'h-[2px] bg-line',
+              ].join(' ')}
+              style={d.tokens > 0 ? { height: `${Math.max(4, (d.tokens / max) * 100)}%` } : undefined}
+            />
+            {d.errors > 0 && (
+              <span className="absolute -top-[2px] h-[6px] w-[6px] rounded-full bg-red" aria-hidden="true" />
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between font-mono text-[10px] text-muted">
+        <span>{days[0]?.date.slice(5)}</span>
+        <span>{days[Math.floor(days.length / 2)]?.date.slice(5)}</span>
+        <span>{days[days.length - 1]?.date.slice(5)}</span>
+      </div>
     </div>
   );
 }
