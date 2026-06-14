@@ -278,6 +278,76 @@ describe('buildWorkItemDrafts — waiting on them (Phase 8)', () => {
     );
     expect(drafts).toHaveLength(0);
   });
+
+  // The default pregate_ai is permissive: it keeps an unusually phrased reply
+  // (no "?", no known verb) so the AI can decide, instead of dropping it.
+  it('default mode keeps an unusual ask the strict gate would miss', () => {
+    const drafts = buildWorkItemDrafts(
+      [
+        {
+          msg: msg({
+            id: 'b',
+            conversationId: 'U',
+            bodyPreview: 'The vendor situation is still unresolved on our side.',
+            toRecipients: [{ emailAddress: { address: 'sam@cedars.com' } }],
+            sentDateTime: '2026-06-06T10:00:00Z',
+          }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+    );
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0].row.category).toBe('waiting_on_them');
+  });
+
+  // #3: the heuristic reads the WHOLE reply, not Graph's ~255-char preview.
+  it('reads an ask buried below the preview (strict heuristic mode)', () => {
+    const benign = 'Hi team, quick recap before the weekend, everything is on track.';
+    const drafts = buildWorkItemDrafts(
+      [
+        {
+          msg: msg({
+            id: 'b',
+            conversationId: 'B',
+            bodyPreview: benign, // no ask here
+            body: { contentType: 'text', content: `${benign}\n\nCan you send the figures?` },
+            toRecipients: [{ emailAddress: { address: 'sam@cedars.com' } }],
+            sentDateTime: '2026-06-06T10:00:00Z',
+          }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+      Date.now(),
+      { replyIntentMode: 'heuristic' },
+    );
+    expect(drafts).toHaveLength(1); // the buried "Can you send" is found in the body
+  });
+
+  it('strips quoted history so a short "Thanks!" above a pasted thread still drops', () => {
+    const drafts = buildWorkItemDrafts(
+      [
+        {
+          msg: msg({
+            id: 'b',
+            conversationId: 'Q',
+            bodyPreview: 'Thanks!',
+            body: {
+              contentType: 'html',
+              content:
+                '<div>Thanks!</div><div id="divRplyFwdMsg"><b>From:</b> Maya<br>Can you send the numbers?</div>',
+            },
+            toRecipients: [{ emailAddress: { address: 'sam@cedars.com' } }],
+            sentDateTime: '2026-06-06T10:00:00Z',
+          }),
+          direction: 'outbound',
+        },
+      ],
+      ctx,
+    );
+    expect(drafts).toHaveLength(0); // the ask lives only in the quoted history
+  });
 });
 
 describe('classifyForSync', () => {
