@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { isAddressedToManager, buildWorkItemDrafts } from '../outlook';
+import {
+  isAddressedToManager,
+  managerAddressesInConversation,
+  buildWorkItemDrafts,
+} from '../outlook';
 import type { GraphMessage } from '@/lib/graph/mail';
 
 const MGR = 'boss@corp.com';
+const ALIAS = 'boss.alias@corp.com';
 const ctx = { userId: 'u1', integrationId: 'i1', mailboxId: 'm1' };
 const msg = (over: Partial<GraphMessage>): GraphMessage => ({ id: 'x', ...over });
+const tag = (over: Partial<GraphMessage>, direction: 'inbound' | 'outbound') => ({
+  msg: msg(over),
+  direction,
+});
 
 describe('isAddressedToManager', () => {
   it('true — manager is a direct To recipient (case-insensitive)', () => {
@@ -38,6 +47,34 @@ describe('isAddressedToManager', () => {
       true,
     );
   });
+
+  it('true — addressed to an alias once the alias is in the known set', () => {
+    const m = msg({ toRecipients: [{ emailAddress: { address: ALIAS } }] });
+    expect(isAddressedToManager(m, [MGR])).toBe(false); // primary only -> miss
+    expect(isAddressedToManager(m, [MGR, ALIAS])).toBe(true); // alias known -> hit
+  });
+});
+
+describe('managerAddressesInConversation', () => {
+  it('adds the address the manager actually sent FROM to the base set', () => {
+    const msgs = [
+      tag({ from: { emailAddress: { address: 'BOSS.ALIAS@corp.com' } } }, 'outbound'),
+      tag({ from: { emailAddress: { address: 's@x.com' } } }, 'inbound'),
+    ];
+    expect(managerAddressesInConversation(msgs, [MGR]).sort()).toEqual([ALIAS, MGR].sort());
+  });
+
+  it('falls back to sender, lowercases, and dedupes', () => {
+    const msgs = [
+      tag({ sender: { emailAddress: { address: 'Boss@Corp.com' } } }, 'outbound'),
+      tag({ from: { emailAddress: { address: ALIAS } } }, 'outbound'),
+    ];
+    expect(managerAddressesInConversation(msgs, [MGR]).sort()).toEqual([ALIAS, MGR].sort());
+  });
+
+  it('returns just the base when there are no outbound messages', () => {
+    expect(managerAddressesInConversation([tag({}, 'inbound')], [MGR])).toEqual([MGR]);
+  });
 });
 
 describe('buildWorkItemDrafts — addressing gate', () => {
@@ -70,5 +107,29 @@ describe('buildWorkItemDrafts — addressing gate', () => {
   it('keeps everything when the manager email is unknown', () => {
     const drafts = buildWorkItemDrafts([inbound({ toRecipients: [{ emailAddress: { address: 'list@x.com' } }] })], ctx);
     expect(drafts).toHaveLength(1);
+  });
+
+  it('keeps a waiting thread addressed to an ALIAS the manager replied from', () => {
+    const outbound = tag(
+      { conversationId: 'c1', from: { emailAddress: { address: ALIAS } }, sentDateTime: '2026-06-08T09:00:00Z' },
+      'outbound',
+    );
+    const drafts = buildWorkItemDrafts(
+      [outbound, inbound({ toRecipients: [{ emailAddress: { address: ALIAS } }] })],
+      { ...ctx, managerEmails: [MGR] },
+    );
+    expect(drafts).toHaveLength(1);
+  });
+
+  it('still drops a true broadcast even with the alias rule in play', () => {
+    const outbound = tag(
+      { conversationId: 'c1', from: { emailAddress: { address: ALIAS } }, sentDateTime: '2026-06-08T09:00:00Z' },
+      'outbound',
+    );
+    const drafts = buildWorkItemDrafts(
+      [outbound, inbound({ toRecipients: [{ emailAddress: { address: 'list@x.com' } }] })],
+      { ...ctx, managerEmails: [MGR] },
+    );
+    expect(drafts).toHaveLength(0);
   });
 });

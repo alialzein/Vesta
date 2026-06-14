@@ -208,6 +208,24 @@ export function isAddressedToManager(msg: GraphMessage, managerEmails: string[])
   return body.length > 0 && mgr.some((m) => body.includes(m));
 }
 
+/**
+ * The manager's addresses as they appear in ONE conversation: the configured
+ * mailbox address(es) PLUS any address the manager actually sent FROM in this
+ * thread. This catches aliases — when a manager replies from an alias, an inbound
+ * "To: <that alias>" still counts as addressed to them instead of being mistaken
+ * for a broadcast they're merely Cc'd on. Derived from messages already in hand
+ * (no extra query); lowercased and deduped.
+ */
+export function managerAddressesInConversation(msgs: Tagged[], base: string[]): string[] {
+  const set = new Set(base.map((e) => e.toLowerCase()).filter(Boolean));
+  for (const { msg, direction } of msgs) {
+    if (direction !== 'outbound') continue;
+    const from = (msg.from ?? msg.sender)?.emailAddress?.address?.trim().toLowerCase();
+    if (from) set.add(from);
+  }
+  return [...set];
+}
+
 /** Build one email_threads row per conversation, including follow-up flags. */
 export function buildThreadRows(tagged: Tagged[], ctx: SyncContext): ThreadRow[] {
   const rows: ThreadRow[] = [];
@@ -218,9 +236,10 @@ export function buildThreadRows(tagged: Tagged[], ctx: SyncContext): ThreadRow[]
     // Only "waiting on you" if the latest inbound is actually addressed to the
     // manager (To / body-mention), not a broadcast he's merely Cc'd on.
     const latestInbound = latestInboundOf(msgs);
+    const managerAddrs = managerAddressesInConversation(msgs, ctx.managerEmails ?? []);
     const waitingOnManager =
       state.isWaitingOnManager &&
-      (!latestInbound || isAddressedToManager(latestInbound, ctx.managerEmails ?? []));
+      (!latestInbound || isAddressedToManager(latestInbound, managerAddrs));
     const subjectSource = msgs.find((t) => t.msg.subject)?.msg.subject;
     rows.push({
       user_id: ctx.userId,
@@ -323,8 +342,10 @@ export function buildWorkItemDrafts(
 
     // The latest inbound message drives title/summary/age.
     const latestInbound = latestInboundOf(msgs);
-    // Skip broadcasts the manager is merely Cc'd on / not addressed in.
-    if (latestInbound && !isAddressedToManager(latestInbound, ctx.managerEmails ?? [])) continue;
+    // Skip broadcasts the manager is merely Cc'd on / not addressed in. Aliases
+    // the manager replied from in THIS thread count as "addressed to me" too.
+    const managerAddrs = managerAddressesInConversation(msgs, ctx.managerEmails ?? []);
+    if (latestInbound && !isAddressedToManager(latestInbound, managerAddrs)) continue;
 
     const senderEmail = (latestInbound?.from ?? latestInbound?.sender)?.emailAddress?.address
       ?.trim()
