@@ -7,6 +7,14 @@ to control it.
 These are written so they can later be stitched together into one complete user
 manual. Each guide is self-contained and matches the product as it actually ships.
 
+> **Published for users at `/user-guide`.** These Markdown files are the *source* —
+> they render live as the public, themed doc site
+> ([vesta-ai-radar.vercel.app/user-guide](https://vesta-ai-radar.vercel.app/user-guide)),
+> built statically at deploy time. To add a guide to the site: drop its `.md` here
+> and add one row to [`lib/guides/registry.ts`](../../lib/guides/registry.ts) (slug,
+> title, group, blurb, icon). The operator-only `admin-panel.md` is deliberately
+> **not** in the registry, so it never reaches the public site.
+
 > **Working rule:** every time we finish a feature, we add or update its guide here
 > in the same task. If a guide and the app ever disagree, the app is right and the
 > guide is out of date — fix it.

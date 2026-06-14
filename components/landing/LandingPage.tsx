@@ -391,6 +391,13 @@ export function LandingPage() {
           <nav className="pointer-events-auto mx-auto flex h-[68px] max-w-[1280px] items-center gap-3 px-5 sm:px-7">
             <span className="font-display text-[21px] font-semibold tracking-tight">Vesta</span>
             <span className="ml-auto" />
+            <Link
+              href="/user-guide"
+              prefetch
+              className="hidden rounded-full px-3 py-[8px] text-[13px] font-semibold text-ink-soft transition hover:text-accent sm:inline-flex"
+            >
+              Guide
+            </Link>
             <button
               type="button"
               onClick={toggleTheme}
@@ -809,6 +816,9 @@ export function LandingPage() {
           <div className="mt-10 flex flex-wrap items-center gap-4 border-t border-line pt-6 text-[12.5px] text-muted">
             <span>Your work, in order.</span>
             <span className="ml-auto flex items-center gap-4">
+              <Link href="/user-guide" prefetch className="transition hover:text-accent">
+                User guide
+              </Link>
               <Link href="/login" prefetch className="transition hover:text-accent">
                 Sign in
               </Link>
