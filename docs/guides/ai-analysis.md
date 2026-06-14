@@ -52,11 +52,14 @@ Automatically, **after each sync**. To keep it efficient and low-cost:
 ### "Waiting on them" reply-intent
 
 When you reply to a thread, Vesta decides whether your reply actually **expects a
-response** (so it becomes a *Waiting on them* item) or just closes the loop. A free
-heuristic skips the obvious "thanks/done" replies; only the plausible asks cost an AI
-call, which confirms and writes the follow-up note (or drops it if nothing's owed). How
-aggressively AI is used here is a per-account setting (`pregate_ai` default,
-`ai_always`, `heuristic`, or `off`).
+response** (so it becomes a *Waiting on them* item) or just closes the loop. In the
+default mode a free first pass drops only the obvious closing notes ("thanks", "got
+it", "will do") and sends **everything else — including unusually phrased asks** — to
+the AI, which makes the final call and writes the follow-up note (or quietly drops it
+if nothing's owed). It reads your **whole reply**, not just the first line, so an ask
+buried lower down is still caught. How aggressively AI is used here is a per-account
+setting: `pregate_ai` (the default — quick filter + AI confirm), `ai_always` (AI on
+every reply), `heuristic` (keyword-only, no AI), or `off`.
 
 ## Cost & privacy
 

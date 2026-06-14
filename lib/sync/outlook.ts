@@ -16,7 +16,12 @@ import {
   type ThreadMessage,
   type ThreadState,
 } from '@/lib/engine/threads';
-import { replyLikelyExpectsResponse } from '@/lib/engine/replies';
+import {
+  replyLikelyExpectsResponse,
+  replyPlausiblyExpectsResponse,
+} from '@/lib/engine/replies';
+import { splitQuotedHtml, splitQuotedText } from '@/lib/email/quotes';
+import { htmlToText } from '@/lib/email/render';
 import { type ReplyIntentMode } from '@/lib/ai/config';
 import { getEffectiveReplyIntentMode } from '@/lib/ai/runtime';
 import { applyScanBack, scanBackCutoffIso } from '@/lib/sync/scanback';
@@ -172,6 +177,26 @@ function latestOutboundOf(msgs: Tagged[]): GraphMessage | undefined {
     )[0]?.msg;
 }
 
+/**
+ * Plain text of the manager's NEW reply for the reply-intent pre-gate: the full
+ * body with the quoted prior thread split off (so a short "Thanks!" above a
+ * pasted history still reads as a closing note), converted from HTML when
+ * needed, and capped for cheap regex matching. Falls back to Graph's
+ * ~255-char bodyPreview when the body is unavailable.
+ */
+function replySearchText(msg: GraphMessage | undefined): string | null {
+  const body = msg?.body;
+  let main: string | null = null;
+  if (body?.content) {
+    main =
+      body.contentType === 'text'
+        ? splitQuotedText(body.content).main
+        : htmlToText(splitQuotedHtml(body.content).main);
+  }
+  const text = (main && main.trim()) || (msg?.bodyPreview ?? '').trim();
+  return text ? text.slice(0, 4000) : null;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Priority for a "waiting on them" item: the longer they've gone without replying,
@@ -306,11 +331,17 @@ export function buildWorkItemDrafts(
       // "Waiting on them": the manager replied last and may be owed a response.
       if (state.isWaitingOnOther && replyIntentMode !== 'off') {
         const latestOutbound = latestOutboundOf(msgs);
-        // pregate_ai / heuristic keep only replies that plausibly ask for something;
-        // ai_always keeps every reply (AI prunes the rest later).
+        // Read the manager's whole NEW reply (quoted history stripped), not just
+        // Graph's ~255-char preview, so an ask buried lower is still seen.
+        const replyText = replySearchText(latestOutbound);
+        // ai_always: keep every reply (AI prunes later). pregate_ai (default):
+        // keep unless it's clearly a closing note — AI confirms, so err toward
+        // keeping. heuristic (no AI): strict, keep only a recognizable ask.
         const keep =
           replyIntentMode === 'ai_always' ||
-          replyLikelyExpectsResponse(latestOutbound?.bodyPreview ?? null);
+          (replyIntentMode === 'pregate_ai'
+            ? replyPlausiblyExpectsResponse(replyText)
+            : replyLikelyExpectsResponse(replyText));
         if (keep) {
           const other =
             latestOutbound?.toRecipients?.[0]?.emailAddress?.name ??

@@ -75,6 +75,30 @@ export function simpleEmailText(html: string): string | null {
   return text || null;
 }
 
+/**
+ * Best-effort plain text from ANY HTML body. Unlike `simpleEmailText`, this
+ * never returns null — it always extracts something — so it suits machine
+ * reading (e.g. the reply-intent pre-gate) rather than display. Strips
+ * head/style/script, drops images, turns block tags into newlines, decodes
+ * common entities.
+ */
+export function htmlToText(html: string): string {
+  const body = html
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+  return decodeEntities(
+    flattenAnchors(body)
+      .replace(/<img[^>]*>/gi, '')
+      .replace(/<(br|\/p|\/div|\/li|\/tr|\/h[1-6]|\/blockquote)[^>]*>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '• ')
+      .replace(/<[^>]+>/g, ''),
+  )
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /** Split text into plain segments and http(s) links for safe linkification
  *  (the caller renders links as real anchors it constructs itself). */
 export function linkifySegments(text: string): { type: 'text' | 'link'; value: string }[] {

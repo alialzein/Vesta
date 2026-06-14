@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linkifySegments, simpleEmailText } from '@/lib/email/render';
+import { htmlToText, linkifySegments, simpleEmailText } from '@/lib/email/render';
 
 describe('simpleEmailText', () => {
   it('extracts theme-native text from plain correspondence HTML', () => {
@@ -53,5 +53,23 @@ describe('linkifySegments', () => {
 
   it('passes through link-free text untouched', () => {
     expect(linkifySegments('no links')).toEqual([{ type: 'text', value: 'no links' }]);
+  });
+});
+
+describe('htmlToText', () => {
+  it('extracts text from any HTML and never returns null (unlike simpleEmailText)', () => {
+    const html =
+      '<head><style>p{}</style></head><body><p>Hi Sam,</p><p>Can you send the numbers?</p></body>';
+    expect(htmlToText(html)).toBe('Hi Sam,\nCan you send the numbers?');
+  });
+
+  it('extracts text even from rich HTML that simpleEmailText rejects', () => {
+    const html = '<div style="background-color:#fff"><p>Quarterly numbers attached.</p></div>';
+    expect(simpleEmailText(html)).toBeNull(); // background → rich → keep the iframe
+    expect(htmlToText(html)).toBe('Quarterly numbers attached.'); // machine read still works
+  });
+
+  it('drops script content and decodes entities', () => {
+    expect(htmlToText('<div>Tom &amp; Jerry</div><script>alert(1)</script>')).toBe('Tom & Jerry');
   });
 });

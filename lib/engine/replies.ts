@@ -6,6 +6,15 @@
  * a closing note ("thanks", "got it", "will do") that needs no follow-up. It is a
  * cheap first pass, not the final word: in the default mode it filters out the
  * obvious no-reply cases so AI only spends a call on plausible asks. AI confirms.
+ *
+ * Two strengths:
+ *  - `replyLikelyExpectsResponse` (STRICT) — requires a recognizable ask. Used by
+ *    the `heuristic` mode, which has NO AI safety net, so it must avoid false
+ *    "waiting" items.
+ *  - `replyPlausiblyExpectsResponse` (PERMISSIVE) — keeps anything that is not a
+ *    clear closing note. Used by the default `pregate_ai` mode, where the AI
+ *    confirms afterward and prunes false positives: being permissive here only
+ *    surfaces MORE genuine asks (incl. unusually phrased ones), never wrong ones.
  */
 
 // Phrasings that signal the manager is asking for / expecting something back.
@@ -26,10 +35,21 @@ const REQUEST_PATTERNS: RegExp[] = [
 const CLOSING_ONLY =
   /^(thanks?|thank you|thx|ok|okay|k|got it|sounds good|will do|noted|cheers|great|perfect|done|received|appreciated|no problem|np|understood|agreed)[!.\s]*$/i;
 
-/** True when the manager's reply plausibly asks for / expects a response. */
+/** STRICT: the reply matches a recognizable ask (and is not a closing note). */
 export function replyLikelyExpectsResponse(text: string | null | undefined): boolean {
   const t = (text ?? '').trim();
   if (!t) return false;
   if (CLOSING_ONLY.test(t)) return false;
   return REQUEST_PATTERNS.some((re) => re.test(t));
+}
+
+/**
+ * PERMISSIVE: keep the reply unless it is empty or a clear closing note. An
+ * unusually phrased ask (no "?", no known verb) passes here and reaches the AI,
+ * which makes the final call — so the default mode no longer silently drops it.
+ */
+export function replyPlausiblyExpectsResponse(text: string | null | undefined): boolean {
+  const t = (text ?? '').trim();
+  if (!t) return false;
+  return !CLOSING_ONLY.test(t);
 }
