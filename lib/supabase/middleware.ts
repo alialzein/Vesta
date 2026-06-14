@@ -18,9 +18,10 @@ import { adminSessionExpired } from '@/lib/admin/session';
  *
  * Public (unauthenticated) paths: /welcome (the marketing landing), /login,
  * /signup, /auth/* (the OAuth/email confirmation callback + update-password),
- * and Next internals/static assets (excluded by the matcher in middleware.ts).
+ * /user-guide (the public docs site), and Next internals/static assets
+ * (excluded by the matcher in middleware.ts).
  */
-const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/auth'];
+const PUBLIC_PATHS = ['/welcome', '/login', '/signup', '/auth', '/user-guide'];
 
 /** True for routes reachable without a session (login/signup + auth callback). */
 export function isPublicPath(pathname: string): boolean {

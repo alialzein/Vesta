@@ -14,6 +14,12 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/welcomeback')).toBe(false); // no lookalike prefixes
   });
 
+  it('treats the public user-guide site as public', () => {
+    expect(isPublicPath('/user-guide')).toBe(true);
+    expect(isPublicPath('/user-guide/getting-started')).toBe(true);
+    expect(isPublicPath('/user-guides')).toBe(false); // no lookalike prefixes
+  });
+
   it('treats the dashboard and app routes as protected', () => {
     expect(isPublicPath('/')).toBe(false);
     expect(isPublicPath('/settings')).toBe(false);

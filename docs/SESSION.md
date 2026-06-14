@@ -4,7 +4,23 @@
 > living status + next-steps file that travels across laptops/sessions via git.
 > Claude updates it at the end of each session and pushes it.
 
-**Last updated:** 2026-06-12 END OF DAY (third session, work laptop).
+**Last updated:** 2026-06-14 (fourth session). `main` = #45–#84 merged, tree clean.
+**OPEN NOW — PR A `feat/user-guide-site`:** the public, themed `/user-guide` doc
+site. Renders `docs/guides/*.md` as a static doc site (deps added: react-markdown
++ remark-gfm + rehype-slug + github-slugger). New: `lib/guides/{registry,markdown,
+load}.ts`, `components/guide/{DocsShell,GuideMarkdown,GuideToc}.tsx`,
+`app/user-guide/[[...slug]]/page.tsx` (SSG — overview + 17 guides = 18 paths) +
+`app/user-guide/loading.tsx`; `.guide-prose` in globals.css (both themes,
+shot-verified via `scripts/guide-shots.mjs`). `/user-guide` added to middleware
+`PUBLIC_PATHS` (+ test); `next.config.mjs` traces `docs/guides/*.md`. Landing nav
++ footer got a **Guide** link. admin-panel.md deliberately excluded from the
+registry (operator-only, never public). 22 new unit tests; full suite green;
+`npm run build` OK (route shows ● SSG); lint + typecheck clean. **AWAITING owner
+review/merge.** After merge → **PR B (small, planned):** dashboard
+`app/loading.tsx` skeleton + manager-alias fix in `isAddressedToManager`
+(use all mailbox addresses, not just the single mailbox_email). Mobile = manual
+device verify (no code change). News must never appear above Today's Radar.
+**Prior session:** 2026-06-12 END OF DAY (third session, work laptop).
 `main` = **#45–#84 ALL MERGED, no PRs open, all branches deleted, tree
 clean.** (Note: #81 was merged into #80's branch by mistake — stacked-PR
 lesson #2: NEVER stack again; #82 = its clean cherry-pick.)

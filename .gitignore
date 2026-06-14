@@ -58,4 +58,6 @@ Thumbs.db
 
 # landing visual-check output (scripts/landing-shots.mjs)
 .landing-shots/
+# user-guide visual-check output (scripts/guide-shots.mjs)
+.guide-shots/
 .git-commit-msg.txt
